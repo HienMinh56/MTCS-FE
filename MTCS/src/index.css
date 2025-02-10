@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+  }
+}
+@layer utilities {
+  .bg-grid {
+    background-size: 100px 100px;
+    background-image: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0.05) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  }
+}
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #020817;
+    --primary: #0ea5e9;
+  }
+
+  .dark {
+    --background: #020817;
+    --foreground: #ffffff;
+    --primary: #0ea5e9;
+  }
+}
