@@ -5,6 +5,12 @@
 @layer base {
   :root {
     --radius: 0.5rem;
+    --color-primary: #0146c7;
+    --color-secondary: #75edd1;
+    --color-primary-light: #3369d1;
+    --color-primary-dark: #00318b;
+    --color-secondary-light: #9ff2df;
+    --color-secondary-dark: #52a592;
   }
 }
 @layer utilities {
