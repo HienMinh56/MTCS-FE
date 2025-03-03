@@ -8,9 +8,9 @@ export interface ApiResponseData {
   errors?: ApiError[];
 }
 
-export interface ApiResponse<T = ApiResponseData> {
+export interface ApiResponse<T = any> {
   success: boolean;
-  message?: string;
-  data?: T;
-  errors?: string[] | null;
+  data: T;
+  message: string;
+  errors: string | null;
 }
