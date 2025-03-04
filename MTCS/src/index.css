@@ -37,3 +37,181 @@
     --primary: #0ea5e9;
   }
 }
+
+.tractor-svg {
+  overflow: hidden;
+}
+
+/* Animation keyframes */
+@keyframes moveLeftToRight {
+  0% {
+    transform: translateX(-100px);
+  }
+  100% {
+    transform: translateX(900px);
+  }
+}
+
+@keyframes moveLeftToRightSlow {
+  0% {
+    transform: translateX(-200px);
+  }
+  100% {
+    transform: translateX(1000px);
+  }
+}
+
+@keyframes moveLeftToRightFast {
+  0% {
+    transform: translateX(-150px);
+  }
+  100% {
+    transform: translateX(850px);
+  }
+}
+
+/* Wind effect animation */
+@keyframes windStreak {
+  0% {
+    opacity: 0;
+    transform: translateX(50px) scaleX(0.1);
+  }
+  10% {
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(600px) scaleX(0.8);
+  }
+}
+
+/* Change spin direction to clockwise for forward motion */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes dashoffset {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 40;
+  }
+}
+
+/* Additional animation for the sun */
+@keyframes sunGlow {
+  0% {
+    opacity: 0.85;
+    filter: blur(3px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(5px);
+  }
+  100% {
+    opacity: 0.85;
+    filter: blur(3px);
+  }
+}
+
+@keyframes sunRays {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+}
+
+/* Cloud styling - Static with no animations */
+.cloud-standard {
+  transform-origin: center center;
+}
+
+.cloud-1 {
+  opacity: 0.7;
+}
+
+.cloud-2 {
+  opacity: 0.6;
+}
+
+.cloud-3 {
+  opacity: 0.5;
+}
+
+.cloud-4 {
+  opacity: 0.8;
+}
+
+.cloud-5 {
+  opacity: 0.7;
+}
+
+.cloud-6 {
+  opacity: 0.5;
+}
+
+/* Wind streak styles */
+.wind-streak {
+  animation: windStreak 3s ease-in-out infinite;
+  transform-origin: left center;
+}
+
+.wind-streak:nth-child(2) {
+  animation-delay: 0.4s;
+}
+
+.wind-streak:nth-child(3) {
+  animation-delay: 1.2s;
+}
+
+.wind-streak:nth-child(4) {
+  animation-delay: 2s;
+}
+
+.wind-streak:nth-child(5) {
+  animation-delay: 1.6s;
+}
+
+/* Wheel animations */
+.front-wheel {
+  animation: spin 5s linear infinite;
+  transform-origin: 210px 450px;
+}
+
+.middle-wheel {
+  animation: spin 5s linear infinite;
+  transform-origin: 380px 450px;
+}
+
+.back-wheel {
+  animation: spin 5s linear infinite;
+  transform-origin: 600px 450px;
+}
+
+/* Sun styling */
+.sun-body {
+  animation: sunGlow 8s ease-in-out infinite;
+  filter: drop-shadow(0 0 15px rgba(255, 220, 80, 0.6));
+}
+
+.sun-rays {
+  animation: sunRays 6s ease-in-out infinite;
+  transform-origin: center center;
+}
