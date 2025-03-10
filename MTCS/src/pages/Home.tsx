@@ -68,7 +68,7 @@ const MTCSLogistics: React.FC = () => {
                     variant="h1"
                     noWrap
                     sx={{
-                      fontFamily: "'Montserrat', 'Roboto', sans-serif", // Bold, clean font for company name
+                      fontFamily: "'Montserrat', 'Roboto', sans-serif",
                       fontWeight: 900,
                       fontSize: { xs: "2rem", sm: "3rem", md: "3.8rem" },
                       letterSpacing: -0.5,
@@ -92,7 +92,7 @@ const MTCSLogistics: React.FC = () => {
                       variant="h2"
                       noWrap
                       sx={{
-                        fontFamily: "'Racing Sans One', 'Oswald', cursive", // Dynamic, energetic font for slogan
+                        fontFamily: "'Racing Sans One', 'Oswald', cursive",
                         fontWeight: 700,
                         fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" },
                         letterSpacing: { xs: -0.2, md: 0 },
@@ -106,7 +106,6 @@ const MTCSLogistics: React.FC = () => {
                         px: 1,
                         borderRadius: "4px",
                         background: "rgba(255, 255, 255, 0.1)",
-                        // Enhanced underline effect
                         "&::after": {
                           content: '""',
                           position: "absolute",
