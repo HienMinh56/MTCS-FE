@@ -5,17 +5,20 @@ import StaffMenu from "./pages/StaffMenu";
 import ProfilePage from "./pages/ProfilePage";
 import "./index.css";
 import MTCSLogistics from "./pages/Home";
+import { AuthProvider } from "./contexts/AuthContext";
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<MTCSLogistics />} />
-          <Route path="/staff-menu/*" element={<StaffMenu />} />
-          <Route path="/profile" element={<ProfilePage />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<MTCSLogistics />} />
+            <Route path="/staff-menu/*" element={<StaffMenu />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

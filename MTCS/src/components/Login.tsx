@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import {
   Dialog,
   DialogTitle,
@@ -18,11 +19,13 @@ import PasswordField from "./PasswordVisibility";
 import ForgotPassword from "./ForgotPassword";
 import Register from "./Register";
 import { login, LoginRequest } from "../services/authApi";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 interface LoginProps {
   open: boolean;
   onClose: () => void;
-  onLoginSuccess?: () => void; // Optional callback for successful login
+  onLoginSuccess?: () => void;
 }
 
 const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
@@ -43,6 +46,8 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
     message: "",
     severity: "success" as "success" | "error",
   });
+  const navigate = useNavigate();
+  const { setIsAuthenticated } = useAuth();
 
   const validateForm = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
@@ -89,33 +94,48 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
 
     try {
       const tokenData = await login(credentials);
+      console.log("Login successful, updating authentication state");
 
-      // Display success message
+      // Update auth state in context
+      setIsAuthenticated(true);
+
+      // Dispatch an event to notify other components
+      window.dispatchEvent(new Event("auth-changed"));
+
       setSnackbar({
         open: true,
         message: "Đăng nhập thành công",
         severity: "success",
       });
 
-      // Wait a brief moment to show the success message before proceeding
+      const userRole = localStorage.getItem("userRole");
+
       setTimeout(() => {
         onClose();
-        // Call the success callback if provided
         if (onLoginSuccess) {
           onLoginSuccess();
         } else {
-          // Default behavior: reload the page
-          window.location.reload();
+          if (userRole === "Staff") {
+            navigate("/staff-menu");
+          } else {
+            window.location.reload();
+          }
         }
       }, 1000);
     } catch (error) {
       let errorMessage = "Đăng nhập thất bại";
-      if (error instanceof Error) {
+
+      if (
+        axios.isAxiosError(error) &&
+        error.response?.headers?.["token-expired"] === "true"
+      ) {
+        errorMessage = "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại";
+      } else if (error instanceof Error) {
         errorMessage = error.message;
       }
+
       setErrors({ general: errorMessage });
 
-      // Also display the error in a snackbar for consistency with Register component
       setSnackbar({
         open: true,
         message: errorMessage,

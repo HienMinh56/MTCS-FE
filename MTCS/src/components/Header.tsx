@@ -1,18 +1,45 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AppBar, Toolbar, Box, Button, useTheme } from "@mui/material";
 import LoginIcon from "@mui/icons-material/Login";
 import Login from "./Login";
 import logo1 from "../assets/logo1.png";
+import { useAuth } from "../contexts/AuthContext";
+import Cookies from "js-cookie";
 
 const Header: React.FC = () => {
   const theme = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const [showLoginButton, setShowLoginButton] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = Cookies.get("token");
+      const shouldShow = !token;
+      console.log("Header cookie check:", !shouldShow);
+      setShowLoginButton(shouldShow);
+    };
+
+    checkAuth();
+
+    window.addEventListener("auth-changed", checkAuth);
+
+    const interval = setInterval(checkAuth, 2000);
+
+    return () => {
+      window.removeEventListener("auth-changed", checkAuth);
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleLoginOpen = () => setLoginOpen(true);
-  const handleLoginClose = () => setLoginOpen(false);
+  const handleLoginClose = () => {
+    setLoginOpen(false);
+    const token = Cookies.get("token");
+    setShowLoginButton(!token);
+  };
 
   const handleLogoClick = () => {
-    // Navigate to home page
     window.location.href = "/";
   };
 
@@ -33,10 +60,8 @@ const Header: React.FC = () => {
             px: { xs: 2, sm: 4, md: 6 },
           }}
         >
-          {/* Left side - empty for balance */}
           <Box />
 
-          {/* Center - logo */}
           <Box
             component="img"
             src={logo1}
@@ -51,26 +76,27 @@ const Header: React.FC = () => {
             }}
           />
 
-          {/* Right side - login button */}
           <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-            <Button
-              variant="contained"
-              startIcon={<LoginIcon />}
-              onClick={handleLoginOpen}
-              sx={{
-                px: { xs: 2, md: 3 },
-                py: 1,
-                fontWeight: 600,
-                borderRadius: 2,
-                textTransform: "none",
-                background: `linear-gradient(135deg, ${theme.palette.mtcs.primary}, ${theme.palette.mtcs.primary})`,
-                "&:hover": {
-                  background: `linear-gradient(135deg, ${theme.palette.mtcs.secondary}, ${theme.palette.mtcs.primary})`,
-                },
-              }}
-            >
-              Đăng nhập
-            </Button>
+            {showLoginButton && (
+              <Button
+                variant="contained"
+                startIcon={<LoginIcon />}
+                onClick={handleLoginOpen}
+                sx={{
+                  px: { xs: 2, md: 3 },
+                  py: 1,
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  textTransform: "none",
+                  background: `linear-gradient(135deg, ${theme.palette.mtcs.primary}, ${theme.palette.mtcs.primary})`,
+                  "&:hover": {
+                    background: `linear-gradient(135deg, ${theme.palette.mtcs.secondary}, ${theme.palette.mtcs.primary})`,
+                  },
+                }}
+              >
+                Đăng nhập
+              </Button>
+            )}
           </Box>
         </Toolbar>
       </AppBar>

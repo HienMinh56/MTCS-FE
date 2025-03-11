@@ -17,12 +17,12 @@ import {
   Menu,
   MenuItem,
   Container,
+  useTheme,
 } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import LogoutIcon from "@mui/icons-material/Logout";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import PersonIcon from "@mui/icons-material/Person";
@@ -32,11 +32,14 @@ import Tractors from "../components/Tractors";
 import Trailers from "../components/Trailers";
 import Customers from "../components/Customers";
 import { useNavigate } from "react-router-dom";
+import LogoutButton from "../components/Logout";
+import logo1 from "../assets/logo1.png";
 
 const drawerWidth = 240;
 
 const StaffMenu: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeTab, setActiveTab] = useState("orders");
 
@@ -57,7 +60,6 @@ const StaffMenu: React.FC = () => {
     navigate("/profile");
   };
 
-  // Menu items with updated structure
   const menuItems = [
     {
       id: "orders",
@@ -91,7 +93,6 @@ const StaffMenu: React.FC = () => {
     },
   ];
 
-  // Function to render the active component
   const renderActiveComponent = () => {
     switch (activeTab) {
       case "orders":
@@ -116,42 +117,50 @@ const StaffMenu: React.FC = () => {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
-          bgcolor: "white",
-          color: "text.primary",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          background: "linear-gradient(90deg, #0146C7, #3369d1)",
+          color: "white",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           zIndex: (theme) => theme.zIndex.drawer + 1,
         }}
       >
-        <Toolbar>
-          <Typography
-            variant="h6"
-            noWrap
-            component="div"
-            className="font-medium"
-          >
-            MTCS System
-          </Typography>
-          <Box sx={{ flexGrow: 1 }} />
-          <IconButton
-            size="large"
-            aria-label="show notifications"
-            color="inherit"
-            className="mr-2"
-          >
-            <Badge badgeContent={4} color="error">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
-          <IconButton
-            size="large"
-            edge="end"
-            aria-label="account"
-            aria-haspopup="true"
-            onClick={handleProfileMenuOpen}
-            color="inherit"
-          >
-            <AccountCircleIcon />
-          </IconButton>
+        <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+          <Box sx={{ width: "48px" }} />
+
+          <Box
+            component="img"
+            src={logo1}
+            alt="MTCS Logo"
+            sx={{
+              height: 40,
+              position: "absolute",
+              left: "50%",
+              transform: "translateX(-50%)",
+              pointerEvents: "none",
+            }}
+          />
+
+          <Box sx={{ display: "flex" }}>
+            <IconButton
+              size="large"
+              aria-label="show notifications"
+              color="inherit"
+              className="mr-2"
+            >
+              <Badge badgeContent={4} color="secondary">
+                <NotificationsIcon />
+              </Badge>
+            </IconButton>
+            <IconButton
+              size="large"
+              edge="end"
+              aria-label="account"
+              aria-haspopup="true"
+              onClick={handleProfileMenuOpen}
+              color="inherit"
+            >
+              <AccountCircleIcon />
+            </IconButton>
+          </Box>
           <Menu
             id="profile-menu"
             anchorEl={anchorEl}
@@ -160,9 +169,8 @@ const StaffMenu: React.FC = () => {
             onClose={handleMenuClose}
           >
             <MenuItem onClick={handleOpenProfile}>Hồ sơ</MenuItem>
-            <MenuItem onClick={handleMenuClose}>
-              <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
-              Đăng xuất
+            <MenuItem sx={{ color: "error.main" }}>
+              <LogoutButton buttonType="menuItem" onClick={handleMenuClose} />
             </MenuItem>
           </Menu>
         </Toolbar>
@@ -177,6 +185,7 @@ const StaffMenu: React.FC = () => {
             width: drawerWidth,
             boxSizing: "border-box",
             borderRight: "1px solid rgba(0, 0, 0, 0.08)",
+            backgroundColor: "#f8f9fa",
             zIndex: 1,
           },
         }}
@@ -187,11 +196,25 @@ const StaffMenu: React.FC = () => {
             display: "flex",
             alignItems: "center",
             p: 2,
+            background:
+              "linear-gradient(135deg, rgba(1, 70, 199, 0.05), rgba(117, 237, 209, 0.08))",
           }}
         >
-          <Avatar alt="Staff User" src="/static/avatar.jpg" className="mr-3" />
+          <Avatar
+            alt="Staff User"
+            src="/static/avatar.jpg"
+            className="mr-3"
+            sx={{
+              border: `2px solid ${theme.palette.mtcs.secondary}`,
+              bgcolor: theme.palette.mtcs.primary,
+            }}
+          />
           <div>
-            <Typography variant="subtitle1" className="font-medium">
+            <Typography
+              variant="subtitle1"
+              className="font-medium"
+              sx={{ color: theme.palette.mtcs.primary }}
+            >
               Nhân viên
             </Typography>
           </div>
@@ -205,14 +228,18 @@ const StaffMenu: React.FC = () => {
                 sx={{
                   minHeight: 48,
                   px: 2.5,
-                  backgroundColor: item.selected
-                    ? "rgba(25, 118, 210, 0.08)"
+                  my: 0.5,
+                  mx: 1,
+                  borderRadius: 1,
+                  background: item.selected
+                    ? "linear-gradient(135deg, rgba(1, 70, 199, 0.1), rgba(117, 237, 209, 0.2))"
                     : "inherit",
                   "&:hover": {
-                    backgroundColor: "rgba(25, 118, 210, 0.04)",
+                    background:
+                      "linear-gradient(135deg, rgba(1, 70, 199, 0.05), rgba(117, 237, 209, 0.1))",
                   },
                   borderLeft: item.selected
-                    ? "4px solid #1976d2"
+                    ? `4px solid ${theme.palette.mtcs.primary}`
                     : "4px solid transparent",
                 }}
               >
@@ -221,15 +248,22 @@ const StaffMenu: React.FC = () => {
                     minWidth: 0,
                     mr: 2,
                     justifyContent: "center",
-                    color: item.selected ? "primary.main" : "inherit",
+                    color: item.selected
+                      ? theme.palette.mtcs.primary
+                      : "inherit",
                   }}
                 >
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText
                   primary={item.text}
+                  primaryTypographyProps={{
+                    fontWeight: item.selected ? "medium" : "normal",
+                  }}
                   sx={{
-                    color: item.selected ? "primary.main" : "inherit",
+                    color: item.selected
+                      ? theme.palette.mtcs.primary
+                      : "inherit",
                   }}
                 />
               </ListItemButton>
@@ -238,7 +272,6 @@ const StaffMenu: React.FC = () => {
         </List>
       </Drawer>
 
-      {/* Fixed main content area */}
       <Box
         component="main"
         sx={{
@@ -250,6 +283,7 @@ const StaffMenu: React.FC = () => {
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
+          backgroundColor: "#f8f9fa",
         }}
       >
         {renderActiveComponent()}

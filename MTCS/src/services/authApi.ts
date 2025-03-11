@@ -42,7 +42,6 @@ export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
-// Parse JWT token to get user ID
 const parseJwt = (token: string) => {
   try {
     const base64Url = token.split(".")[1];
@@ -72,10 +71,22 @@ const storeTokens = (tokens: TokenData) => {
     sameSite: "strict",
   });
 
-  // Extract and store userId in localStorage
   const tokenData = parseJwt(tokens.token);
-  if (tokenData && tokenData.sub) {
-    localStorage.setItem("userId", tokenData.sub);
+  if (tokenData) {
+    if (tokenData.sub) {
+      localStorage.setItem("userId", tokenData.sub);
+    }
+
+    if (
+      tokenData["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]
+    ) {
+      localStorage.setItem(
+        "userRole",
+        tokenData[
+          "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+        ]
+      );
+    }
   }
 };
 
@@ -99,13 +110,21 @@ export const login = async (credentials: LoginRequest): Promise<TokenData> => {
 
     throw new Error("Invalid token data received");
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.data) {
-      const responseData = error.response.data as ApiResponse;
-      throw new Error(
-        responseData.errors || responseData.message || "Login failed"
-      );
+    if (axios.isAxiosError(error)) {
+      if (
+        error.response?.status === 404 ||
+        (error.response?.data &&
+          typeof error.response.data === "object" &&
+          (error.response.data as any).message
+            ?.toLowerCase()
+            .includes("user not found"))
+      ) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      throw new Error("Đăng nhập thất bại");
     }
-    throw error;
+
+    throw new Error("Đăng nhập thất bại");
   }
 };
 
@@ -154,7 +173,7 @@ export const refreshTokens = async (): Promise<TokenData> => {
     storeTokens(response.data.data);
     return response.data.data;
   } catch (error) {
-    logout(); // Clear tokens on refresh failure
+    logout();
     if (axios.isAxiosError(error) && error.response?.data) {
       const responseData = error.response.data as ApiResponse;
       throw new Error(
@@ -169,27 +188,29 @@ export const logout = () => {
   Cookies.remove("token");
   Cookies.remove("refreshToken");
   localStorage.removeItem("userId");
+  localStorage.removeItem("userRole");
 };
 
-// Add axios response interceptor to handle token expiration
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // If error is 401 and we haven't tried to refresh the token yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isTokenExpired =
+      error.response?.headers?.["token-expired"] === "true";
+
+    if (
+      error.response?.status === 401 &&
+      isTokenExpired &&
+      !originalRequest._retry
+    ) {
       originalRequest._retry = true;
 
       try {
-        // Try to refresh the token
         const newTokens = await refreshTokens();
-        // Update the request authorization header
         originalRequest.headers.Authorization = `Bearer ${newTokens.token}`;
-        // Retry the original request
         return api(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, redirect to login (or dispatch logout action)
         logout();
         return Promise.reject(refreshError);
       }
