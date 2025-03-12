@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Drawer,
@@ -13,15 +13,12 @@ import {
   ListItemIcon,
   ListItemText,
   Avatar,
-  Badge,
   Menu,
   MenuItem,
-  Container,
   useTheme,
 } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
-import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
@@ -33,6 +30,7 @@ import Trailers from "../components/Trailers";
 import Customers from "../components/Customers";
 import { useNavigate } from "react-router-dom";
 import LogoutButton from "../components/Logout";
+import NotificationComponent from "../components/Notification";
 import logo1 from "../assets/logo1.png";
 
 const drawerWidth = 240;
@@ -42,6 +40,12 @@ const StaffMenu: React.FC = () => {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeTab, setActiveTab] = useState("orders");
+
+  const userId = localStorage.getItem("userId") || "staff-user";
+
+  useEffect(() => {
+    console.log("StaffMenu is using userId:", userId);
+  }, [userId]);
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -140,16 +144,8 @@ const StaffMenu: React.FC = () => {
           />
 
           <Box sx={{ display: "flex" }}>
-            <IconButton
-              size="large"
-              aria-label="show notifications"
-              color="inherit"
-              className="mr-2"
-            >
-              <Badge badgeContent={4} color="secondary">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
+            <NotificationComponent userId={userId} />
+
             <IconButton
               size="large"
               edge="end"

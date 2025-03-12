@@ -6,6 +6,7 @@ import ProfilePage from "./pages/ProfilePage";
 import "./index.css";
 import MTCSLogistics from "./pages/Home";
 import { AuthProvider } from "./contexts/AuthContext";
+import { useEffect } from "react";
 
 function App() {
   return (
