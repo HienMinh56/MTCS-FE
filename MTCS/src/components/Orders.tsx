@@ -20,7 +20,14 @@ import {
   Grid,
   Card,
   CardContent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  ImageList,
+  ImageListItem,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -59,11 +66,26 @@ function a11yProps(index: number) {
   };
 }
 
+interface Order {
+  id: string;
+  customer: string;
+  date: string;
+  status: string;
+}
+
 const OrderManagement = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  const [orders, setOrders] = useState<Order[]>([
+    { id: "001", customer: "Nguyen Van A", date: "2025-03-01", status: "pending" },
+    { id: "002", customer: "Tran Thi B", date: "2025-03-02", status: "processing" },
+    { id: "003", customer: "Le Van C", date: "2025-03-03", status: "completed" },
+    { id: "004", customer: "Pham Thi D", date: "2025-03-04", status: "cancelled" },
+  ]);
+  const [openDialog, setOpenDialog] = useState(false);
+  const navigate = useNavigate();
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -84,14 +106,37 @@ const OrderManagement = () => {
     setSearchTerm(event.target.value);
   };
 
+  const handleOpenDialog = () => {
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
+  const handleEdit = (orderId: string) => {
+    navigate(`/staff-menu/orders/trip/${orderId}`);
+  };
+
   // Order status options with Vietnamese labels
   const orderStatusOptions = [
-    { value: "all", label: "Tất cả", color: "default", count: 0 },
-    { value: "pending", label: "Chờ xử lý", color: "warning", count: 0 },
-    { value: "processing", label: "Đang xử lý", color: "info", count: 0 },
-    { value: "completed", label: "Hoàn thành", color: "success", count: 0 },
-    { value: "cancelled", label: "Đã hủy", color: "error", count: 0 },
+    { value: "all", label: "Tất cả", color: "default", count: orders.length },
+    { value: "pending", label: "Chờ xử lý", color: "warning", count: orders.filter(order => order.status === "pending").length },
+    { value: "processing", label: "Đang xử lý", color: "info", count: orders.filter(order => order.status === "processing").length },
+    { value: "completed", label: "Hoàn thành", color: "success", count: orders.filter(order => order.status === "completed").length },
+    { value: "cancelled", label: "Đã hủy", color: "error", count: orders.filter(order => order.status === "cancelled").length },
   ];
+
+  const filteredOrders = orders.filter(order =>
+    order.customer.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getFilteredOrdersByStatus = (status: string) => {
+    if (status === "all") {
+      return filteredOrders;
+    }
+    return filteredOrders.filter(order => order.status === status);
+  };
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -116,7 +161,7 @@ const OrderManagement = () => {
                     Tổng số đơn
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {orders.length}
                   </Typography>
                 </Box>
                 <Box
@@ -152,7 +197,7 @@ const OrderManagement = () => {
                     Chờ xử lý
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {orders.filter(order => order.status === "pending").length}
                   </Typography>
                 </Box>
                 <Box
@@ -187,7 +232,7 @@ const OrderManagement = () => {
                     Hoàn thành
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {orders.filter(order => order.status === "completed").length}
                   </Typography>
                 </Box>
                 <Box
@@ -222,7 +267,7 @@ const OrderManagement = () => {
                     Đã hủy
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {orders.filter(order => order.status === "cancelled").length}
                   </Typography>
                 </Box>
                 <Box
@@ -323,7 +368,7 @@ const OrderManagement = () => {
         </Box>
 
         <Box sx={{ flexGrow: 1, overflow: "auto" }}>
-          {orderStatusOptions.map((_, index) => (
+          {orderStatusOptions.map((status, index) => (
             <TabPanel key={index} value={tabValue} index={index}>
               <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
                 <Table
@@ -342,24 +387,43 @@ const OrderManagement = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={5} align="center">
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          py={3}
-                        >
-                          Không có dữ liệu
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
+                    {getFilteredOrdersByStatus(status.value).length > 0 ? (
+                      getFilteredOrdersByStatus(status.value).map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell>{order.id}</TableCell>
+                          <TableCell>{order.customer}</TableCell>
+                          <TableCell>{order.date}</TableCell>
+                          <TableCell>{order.status}</TableCell>
+                          <TableCell align="center">
+                            <IconButton size="small" onClick={handleOpenDialog}>
+                              <VisibilityIcon />
+                            </IconButton>
+                            <IconButton size="small" onClick={() => handleEdit(order.id)}>
+                              <EditIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center">
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            py={3}
+                          >
+                            Không có dữ liệu
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
               <TablePagination
                 rowsPerPageOptions={[5, 10, 25]}
                 component="div"
-                count={0}
+                count={getFilteredOrdersByStatus(status.value).length}
                 rowsPerPage={rowsPerPage}
                 page={page}
                 onPageChange={handleChangePage}
@@ -374,6 +438,35 @@ const OrderManagement = () => {
           ))}
         </Box>
       </Paper>
+
+      {/* Dialog for viewing images */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>Ảnh hợp đồng</DialogTitle>
+        <DialogContent dividers>
+          <ImageList cols={3} rowHeight={164}>
+            {["/path/to/image1.jpg", "/path/to/image2.jpg", "/path/to/image3.jpg"].map((item, index) => (
+              <ImageListItem key={index}>
+                <img src={item} alt={`Contract Image ${index + 1}`} loading="lazy" />
+              </ImageListItem>
+            ))}
+          </ImageList>
+          <Typography variant="h6" component="div" sx={{ mt: 2 }}>
+            Ảnh giấy tờ xuất cảng
+          </Typography>
+          <ImageList cols={3} rowHeight={164}>
+            {["/path/to/image4.jpg", "/path/to/image5.jpg", "/path/to/image6.jpg"].map((item, index) => (
+              <ImageListItem key={index}>
+                <img src={item} alt={`Export Document Image ${index + 1}`} loading="lazy" />
+              </ImageListItem>
+            ))}
+          </ImageList>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} color="primary">
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
