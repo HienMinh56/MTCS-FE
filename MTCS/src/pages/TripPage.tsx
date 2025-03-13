@@ -16,6 +16,7 @@ import {
   Menu,
   MenuItem,
   useTheme,
+  Grid,
 } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
@@ -23,24 +24,22 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import PersonIcon from "@mui/icons-material/Person";
-import OrderManagement from "../components/Orders";
-import Drivers from "../components/Drivers";
-import Tractors from "../components/Tractors";
-import Trailers from "../components/Trailers";
-import Customers from "../components/Customers";
 import { useNavigate, useLocation } from "react-router-dom";
 import LogoutButton from "../components/Logout";
 import NotificationComponent from "../components/Notification";
 import logo1 from "../assets/logo1.png";
+import TripManagement from "../components/Trips";
+import IncidentReportDialog from "../components/IncidentReportDialog";
 
 const drawerWidth = 240;
 
-const StaffMenu: React.FC = () => {
+const TripPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeTab, setActiveTab] = useState<string>("orders");
+  const [selectedIncidentReport, setSelectedIncidentReport] = useState<any>(null);
 
   const userId = localStorage.getItem("userId") || "staff-user";
 
@@ -71,6 +70,14 @@ const StaffMenu: React.FC = () => {
   const handleOpenProfile = () => {
     setAnchorEl(null);
     navigate("/profile");
+  };
+
+  const handleOpenIncidentReport = (incidentReport: any) => {
+    setSelectedIncidentReport(incidentReport);
+  };
+
+  const handleCloseIncidentReport = () => {
+    setSelectedIncidentReport(null);
   };
 
   const menuItems = [
@@ -106,22 +113,72 @@ const StaffMenu: React.FC = () => {
     },
   ];
 
-  const renderActiveComponent = () => {
-    switch (activeTab) {
-      case "orders":
-        return <OrderManagement />;
-      case "customers":
-        return <Customers />;
-      case "drivers":
-        return <Drivers />;
-      case "tractors":
-        return <Tractors />;
-      case "trailers":
-        return <Trailers />;
-      default:
-        return <OrderManagement />;
-    }
-  };
+  const trips = [
+    {
+      tripId: "T001",
+      orderId: "001",
+      driverId: "D001",
+      tractorId: "TR001",
+      trailerId: "TL001",
+      startTime: "2025-03-01 08:00:00",
+      endTime: "2025-03-01 12:00:00",
+      status: "completed",
+      distance: 120.5,
+      matchType: 1,
+      matchBy: "System",
+      matchTime: "2025-02-28 15:00:00",
+      deliveryReports: [],
+      driver: {},
+      fuelReports: [],
+      incidentReports: [
+        {
+          reportId: "IR001",
+          reportBy: "John Doe",
+          incidentType: "Accident",
+          description: "Minor accident with no injuries.",
+          incidentTime: "2025-03-01 09:00:00",
+          location: "Highway 1",
+          type: "Minor",
+          status: "Resolved",
+          resolutionDetails: "Resolved by on-site team.",
+          handleBy: "Jane Smith",
+          handleTime: "2025-03-01 10:00:00",
+          createdDate: "2025-03-01 08:30:00",
+          incidentImages: ["/path/to/incident_image1.jpg", "/path/to/incident_image2.jpg"],
+          invoiceImages: ["/path/to/invoice_image1.jpg", "/path/to/invoice_image2.jpg"],
+          transferImages: ["/path/to/transfer_image1.jpg", "/path/to/transfer_image2.jpg"],
+        },
+      ],
+      inspectionLogs: [],
+      order: {},
+      tractor: {},
+      trailer: {},
+      tripStatusHistories: [],
+    },
+    {
+      tripId: "T002",
+      orderId: "002",
+      driverId: "D002",
+      tractorId: "TR002",
+      trailerId: "TL002",
+      startTime: "2025-03-02 09:00:00",
+      status: "in-progress",
+      distance: 80.0,
+      matchType: 2,
+      matchBy: "Admin",
+      matchTime: "2025-03-01 10:00:00",
+      deliveryReports: [],
+      driver: {},
+      fuelReports: [],
+      incidentReports: [],
+      inspectionLogs: [],
+      order: {},
+      tractor: {},
+      trailer: {},
+      tripStatusHistories: [],
+    },
+    // Add more trips as needed
+  ];
 
   return (
     <Box sx={{ display: "flex" }} className="min-h-screen bg-gray-50">
@@ -291,10 +348,23 @@ const StaffMenu: React.FC = () => {
           backgroundColor: "#f8f9fa",
         }}
       >
-        {renderActiveComponent()}
+        <Grid container spacing={2}>
+          {trips.map((trip) => (
+            <Grid item xs={12} md={6} key={trip.tripId}>
+              <TripManagement trip={trip} onOpenIncidentReport={handleOpenIncidentReport} />
+            </Grid>
+          ))}
+        </Grid>
       </Box>
+
+      {selectedIncidentReport && (
+        <IncidentReportDialog
+          incidentReport={selectedIncidentReport}
+          onClose={handleCloseIncidentReport}
+        />
+      )}
     </Box>
   );
 };
 
-export default StaffMenu;
+export default TripPage;
