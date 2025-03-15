@@ -21,8 +21,8 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import BuildIcon from "@mui/icons-material/Build";
 import EventIcon from "@mui/icons-material/Event";
@@ -47,6 +47,51 @@ const Tractors = () => {
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
+
+  const handleEdit = (tractorId: string) => {
+    console.log(`Edit tractor with ID: ${tractorId}`);
+  };
+
+  const handleDelete = (tractorId: string) => {
+    console.log(`Delete tractor with ID: ${tractorId}`);
+  };
+
+  // Fake tractor data
+  const tractors = [
+    {
+      id: "T001",
+      licensePlate: "29A-12345",
+      manufacturer: "Toyota",
+      model: "Hilux",
+      registrationDate: "2025-01-01",
+      nextMaintenanceDate: "2025-06-01",
+      status: "active",
+    },
+    {
+      id: "T002",
+      licensePlate: "30B-67890",
+      manufacturer: "Ford",
+      model: "Ranger",
+      registrationDate: "2025-02-01",
+      nextMaintenanceDate: "2025-07-01",
+      status: "maintenance",
+    },
+    {
+      id: "T003",
+      licensePlate: "31C-54321",
+      manufacturer: "Isuzu",
+      model: "D-Max",
+      registrationDate: "2025-03-01",
+      nextMaintenanceDate: "2025-08-01",
+      status: "repair",
+    },
+    // Add more tractors as needed
+  ];
+
+  // Filtered tractors based on search term
+  const filteredTractors = tractors.filter((tractor) =>
+    tractor.licensePlate.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Tractor status options
   const statusOptions = [
@@ -97,7 +142,7 @@ const Tractors = () => {
                     Tổng số đầu kéo
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {tractors.length}
                   </Typography>
                 </Box>
                 <Box
@@ -132,7 +177,10 @@ const Tractors = () => {
                     Đang hoạt động
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {
+                      tractors.filter((tractor) => tractor.status === "active")
+                        .length
+                    }
                   </Typography>
                 </Box>
                 <Box
@@ -167,7 +215,10 @@ const Tractors = () => {
                     Cần đăng kiểm
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {
+                      tractors.filter((tractor) => tractor.status === "repair")
+                        .length
+                    }
                   </Typography>
                 </Box>
                 <Box
@@ -202,7 +253,11 @@ const Tractors = () => {
                     Cần bảo dưỡng
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {
+                      tractors.filter(
+                        (tractor) => tractor.status === "maintenance"
+                      ).length
+                    }
                   </Typography>
                 </Box>
                 <Box
@@ -290,20 +345,47 @@ const Tractors = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    <Typography variant="body2" color="text.secondary" py={3}>
-                      Không có dữ liệu
-                    </Typography>
-                  </TableCell>
-                </TableRow>
+                {filteredTractors.length > 0 ? (
+                  filteredTractors.map((tractor) => (
+                    <TableRow key={tractor.id}>
+                      <TableCell>{tractor.licensePlate}</TableCell>
+                      <TableCell>{tractor.manufacturer}</TableCell>
+                      <TableCell>{tractor.model}</TableCell>
+                      <TableCell>{tractor.registrationDate}</TableCell>
+                      <TableCell>{tractor.nextMaintenanceDate}</TableCell>
+                      <TableCell>{getStatusChip(tractor.status)}</TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEdit(tractor.id)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(tractor.id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      <Typography variant="body2" color="text.secondary" py={3}>
+                        Không có dữ liệu
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={0}
+            count={filteredTractors.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}

@@ -21,12 +21,11 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
-import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+import DeleteIcon from "@mui/icons-material/Delete";
+import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import BuildIcon from "@mui/icons-material/Build";
 import EventIcon from "@mui/icons-material/Event";
-import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 
 const Trailers = () => {
   const [page, setPage] = useState(0);
@@ -47,6 +46,51 @@ const Trailers = () => {
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
+
+  const handleEdit = (trailerId: string) => {
+    console.log(`Edit trailer with ID: ${trailerId}`);
+  };
+
+  const handleDelete = (trailerId: string) => {
+    console.log(`Delete trailer with ID: ${trailerId}`);
+  };
+
+  // Fake trailer data
+  const trailers = [
+    {
+      id: "TR001",
+      licensePlate: "29R-12345",
+      manufacturer: "Hyundai",
+      model: "Xcient",
+      registrationDate: "2025-01-01",
+      nextMaintenanceDate: "2025-06-01",
+      status: "active",
+    },
+    {
+      id: "TR002",
+      licensePlate: "30R-67890",
+      manufacturer: "Isuzu",
+      model: "Giga",
+      registrationDate: "2025-02-01",
+      nextMaintenanceDate: "2025-07-01",
+      status: "maintenance",
+    },
+    {
+      id: "TR003",
+      licensePlate: "31R-54321",
+      manufacturer: "Hino",
+      model: "500 Series",
+      registrationDate: "2025-03-01",
+      nextMaintenanceDate: "2025-08-01",
+      status: "repair",
+    },
+    // Add more trailers as needed
+  ];
+
+  // Filtered trailers based on search term
+  const filteredTrailers = trailers.filter((trailer) =>
+    trailer.licensePlate.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Trailer status options
   const statusOptions = [
@@ -97,7 +141,7 @@ const Trailers = () => {
                     Tổng số rơ moóc
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {trailers.length}
                   </Typography>
                 </Box>
                 <Box
@@ -132,7 +176,10 @@ const Trailers = () => {
                     Đang hoạt động
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {
+                      trailers.filter((trailer) => trailer.status === "active")
+                        .length
+                    }
                   </Typography>
                 </Box>
                 <Box
@@ -167,7 +214,10 @@ const Trailers = () => {
                     Cần đăng kiểm
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {
+                      trailers.filter((trailer) => trailer.status === "repair")
+                        .length
+                    }
                   </Typography>
                 </Box>
                 <Box
@@ -202,7 +252,11 @@ const Trailers = () => {
                     Cần bảo dưỡng
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {
+                      trailers.filter(
+                        (trailer) => trailer.status === "maintenance"
+                      ).length
+                    }
                   </Typography>
                 </Box>
                 <Box
@@ -290,20 +344,47 @@ const Trailers = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    <Typography variant="body2" color="text.secondary" py={3}>
-                      Không có dữ liệu
-                    </Typography>
-                  </TableCell>
-                </TableRow>
+                {filteredTrailers.length > 0 ? (
+                  filteredTrailers.map((trailer) => (
+                    <TableRow key={trailer.id}>
+                      <TableCell>{trailer.licensePlate}</TableCell>
+                      <TableCell>{trailer.manufacturer}</TableCell>
+                      <TableCell>{trailer.model}</TableCell>
+                      <TableCell>{trailer.registrationDate}</TableCell>
+                      <TableCell>{trailer.nextMaintenanceDate}</TableCell>
+                      <TableCell>{getStatusChip(trailer.status)}</TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEdit(trailer.id)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(trailer.id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      <Typography variant="body2" color="text.secondary" py={3}>
+                        Không có dữ liệu
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={0}
+            count={filteredTrailers.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
