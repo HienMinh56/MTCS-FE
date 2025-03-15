@@ -15,18 +15,22 @@ interface TripProps {
     matchType?: number;
     matchBy?: string;
     matchTime?: string;
-    deliveryReports?: string[];
-    fuelReports?: string[];
-    incidentReports?: string[];
-    inspectionLogs?: string[];
-    tripStatusHistories?: string[];
+    deliveryReports?: any[];
+    driver?: any;
+    fuelReports?: any[];
+    incidentReports?: any[];
+    inspectionLogs?: any[];
+    order?: any;
+    tractor?: any;
+    trailer?: any;
+    tripStatusHistories?: any[];
   };
-  onOpenIncidentReport: (incidentReport: string) => void;
+  onOpenIncidentReport: (incidentReport: any) => void;
 }
 
 const TripManagement: React.FC<TripProps> = ({ trip, onOpenIncidentReport }) => {
   return (
-    <Card sx={{ mb: 2 }}>
+    <Card sx={{ mb: 2, maxHeight: 400, overflow: "auto" }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
           Trip ID: {trip.tripId}

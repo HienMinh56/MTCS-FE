@@ -23,6 +23,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import PeopleIcon from "@mui/icons-material/People";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
@@ -47,6 +48,51 @@ const Customers = () => {
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
+
+  const handleEdit = (customerId: string) => {
+    console.log(`Edit customer with ID: ${customerId}`);
+  };
+
+  const handleDelete = (customerId: string) => {
+    console.log(`Delete customer with ID: ${customerId}`);
+  };
+
+  // Fake customer data
+  const customers = [
+    {
+      id: "C001",
+      name: "Nguyen Van A",
+      email: "nguyenvana@example.com",
+      phone: "0123456789",
+      createdDate: "2025-01-01",
+      orderCount: 5,
+      status: "active",
+    },
+    {
+      id: "C002",
+      name: "Tran Thi B",
+      email: "tranthib@example.com",
+      phone: "0987654321",
+      createdDate: "2025-02-01",
+      orderCount: 3,
+      status: "inactive",
+    },
+    {
+      id: "C003",
+      name: "Le Van C",
+      email: "levanc@example.com",
+      phone: "0912345678",
+      createdDate: "2025-03-01",
+      orderCount: 8,
+      status: "pending",
+    },
+    // Add more customers as needed
+  ];
+
+  // Filtered customers based on search term
+  const filteredCustomers = customers.filter((customer) =>
+    customer.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Customer status options
   const statusOptions = [
@@ -94,7 +140,7 @@ const Customers = () => {
                     Tổng số khách hàng
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {customers.length}
                   </Typography>
                 </Box>
                 <Box
@@ -253,20 +299,47 @@ const Customers = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    <Typography variant="body2" color="text.secondary" py={3}>
-                      Không có dữ liệu
-                    </Typography>
-                  </TableCell>
-                </TableRow>
+                {filteredCustomers.length > 0 ? (
+                  filteredCustomers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell>{customer.name}</TableCell>
+                      <TableCell>{customer.email}</TableCell>
+                      <TableCell>{customer.phone}</TableCell>
+                      <TableCell>{customer.createdDate}</TableCell>
+                      <TableCell>{customer.orderCount}</TableCell>
+                      <TableCell>{getStatusChip(customer.status)}</TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEdit(customer.id)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(customer.id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      <Typography variant="body2" color="text.secondary" py={3}>
+                        Không có dữ liệu
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={0}
+            count={filteredCustomers.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}

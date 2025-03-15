@@ -21,8 +21,8 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import PersonIcon from "@mui/icons-material/Person";
 import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
 
@@ -45,6 +45,45 @@ const Drivers = () => {
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
+
+  const handleEdit = (driverId: string) => {
+    console.log(`Edit driver with ID: ${driverId}`);
+  };
+
+  const handleDelete = (driverId: string) => {
+    console.log(`Delete driver with ID: ${driverId}`);
+  };
+
+  // Fake driver data
+  const drivers = [
+    {
+      id: "D001",
+      name: "Nguyen Van A",
+      birthDate: "1985-01-01",
+      phone: "0123456789",
+      status: "active",
+    },
+    {
+      id: "D002",
+      name: "Tran Thi B",
+      birthDate: "1990-02-01",
+      phone: "0987654321",
+      status: "inactive",
+    },
+    {
+      id: "D003",
+      name: "Le Van C",
+      birthDate: "1988-03-01",
+      phone: "0912345678",
+      status: "on_trip",
+    },
+    // Add more drivers as needed
+  ];
+
+  // Filtered drivers based on search term
+  const filteredDrivers = drivers.filter((driver) =>
+    driver.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Driver status options
   const driverStatusOptions = [
@@ -92,7 +131,7 @@ const Drivers = () => {
                     Tổng số tài xế
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {drivers.length}
                   </Typography>
                 </Box>
                 <Box
@@ -127,7 +166,10 @@ const Drivers = () => {
                     Tài xế đang hoạt động
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {
+                      drivers.filter((driver) => driver.status === "active")
+                        .length
+                    }
                   </Typography>
                 </Box>
                 <Box
@@ -162,7 +204,10 @@ const Drivers = () => {
                     Đang trong chuyến đi
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {
+                      drivers.filter((driver) => driver.status === "on_trip")
+                        .length
+                    }
                   </Typography>
                 </Box>
                 <Box
@@ -248,20 +293,45 @@ const Drivers = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    <Typography variant="body2" color="text.secondary" py={3}>
-                      Không có dữ liệu
-                    </Typography>
-                  </TableCell>
-                </TableRow>
+                {filteredDrivers.length > 0 ? (
+                  filteredDrivers.map((driver) => (
+                    <TableRow key={driver.id}>
+                      <TableCell>{driver.name}</TableCell>
+                      <TableCell>{driver.birthDate}</TableCell>
+                      <TableCell>{driver.phone}</TableCell>
+                      <TableCell>{getStatusChip(driver.status)}</TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEdit(driver.id)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(driver.id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">
+                      <Typography variant="body2" color="text.secondary" py={3}>
+                        Không có dữ liệu
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={0}
+            count={filteredDrivers.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}

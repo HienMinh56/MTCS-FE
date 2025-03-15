@@ -17,6 +17,7 @@ import {
   MenuItem,
   useTheme,
   Grid,
+  Button,
 } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
@@ -30,6 +31,7 @@ import NotificationComponent from "../components/Notification";
 import logo1 from "../assets/logo1.png";
 import TripManagement from "../components/Trips";
 import IncidentReportDialog from "../components/IncidentReportDialog";
+import AddTripDialog from "../components/AddTripDialog";
 
 const drawerWidth = 240;
 
@@ -40,80 +42,8 @@ const TripPage: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeTab, setActiveTab] = useState<string>("orders");
   const [selectedIncidentReport, setSelectedIncidentReport] = useState<any>(null);
-
-  const userId = localStorage.getItem("userId") || "staff-user";
-
-  useEffect(() => {
-    console.log("StaffMenu is using userId:", userId);
-  }, [userId]);
-
-  useEffect(() => {
-    const path = location.pathname.split("/").pop();
-    if (path) {
-      setActiveTab(path);
-    }
-  }, [location.pathname]);
-
-  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    navigate(`/staff-menu/${tab}`);
-  };
-
-  const handleOpenProfile = () => {
-    setAnchorEl(null);
-    navigate("/profile");
-  };
-
-  const handleOpenIncidentReport = (incidentReport: any) => {
-    setSelectedIncidentReport(incidentReport);
-  };
-
-  const handleCloseIncidentReport = () => {
-    setSelectedIncidentReport(null);
-  };
-
-  const menuItems = [
-    {
-      id: "orders",
-      text: "Đơn hàng",
-      icon: <ShoppingCartIcon />,
-      selected: activeTab === "orders",
-    },
-    {
-      id: "customers",
-      text: "Khách hàng",
-      icon: <PersonIcon />,
-      selected: activeTab === "customers",
-    },
-    {
-      id: "drivers",
-      text: "Tài xế",
-      icon: <PeopleAltIcon />,
-      selected: activeTab === "drivers",
-    },
-    {
-      id: "tractors",
-      text: "Đầu kéo",
-      icon: <LocalShippingIcon />,
-      selected: activeTab === "tractors",
-    },
-    {
-      id: "trailers",
-      text: "Rơ-moóc",
-      icon: <DirectionsCarFilledIcon />,
-      selected: activeTab === "trailers",
-    },
-  ];
-
-  const trips = [
+  const [addTripDialogOpen, setAddTripDialogOpen] = useState(false);
+  const [trips, setTrips] = useState([
     {
       tripId: "T001",
       orderId: "001",
@@ -178,6 +108,90 @@ const TripPage: React.FC = () => {
       tripStatusHistories: [],
     },
     // Add more trips as needed
+  ]);
+
+  const userId = localStorage.getItem("userId") || "staff-user";
+
+  useEffect(() => {
+    console.log("StaffMenu is using userId:", userId);
+  }, [userId]);
+
+  useEffect(() => {
+    const path = location.pathname.split("/").pop();
+    if (path) {
+      setActiveTab(path);
+    }
+  }, [location.pathname]);
+
+  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    navigate(`/staff-menu/${tab}`);
+  };
+
+  const handleOpenProfile = () => {
+    setAnchorEl(null);
+    navigate("/profile");
+  };
+
+  const handleOpenIncidentReport = (incidentReport: any) => {
+    setSelectedIncidentReport(incidentReport);
+  };
+
+  const handleCloseIncidentReport = () => {
+    setSelectedIncidentReport(null);
+  };
+
+  const handleOpenAddTripDialog = () => {
+    setAddTripDialogOpen(true);
+  };
+
+  const handleCloseAddTripDialog = () => {
+    setAddTripDialogOpen(false);
+  };
+
+  const handleAddTrip = (newTrip: any) => {
+    setTrips((prevTrips) => [...prevTrips, newTrip]);
+  };
+
+  const menuItems = [
+    {
+      id: "orders",
+      text: "Đơn hàng",
+      icon: <ShoppingCartIcon />,
+      selected: activeTab === "orders",
+    },
+    {
+      id: "customers",
+      text: "Khách hàng",
+      icon: <PersonIcon />,
+      selected: activeTab === "customers",
+    },
+    {
+      id: "drivers",
+      text: "Tài xế",
+      icon: <PeopleAltIcon />,
+      selected: activeTab === "drivers",
+    },
+    {
+      id: "tractors",
+      text: "Đầu kéo",
+      icon: <LocalShippingIcon />,
+      selected: activeTab === "tractors",
+    },
+    {
+      id: "trailers",
+      text: "Rơ-moóc",
+      icon: <DirectionsCarFilledIcon />,
+      selected: activeTab === "trailers",
+    },
   ];
 
   return (
@@ -348,6 +362,11 @@ const TripPage: React.FC = () => {
           backgroundColor: "#f8f9fa",
         }}
       >
+        <Box sx={{ p: 2, display: "flex", justifyContent: "flex-end" }}>
+          <Button variant="contained" color="primary" onClick={handleOpenAddTripDialog}>
+            Add Trip
+          </Button>
+        </Box>
         <Grid container spacing={2}>
           {trips.map((trip) => (
             <Grid item xs={12} md={6} key={trip.tripId}>
@@ -363,6 +382,12 @@ const TripPage: React.FC = () => {
           onClose={handleCloseIncidentReport}
         />
       )}
+
+      <AddTripDialog
+        open={addTripDialogOpen}
+        onClose={handleCloseAddTripDialog}
+        onAddTrip={handleAddTrip}
+      />
     </Box>
   );
 };
