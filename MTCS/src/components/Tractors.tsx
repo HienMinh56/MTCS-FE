@@ -64,7 +64,9 @@ const Tractors = () => {
       manufacturer: "Toyota",
       model: "Hilux",
       registrationDate: "2025-01-01",
-      nextMaintenanceDate: "2025-06-01",
+      nextRegistrationDate: "2025-04-15",
+      MaintenanceDate: "2025-01-01",
+      nextMaintenanceDate: "2025-06-01",      
       status: "active",
     },
     {
@@ -73,6 +75,8 @@ const Tractors = () => {
       manufacturer: "Ford",
       model: "Ranger",
       registrationDate: "2025-02-01",
+      nextRegistrationDate: "2025-05-20",
+      MaintenanceDate: "2025-01-01",
       nextMaintenanceDate: "2025-07-01",
       status: "maintenance",
     },
@@ -82,6 +86,8 @@ const Tractors = () => {
       manufacturer: "Isuzu",
       model: "D-Max",
       registrationDate: "2025-03-01",
+      nextRegistrationDate: "2025-06-10",
+      MaintenanceDate: "2025-01-01",
       nextMaintenanceDate: "2025-08-01",
       status: "repair",
     },
@@ -339,6 +345,8 @@ const Tractors = () => {
                   <TableCell>Hãng sản xuất</TableCell>
                   <TableCell>Mẫu xe</TableCell>
                   <TableCell>Đăng kiểm</TableCell>
+                  <TableCell>Đăng kiểm tiếp theo</TableCell>
+                  <TableCell>Bảo dưỡng</TableCell>
                   <TableCell>Bảo dưỡng tiếp theo</TableCell>
                   <TableCell>Trạng thái</TableCell>
                   <TableCell align="center">Hành động</TableCell>
@@ -352,7 +360,9 @@ const Tractors = () => {
                       <TableCell>{tractor.manufacturer}</TableCell>
                       <TableCell>{tractor.model}</TableCell>
                       <TableCell>{tractor.registrationDate}</TableCell>
+                      <TableCell>{tractor.nextRegistrationDate}</TableCell>
                       <TableCell>{tractor.nextMaintenanceDate}</TableCell>
+                      <TableCell>{tractor.MaintenanceDate}</TableCell>
                       <TableCell>{getStatusChip(tractor.status)}</TableCell>
                       <TableCell align="center">
                         <IconButton

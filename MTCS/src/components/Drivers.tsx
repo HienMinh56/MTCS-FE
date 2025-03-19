@@ -62,6 +62,7 @@ const Drivers = () => {
       birthDate: "1985-01-01",
       phone: "0123456789",
       status: "active",
+      totalKm: 1250,
     },
     {
       id: "D002",
@@ -69,6 +70,7 @@ const Drivers = () => {
       birthDate: "1990-02-01",
       phone: "0987654321",
       status: "inactive",
+      totalKm: 980,
     },
     {
       id: "D003",
@@ -76,6 +78,7 @@ const Drivers = () => {
       birthDate: "1988-03-01",
       phone: "0912345678",
       status: "on_trip",
+      totalKm: 2340,
     },
     // Add more drivers as needed
   ];
@@ -104,6 +107,12 @@ const Drivers = () => {
       default:
         return <Chip label="Không xác định" size="small" />;
     }
+  };
+
+  // Format birth date to display as DD/MM/YYYY
+  const formatBirthDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
   };
 
   return (
@@ -288,6 +297,7 @@ const Drivers = () => {
                   <TableCell>Họ tên</TableCell>
                   <TableCell>Ngày sinh</TableCell>
                   <TableCell>Số điện thoại</TableCell>
+                  <TableCell>Tổng số KM đã chạy</TableCell>
                   <TableCell>Trạng thái</TableCell>
                   <TableCell align="center">Hành động</TableCell>
                 </TableRow>
@@ -297,8 +307,9 @@ const Drivers = () => {
                   filteredDrivers.map((driver) => (
                     <TableRow key={driver.id}>
                       <TableCell>{driver.name}</TableCell>
-                      <TableCell>{driver.birthDate}</TableCell>
+                      <TableCell>{formatBirthDate(driver.birthDate)}</TableCell>
                       <TableCell>{driver.phone}</TableCell>
+                      <TableCell>{driver.totalKm.toLocaleString()} KM</TableCell>
                       <TableCell>{getStatusChip(driver.status)}</TableCell>
                       <TableCell align="center">
                         <IconButton
@@ -318,7 +329,7 @@ const Drivers = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">
+                    <TableCell colSpan={6} align="center">
                       <Typography variant="body2" color="text.secondary" py={3}>
                         Không có dữ liệu
                       </Typography>
