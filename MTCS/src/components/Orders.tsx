@@ -36,6 +36,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
+import OrderDetailDialog from "./OrderDetails";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -71,6 +72,16 @@ interface Order {
   customer: string;
   date: string;
   status: string;
+  driverName?: string;
+  trailerLicense?: string;
+  tractorLicense?: string;
+  containerCode?: string;
+  containerType?: string;
+  weight?: string;
+  images?: {
+    contract: string[];
+    exportDocs: string[];
+  };
 }
 
 const OrderManagement = () => {
@@ -79,12 +90,73 @@ const OrderManagement = () => {
   const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [orders, setOrders] = useState<Order[]>([
-    { id: "001", customer: "Nguyen Van A", date: "2025-03-01", status: "pending" },
-    { id: "002", customer: "Tran Thi B", date: "2025-03-02", status: "processing" },
-    { id: "003", customer: "Le Van C", date: "2025-03-03", status: "completed" },
-    { id: "004", customer: "Pham Thi D", date: "2025-03-04", status: "cancelled" },
+    {
+      id: "001",
+      customer: "Nguyen Van A",
+      date: "2025-03-01",
+      status: "pending",
+      driverName: "Tran Van X",
+      trailerLicense: "51R-12345",
+      tractorLicense: "51C-54321",
+      containerCode: "MSCU1234567",
+      containerType: "40HC",
+      weight: "28.5 tấn",
+      images: {
+        contract: ["/path/to/image1.jpg", "/path/to/image2.jpg"],
+        exportDocs: ["/path/to/image4.jpg", "/path/to/image5.jpg"],
+      },
+    },
+    {
+      id: "002",
+      customer: "Tran Thi B",
+      date: "2025-03-02",
+      status: "processing",
+      driverName: "Pham Van Y",
+      trailerLicense: "50R-67890",
+      tractorLicense: "50C-09876",
+      containerCode: "CMAU7654321",
+      containerType: "20GP",
+      weight: "18.2 tấn",
+      images: {
+        contract: ["/path/to/image1.jpg"],
+        exportDocs: ["/path/to/image4.jpg", "/path/to/image6.jpg"],
+      },
+    },
+    {
+      id: "003",
+      customer: "Le Van C",
+      date: "2025-03-03",
+      status: "completed",
+      driverName: "Hoang Van Z",
+      trailerLicense: "59R-13579",
+      tractorLicense: "59C-97531",
+      containerCode: "OOLU9876543",
+      containerType: "40GP",
+      weight: "25.7 tấn",
+      images: {
+        contract: ["/path/to/image2.jpg", "/path/to/image3.jpg"],
+        exportDocs: ["/path/to/image5.jpg"],
+      },
+    },
+    {
+      id: "004",
+      customer: "Pham Thi D",
+      date: "2025-03-04",
+      status: "cancelled",
+      driverName: "Nguyen Van W",
+      trailerLicense: "61R-24680",
+      tractorLicense: "61C-08642",
+      containerCode: "MAEU1122334",
+      containerType: "20RF",
+      weight: "15.8 tấn",
+      images: {
+        contract: ["/path/to/image3.jpg"],
+        exportDocs: ["/path/to/image6.jpg"],
+      },
+    },
   ]);
   const [openDialog, setOpenDialog] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const navigate = useNavigate();
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -106,12 +178,14 @@ const OrderManagement = () => {
     setSearchTerm(event.target.value);
   };
 
-  const handleOpenDialog = () => {
+  const handleOpenDialog = (order: Order) => {
+    setSelectedOrder(order);
     setOpenDialog(true);
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
+    setSelectedOrder(null);
   };
 
   const handleEdit = (orderId: string) => {
@@ -121,13 +195,33 @@ const OrderManagement = () => {
   // Order status options with Vietnamese labels
   const orderStatusOptions = [
     { value: "all", label: "Tất cả", color: "default", count: orders.length },
-    { value: "pending", label: "Chờ xử lý", color: "warning", count: orders.filter(order => order.status === "pending").length },
-    { value: "processing", label: "Đang xử lý", color: "info", count: orders.filter(order => order.status === "processing").length },
-    { value: "completed", label: "Hoàn thành", color: "success", count: orders.filter(order => order.status === "completed").length },
-    { value: "cancelled", label: "Đã hủy", color: "error", count: orders.filter(order => order.status === "cancelled").length },
+    {
+      value: "pending",
+      label: "Chờ xử lý",
+      color: "warning",
+      count: orders.filter((order) => order.status === "pending").length,
+    },
+    {
+      value: "processing",
+      label: "Đang xử lý",
+      color: "info",
+      count: orders.filter((order) => order.status === "processing").length,
+    },
+    {
+      value: "completed",
+      label: "Hoàn thành",
+      color: "success",
+      count: orders.filter((order) => order.status === "completed").length,
+    },
+    {
+      value: "cancelled",
+      label: "Đã hủy",
+      color: "error",
+      count: orders.filter((order) => order.status === "cancelled").length,
+    },
   ];
 
-  const filteredOrders = orders.filter(order =>
+  const filteredOrders = orders.filter((order) =>
     order.customer.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -135,7 +229,7 @@ const OrderManagement = () => {
     if (status === "all") {
       return filteredOrders;
     }
-    return filteredOrders.filter(order => order.status === status);
+    return filteredOrders.filter((order) => order.status === status);
   };
 
   return (
@@ -197,7 +291,10 @@ const OrderManagement = () => {
                     Chờ xử lý
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {orders.filter(order => order.status === "pending").length}
+                    {
+                      orders.filter((order) => order.status === "pending")
+                        .length
+                    }
                   </Typography>
                 </Box>
                 <Box
@@ -232,7 +329,10 @@ const OrderManagement = () => {
                     Hoàn thành
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {orders.filter(order => order.status === "completed").length}
+                    {
+                      orders.filter((order) => order.status === "completed")
+                        .length
+                    }
                   </Typography>
                 </Box>
                 <Box
@@ -267,7 +367,10 @@ const OrderManagement = () => {
                     Đã hủy
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {orders.filter(order => order.status === "cancelled").length}
+                    {
+                      orders.filter((order) => order.status === "cancelled")
+                        .length
+                    }
                   </Typography>
                 </Box>
                 <Box
@@ -389,16 +492,55 @@ const OrderManagement = () => {
                   <TableBody>
                     {getFilteredOrdersByStatus(status.value).length > 0 ? (
                       getFilteredOrdersByStatus(status.value).map((order) => (
-                        <TableRow key={order.id}>
+                        <TableRow
+                          key={order.id}
+                          hover
+                          onClick={() => handleOpenDialog(order)}
+                          sx={{ cursor: "pointer" }}
+                        >
                           <TableCell>{order.id}</TableCell>
                           <TableCell>{order.customer}</TableCell>
                           <TableCell>{order.date}</TableCell>
-                          <TableCell>{order.status}</TableCell>
+                          <TableCell>
+                            <Chip
+                              size="small"
+                              label={
+                                order.status === "pending"
+                                  ? "Chờ xử lý"
+                                  : order.status === "processing"
+                                  ? "Đang xử lý"
+                                  : order.status === "completed"
+                                  ? "Hoàn thành"
+                                  : "Đã hủy"
+                              }
+                              color={
+                                order.status === "pending"
+                                  ? "warning"
+                                  : order.status === "processing"
+                                  ? "info"
+                                  : order.status === "completed"
+                                  ? "success"
+                                  : "error"
+                              }
+                            />
+                          </TableCell>
                           <TableCell align="center">
-                            <IconButton size="small" onClick={handleOpenDialog}>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenDialog(order);
+                              }}
+                            >
                               <VisibilityIcon />
                             </IconButton>
-                            <IconButton size="small" onClick={() => handleEdit(order.id)}>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(order.id);
+                              }}
+                            >
                               <EditIcon />
                             </IconButton>
                           </TableCell>
@@ -439,34 +581,13 @@ const OrderManagement = () => {
         </Box>
       </Paper>
 
-      {/* Dialog for viewing images */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>Ảnh hợp đồng</DialogTitle>
-        <DialogContent dividers>
-          <ImageList cols={3} rowHeight={164}>
-            {["/path/to/image1.jpg", "/path/to/image2.jpg", "/path/to/image3.jpg"].map((item, index) => (
-              <ImageListItem key={index}>
-                <img src={item} alt={`Contract Image ${index + 1}`} loading="lazy" />
-              </ImageListItem>
-            ))}
-          </ImageList>
-          <Typography variant="h6" component="div" sx={{ mt: 2 }}>
-            Ảnh giấy tờ xuất cảng
-          </Typography>
-          <ImageList cols={3} rowHeight={164}>
-            {["/path/to/image4.jpg", "/path/to/image5.jpg", "/path/to/image6.jpg"].map((item, index) => (
-              <ImageListItem key={index}>
-                <img src={item} alt={`Export Document Image ${index + 1}`} loading="lazy" />
-              </ImageListItem>
-            ))}
-          </ImageList>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
-            Đóng
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Order Detail Dialog Component */}
+      <OrderDetailDialog
+        open={openDialog}
+        order={selectedOrder}
+        onClose={handleCloseDialog}
+        onEdit={handleEdit}
+      />
     </Box>
   );
 };

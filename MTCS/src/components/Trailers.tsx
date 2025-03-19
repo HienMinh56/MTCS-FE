@@ -63,6 +63,8 @@ const Trailers = () => {
       manufacturer: "Hyundai",
       model: "Xcient",
       registrationDate: "2025-01-01",
+      nextRegistrationDate: "2025-04-15",
+      MaintenanceDate: "2025-01-01",
       nextMaintenanceDate: "2025-06-01",
       status: "active",
     },
@@ -72,6 +74,8 @@ const Trailers = () => {
       manufacturer: "Isuzu",
       model: "Giga",
       registrationDate: "2025-02-01",
+      nextRegistrationDate: "2025-05-20",
+      MaintenanceDate: "2025-01-01",
       nextMaintenanceDate: "2025-07-01",
       status: "maintenance",
     },
@@ -81,6 +85,8 @@ const Trailers = () => {
       manufacturer: "Hino",
       model: "500 Series",
       registrationDate: "2025-03-01",
+      nextRegistrationDate: "2025-06-10",
+      MaintenanceDate: "2025-01-01",
       nextMaintenanceDate: "2025-08-01",
       status: "repair",
     },
@@ -338,6 +344,8 @@ const Trailers = () => {
                   <TableCell>Hãng sản xuất</TableCell>
                   <TableCell>Mẫu</TableCell>
                   <TableCell>Đăng kiểm</TableCell>
+                  <TableCell>Đăng kiểm tiếp theo</TableCell>
+                  <TableCell>Bảo dưỡng</TableCell>
                   <TableCell>Bảo dưỡng tiếp theo</TableCell>
                   <TableCell>Trạng thái</TableCell>
                   <TableCell align="center">Hành động</TableCell>
@@ -351,6 +359,8 @@ const Trailers = () => {
                       <TableCell>{trailer.manufacturer}</TableCell>
                       <TableCell>{trailer.model}</TableCell>
                       <TableCell>{trailer.registrationDate}</TableCell>
+                      <TableCell>{trailer.nextRegistrationDate}</TableCell>
+                      <TableCell>{trailer.MaintenanceDate}</TableCell>
                       <TableCell>{trailer.nextMaintenanceDate}</TableCell>
                       <TableCell>{getStatusChip(trailer.status)}</TableCell>
                       <TableCell align="center">
@@ -371,7 +381,7 @@ const Trailers = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} align="center">
+                    <TableCell colSpan={9} align="center">
                       <Typography variant="body2" color="text.secondary" py={3}>
                         Không có dữ liệu
                       </Typography>

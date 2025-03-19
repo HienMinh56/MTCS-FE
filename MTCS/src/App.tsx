@@ -3,7 +3,6 @@ import { theme } from "./theme/theme";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import StaffMenu from "./pages/StaffMenu";
 import ProfilePage from "./pages/ProfilePage";
-import TripPage from "./pages/TripPage.tsx";
 import "./index.css";
 import MTCSLogistics from "./pages/Home";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -17,7 +16,8 @@ function App() {
           <Routes>
             <Route path="/" element={<MTCSLogistics />} />
             <Route path="/staff-menu/*" element={<StaffMenu />} />
-            <Route path="/staff-menu/orders/trip/:orderId" element={<TripPage />} />
+            {/* <Route path="/staff-menu/orders/:orderId/trip/:tripId" element={<TripPage />} /> */}
+            
             <Route path="/profile" element={<ProfilePage />} />
           </Routes>
         </BrowserRouter>
