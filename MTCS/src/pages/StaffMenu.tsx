@@ -21,9 +21,11 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import WarningIcon from '@mui/icons-material/Warning';
 import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import PersonIcon from "@mui/icons-material/Person";
 import OrderManagement from "../components/Orders";
+import IncidentManagement from "../components/Incidents";
 import Drivers from "../components/Drivers";
 import Tractors from "../components/Tractors";
 import Trailers from "../components/Trailers";
@@ -81,6 +83,12 @@ const StaffMenu: React.FC = () => {
       selected: activeTab === "orders",
     },
     {
+      id: "incidents",
+      text: "Sự cố",
+      icon: <WarningIcon />,
+      selected: activeTab === "incidents",
+    },
+    {
       id: "customers",
       text: "Khách hàng",
       icon: <PersonIcon />,
@@ -110,6 +118,8 @@ const StaffMenu: React.FC = () => {
     switch (activeTab) {
       case "orders":
         return <OrderManagement />;
+      case "incidents":
+        return <IncidentManagement />;
       case "customers":
         return <Customers />;
       case "drivers":
