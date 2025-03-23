@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -26,6 +26,7 @@ import {
   DialogActions,
   ImageList,
   ImageListItem,
+  CircularProgress,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
@@ -36,6 +37,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
+import { getAllIncidentReports, getIncidentReportById, IncidentReports } from "../services/IncidentReportApi";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -66,17 +68,9 @@ function a11yProps(index: number) {
   };
 }
 
-interface Incident {
-  reportId: string;
-  tripId: string;
-  reportedBy: string;
-  incidentType: string;
-  incidentTime: string;
-  description: string;
-  location: string;
-  type: number;
-  status: string;
-  createdDate: string;
+// Update the interface to match the API data structure
+interface Incident extends IncidentReports {
+  // Any additional fields not provided by the API can be added here
   images?: {
     incident: string[];
     invoice: string[];
@@ -85,13 +79,17 @@ interface Incident {
 }
 
 // Incident detail dialog component
-const IncidentDetailDialog = ({ open, incident, onClose, onEdit }: { 
+const IncidentDetailDialog = ({ open, incident, onClose }: { 
   open: boolean; 
   incident: Incident | null; 
   onClose: () => void;
-  onEdit: (id: string) => void;
 }) => {
   if (!incident) return null;
+  
+  // Group files by type
+  const incidentFiles = incident.incidentReportsFiles?.$values?.filter(file => file.type === 1) || [];
+  const invoiceFiles = incident.incidentReportsFiles?.$values?.filter(file => file.type === 2) || [];
+  const transferFiles = incident.incidentReportsFiles?.$values?.filter(file => file.type === 3) || [];
   
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -112,7 +110,7 @@ const IncidentDetailDialog = ({ open, incident, onClose, onEdit }: {
             <Typography variant="body1" gutterBottom>{incident.incidentType}</Typography>
             
             <Typography variant="subtitle2">Thời gian xảy ra</Typography>
-            <Typography variant="body1" gutterBottom>{incident.incidentTime}</Typography>
+            <Typography variant="body1" gutterBottom>{new Date(incident.incidentTime).toLocaleString()}</Typography>
           </Grid>
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2">Vị trí</Typography>
@@ -124,48 +122,64 @@ const IncidentDetailDialog = ({ open, incident, onClose, onEdit }: {
                 size="small" 
                 label={
                   incident.status === "Handling" ? "Đang xử lý" :
-                  incident.status === "Completed" ? "Đã xử lý" : "Đã hủy"
+                  incident.status === "Completed" ? "Đã xử lý" : 
+                  incident.status === "Pending" ? "Chờ xử lý" : "Đã hủy"
                 } 
                 color={
                   incident.status === "Handling" ? "info" :
-                  incident.status === "Completed" ? "success" : "error"
+                  incident.status === "Completed" ? "success" : 
+                  incident.status === "Pending" ? "warning" : "error"
                 } 
               />
             </Typography>
             
             <Typography variant="subtitle2">Ngày tạo</Typography>
-            <Typography variant="body1" gutterBottom>{incident.createdDate}</Typography>
+            <Typography variant="body1" gutterBottom>{new Date(incident.createdDate).toLocaleString()}</Typography>
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle2">Mô tả</Typography>
             <Typography variant="body1" paragraph>{incident.description}</Typography>
           </Grid>
           
-          {incident.images && (
+          {incidentFiles.length > 0 && (
             <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Hình ảnh sự cố</Typography>
+              <Typography variant="subtitle2" gutterBottom>Ảnh sự cố</Typography>
               <ImageList cols={3} rowHeight={160} gap={8}>
-                {incident.images.incident.map((img, index) => (
+                {incidentFiles.map((file, index) => (
                   <ImageListItem key={index}>
-                    <img src={img} alt={`Incident ${index}`} loading="lazy" />
+                    <img src={file.fileUrl} 
+                         alt={`Ảnh sự cố ${index + 1}`} 
+                         loading="lazy" />
                   </ImageListItem>
                 ))}
               </ImageList>
-              
-              <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>Hình ảnh hóa đơn</Typography>
+            </Grid>
+          )}
+          
+          {invoiceFiles.length > 0 && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>Ảnh hóa đơn</Typography>
               <ImageList cols={3} rowHeight={160} gap={8}>
-                {incident.images.invoice.map((img, index) => (
+                {invoiceFiles.map((file, index) => (
                   <ImageListItem key={index}>
-                    <img src={img} alt={`Invoice ${index}`} loading="lazy" />
+                    <img src={file.fileUrl} 
+                         alt={`Ảnh hóa đơn ${index + 1}`} 
+                         loading="lazy" />
                   </ImageListItem>
                 ))}
               </ImageList>
-              
-              <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>Giấy tờ đổi trả</Typography>
+            </Grid>
+          )}
+          
+          {transferFiles.length > 0 && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>Ảnh chuyển nhượng</Typography>
               <ImageList cols={3} rowHeight={160} gap={8}>
-                {incident.images.exchangePaper.map((img, index) => (
+                {transferFiles.map((file, index) => (
                   <ImageListItem key={index}>
-                    <img src={img} alt={`Exchange paper ${index}`} loading="lazy" />
+                    <img src={file.fileUrl} 
+                         alt={`Ảnh chuyển nhượng ${index + 1}`} 
+                         loading="lazy" />
                   </ImageListItem>
                 ))}
               </ImageList>
@@ -175,16 +189,6 @@ const IncidentDetailDialog = ({ open, incident, onClose, onEdit }: {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Đóng</Button>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={() => {
-            onEdit(incident.reportId);
-            onClose();
-          }}
-        >
-          Chỉnh sửa
-        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -195,79 +199,42 @@ const IncidentManagement = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [incidents, setIncidents] = useState<Incident[]>([
-    {
-      reportId: "INC000001",
-      tripId: "TRIP0001",
-      reportedBy: "Đoàn Lê Hiển Minh",
-      incidentType: "Bể Bánh",
-      incidentTime: "2025-03-01",
-      description: "Bể bánh xe phía trước",
-      status: "Handling",
-      location: "Quảng trường Ba Đình",
-      type: 1,
-      createdDate: "2025-03-01",
-      images: {
-        incident: ["/path/to/image1.jpg", "/path/to/image2.jpg"],
-        invoice: ["/path/to/image4.jpg", "/path/to/image5.jpg"],
-        exchangePaper: ["/path/to/image6.jpg"],
-      },
-    },
-    {
-      reportId: "INC000002",
-      tripId: "TRIP0001",
-      reportedBy: "Đoàn Lê Hiển Minh",
-      incidentType: "Rơi Bánh",
-      incidentTime: "2025-03-01",
-      description: "Bể bánh xe phía trước",
-      status: "Handling",
-      location: "Quảng trường Ba Đình",
-      type: 1,
-      createdDate: "2025-03-01",
-      images: {
-        incident: ["/path/to/image1.jpg", "/path/to/image2.jpg"],
-        invoice: ["/path/to/image4.jpg", "/path/to/image5.jpg"],
-        exchangePaper: ["/path/to/image6.jpg"],
-      },
-    },
-    {
-      reportId: "INC000003",
-      tripId: "TRIP0002",
-      reportedBy: "Nguyễn Văn A",
-      incidentType: "Hỏng động cơ",
-      incidentTime: "2025-03-03",
-      description: "Động cơ phát ra tiếng kêu lạ",
-      status: "Resolved",
-      location: "Đường Nguyễn Huệ",
-      type: 2,
-      createdDate: "2025-03-03",
-      images: {
-        incident: ["/path/to/image7.jpg"],
-        invoice: ["/path/to/image8.jpg"],
-        exchangePaper: [],
-      },
-    },
-    {
-      reportId: "INC000004",
-      tripId: "TRIP0003",
-      reportedBy: "Trần Thị B",
-      incidentType: "Va chạm nhẹ",
-      incidentTime: "2025-03-05",
-      description: "Va chạm với xe máy tại ngã tư",
-      status: "Resolved",
-      location: "Ngã tư Hàng Xanh",
-      type: 3,
-      createdDate: "2025-03-05",
-      images: {
-        incident: ["/path/to/image9.jpg", "/path/to/image10.jpg"],
-        invoice: [],
-        exchangePaper: ["/path/to/image11.jpg"],
-      },
-    },
-  ]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const navigate = useNavigate();
+
+  // Fetch incident reports from API
+  useEffect(() => {
+    const fetchIncidentReports = async () => {
+      setLoading(true);
+      try {
+        const data = await getAllIncidentReports();
+        setIncidents(data);
+      } catch (error) {
+        console.error("Error fetching incident reports:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchIncidentReports();
+  }, []);
+
+  // Handle view incident details with API data
+  const handleViewIncident = async (reportId: string) => {
+    try {
+      setLoading(true);
+      const incidentData = await getIncidentReportById(reportId);
+      setSelectedIncident(incidentData);
+      setOpenDialog(true);
+    } catch (error) {
+      console.error(`Error fetching incident ${reportId}:`, error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -289,17 +256,12 @@ const IncidentManagement = () => {
   };
 
   const handleOpenDialog = (incident: Incident) => {
-    setSelectedIncident(incident);
-    setOpenDialog(true);
+    handleViewIncident(incident.reportId);
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedIncident(null);
-  };
-
-  const handleEdit = (reportId: string) => {
-    navigate(`/staff-menu/incidents/${reportId}`);
   };
 
   // Incident status options with Vietnamese labels
@@ -312,7 +274,7 @@ const IncidentManagement = () => {
       count: incidents.filter((incident) => incident.status === "Handling").length,
     },
     {
-      value: "ResolvedResolved",
+      value: "Completed",
       label: "Đã xử lý",
       color: "success",
       count: incidents.filter((incident) => incident.status === "Completed").length,
@@ -336,7 +298,7 @@ const IncidentManagement = () => {
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={6} sm={6} md={3}>
+        <Grid item xs={12} sm={4} md={4}>
           <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -371,7 +333,7 @@ const IncidentManagement = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={6} md={3}>
+        <Grid item xs={12} sm={4} md={4}>
           <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -387,11 +349,11 @@ const IncidentManagement = () => {
                     variant="body2"
                     gutterBottom
                   >
-                    Chờ xử lý
+                    Đang xử lý
                   </Typography>
                   <Typography variant="h5" component="div">
                     {
-                      incidents.filter((incident) => incident.status === "Pending")
+                      incidents.filter((incident) => incident.status === "Handling")
                         .length
                     }
                   </Typography>
@@ -409,7 +371,7 @@ const IncidentManagement = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={6} md={3}>
+        <Grid item xs={12} sm={4} md={4}>
           <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -442,44 +404,6 @@ const IncidentManagement = () => {
                   }}
                 >
                   <CheckCircleIcon color="success" />
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={6} md={3}>
-          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
-            <CardContent sx={{ py: 1.5, px: 2 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Box>
-                  <Typography
-                    color="text.secondary"
-                    variant="body2"
-                    gutterBottom
-                  >
-                    Đã hủy
-                  </Typography>
-                  <Typography variant="h5" component="div">
-                    {
-                      incidents.filter((incident) => incident.status === "Cancelled")
-                        .length
-                    }
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    backgroundColor: "rgba(244, 67, 54, 0.08)",
-                    p: 1,
-                    borderRadius: "50%",
-                  }}
-                >
-                  <CancelIcon color="error" />
                 </Box>
               </Box>
             </CardContent>
@@ -570,121 +494,122 @@ const IncidentManagement = () => {
         </Box>
 
         <Box sx={{ flexGrow: 1, overflow: "auto" }}>
-          {incidentStatusOptions.map((status, index) => (
-            <TabPanel key={index} value={tabValue} index={index}>
-              <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
-                <Table
-                  stickyHeader
-                  size="small"
-                  sx={{ minWidth: 650 }}
-                  aria-label="incidents table"
-                >
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Mã sự cố</TableCell>
-                      <TableCell>Mã chuyến</TableCell>
-                      <TableCell>Người báo cáo</TableCell>
-                      <TableCell>Loại sự cố</TableCell>
-                      <TableCell>Thời gian xảy ra</TableCell>
-                      <TableCell>Trạng thái</TableCell>
-                      <TableCell align="center">Hành động</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {getFilteredIncidentsByStatus(status.value)
-                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                      .length > 0 ? (
-                      getFilteredIncidentsByStatus(status.value)
-                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                        .map((incident) => (
-                          <TableRow
-                            key={incident.reportId}
-                            hover
-                            onClick={() => handleOpenDialog(incident)}
-                            sx={{ cursor: "pointer" }}
-                          >
-                            <TableCell>{incident.reportId}</TableCell>
-                            <TableCell>{incident.tripId}</TableCell>
-                            <TableCell>{incident.reportedBy}</TableCell>
-                            <TableCell>{incident.incidentType}</TableCell>
-                            <TableCell>{incident.incidentTime}</TableCell>
-                            <TableCell>
-                              <Chip
-                                size="small"
-                                label={
-                                  incident.status === "Pending"
-                                    ? "Chờ xử lý"
-                                    : incident.status === "Handling"
-                                    ? "Đang xử lý"
-                                    : incident.status === "Completed"
-                                    ? "Đã xử lý"
-                                    : "Đã hủy"
-                                }
-                                color={
-                                  incident.status === "Pending"
-                                    ? "warning"
-                                    : incident.status === "Handling"
-                                    ? "info"
-                                    : incident.status === "Completed"
-                                    ? "success"
-                                    : "error"
-                                }
-                              />
-                            </TableCell>
-                            <TableCell align="center">
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenDialog(incident);
-                                }}
-                              >
-                                <VisibilityIcon />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(incident.reportId);
-                                }}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                    ) : (
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            incidentStatusOptions.map((status, index) => (
+              <TabPanel key={index} value={tabValue} index={index}>
+                <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
+                  <Table
+                    stickyHeader
+                    size="small"
+                    sx={{ minWidth: 650 }}
+                    aria-label="incidents table"
+                  >
+                    <TableHead>
                       <TableRow>
-                        <TableCell colSpan={7} align="center">
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            py={3}
-                          >
-                            Không có dữ liệu
-                          </Typography>
-                        </TableCell>
+                        <TableCell>Mã sự cố</TableCell>
+                        <TableCell>Mã chuyến</TableCell>
+                        <TableCell>Loại sự cố</TableCell>
+                        <TableCell>Loại</TableCell>
+                        <TableCell>Trạng thái</TableCell>
+                        <TableCell align="center">Hành động</TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                rowsPerPageOptions={[5, 10, 25]}
-                component="div"
-                count={getFilteredIncidentsByStatus(status.value).length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                labelRowsPerPage="Dòng mỗi trang:"
-                labelDisplayedRows={({ from, to, count }) =>
-                  `${from}-${to} trên ${count !== -1 ? count : `hơn ${to}`}`
-                }
-                sx={{ borderTop: "1px solid rgba(224, 224, 224, 1)" }}
-              />
-            </TabPanel>
-          ))}
+                    </TableHead>
+                    <TableBody>
+                      {getFilteredIncidentsByStatus(status.value)
+                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                        .length > 0 ? (
+                        getFilteredIncidentsByStatus(status.value)
+                          .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                          .map((incident) => (
+                            <TableRow
+                              key={incident.reportId}
+                              hover
+                              onClick={() => handleOpenDialog(incident)}
+                              sx={{ cursor: "pointer" }}
+                            >
+                              <TableCell>{incident.reportId}</TableCell>
+                              <TableCell>{incident.tripId}</TableCell>
+                              <TableCell>{incident.incidentType}</TableCell>
+                              <TableCell>
+                                {incident.type === 1 
+                                  ? "Có thể sửa" 
+                                  : incident.type === 2 
+                                  ? "Không thể sửa" 
+                                  : incident.type}
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  size="small"
+                                  label={
+                                    incident.status === "Pending"
+                                      ? "Chờ xử lý"
+                                      : incident.status === "Handling"
+                                      ? "Đang xử lý"
+                                      : incident.status === "Completed"
+                                      ? "Đã xử lý"
+                                      : "Đã hủy"
+                                  }
+                                  color={
+                                    incident.status === "Pending"
+                                      ? "warning"
+                                      : incident.status === "Handling"
+                                      ? "info"
+                                      : incident.status === "Completed"
+                                      ? "success"
+                                      : "error"
+                                  }
+                                />
+                              </TableCell>
+                              <TableCell align="center">
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenDialog(incident);
+                                  }}
+                                >
+                                  <VisibilityIcon />
+                                </IconButton>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} align="center">
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              py={3}
+                            >
+                              Không có dữ liệu
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <TablePagination
+                  rowsPerPageOptions={[5, 10, 25]}
+                  component="div"
+                  count={getFilteredIncidentsByStatus(status.value).length}
+                  rowsPerPage={rowsPerPage}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                  labelRowsPerPage="Dòng mỗi trang:"
+                  labelDisplayedRows={({ from, to, count }) =>
+                    `${from}-${to} trên ${count !== -1 ? count : `hơn ${to}`}`
+                  }
+                  sx={{ borderTop: "1px solid rgba(224, 224, 224, 1)" }}
+                />
+              </TabPanel>
+            ))
+          )}
         </Box>
       </Paper>
 
@@ -693,7 +618,6 @@ const IncidentManagement = () => {
         open={openDialog}
         incident={selectedIncident}
         onClose={handleCloseDialog}
-        onEdit={handleEdit}
       />
     </Box>
   );
