@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -18,6 +18,11 @@ import {
   Grid,
   Card,
   CardContent,
+  Modal,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -27,11 +32,67 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import BuildIcon from "@mui/icons-material/Build";
 import EventIcon from "@mui/icons-material/Event";
 import WarningIcon from "@mui/icons-material/Warning";
+import AddIcon from "@mui/icons-material/Add";
+import { getTractors } from "../../services/tractorApi";
+import { Tractor, TractorStatus, ContainerType } from "../../types/tractor";
+import TractorDetails from "./TractorDetails";
+import TractorCreate from "./TractorCreate";
+import { useNavigate, useParams } from "react-router-dom";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 
 const Tractors = () => {
+  const navigate = useNavigate();
+  const { tractorId } = useParams();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const [tractors, setTractors] = useState<Tractor[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState({
+    total: 0,
+    active: 0,
+    maintenance: 0,
+    repair: 0,
+  });
+  const [openCreate, setOpenCreate] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, id: "" });
+
+  const handleOpenCreate = () => setOpenCreate(true);
+  const handleCloseCreate = () => setOpenCreate(false);
+
+  const fetchTractors = async () => {
+    try {
+      setLoading(true);
+      const result = await getTractors(page, rowsPerPage);
+
+      if (result.success) {
+        setTractors(result.data.tractors.items);
+        setTotalCount(result.data.tractors.totalCount);
+        setSummary({
+          total: result.data.allCount,
+          active: result.data.activeCount,
+          maintenance: result.data.maintenanceDueCount,
+          repair: result.data.registrationExpiryDueCount,
+        });
+      } else {
+        console.error("API Error:", result.message);
+        setTractors([]);
+        setTotalCount(0);
+      }
+    } catch (error) {
+      console.error("Error fetching tractors:", error);
+      setTractors([]);
+      setTotalCount(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTractors();
+  }, [page, rowsPerPage]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -53,53 +114,28 @@ const Tractors = () => {
   };
 
   const handleDelete = (tractorId: string) => {
-    console.log(`Delete tractor with ID: ${tractorId}`);
+    setDeleteDialog({ open: true, id: tractorId });
   };
 
-  // Fake tractor data
-  const tractors = [
-    {
-      id: "T001",
-      licensePlate: "29A-12345",
-      manufacturer: "Toyota",
-      model: "Hilux",
-      registrationDate: "2025-01-01",
-      nextRegistrationDate: "2025-04-15",
-      MaintenanceDate: "2025-01-01",
-      nextMaintenanceDate: "2025-06-01",      
-      status: "active",
-    },
-    {
-      id: "T002",
-      licensePlate: "30B-67890",
-      manufacturer: "Ford",
-      model: "Ranger",
-      registrationDate: "2025-02-01",
-      nextRegistrationDate: "2025-05-20",
-      MaintenanceDate: "2025-01-01",
-      nextMaintenanceDate: "2025-07-01",
-      status: "maintenance",
-    },
-    {
-      id: "T003",
-      licensePlate: "31C-54321",
-      manufacturer: "Isuzu",
-      model: "D-Max",
-      registrationDate: "2025-03-01",
-      nextRegistrationDate: "2025-06-10",
-      MaintenanceDate: "2025-01-01",
-      nextMaintenanceDate: "2025-08-01",
-      status: "repair",
-    },
-    // Add more tractors as needed
-  ];
+  const handleConfirmDelete = async () => {
+    try {
+      // Add your delete API call here
+      console.log(`Deleting tractor with ID: ${deleteDialog.id}`);
+      setDeleteDialog({ open: false, id: "" });
+    } catch (error) {
+      console.error("Error deleting tractor:", error);
+    }
+  };
+
+  const handleRowClick = (id: string) => {
+    navigate(`/staff-menu/tractors/${id}`);
+  };
 
   // Filtered tractors based on search term
   const filteredTractors = tractors.filter((tractor) =>
     tractor.licensePlate.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Tractor status options
   const statusOptions = [
     { value: "active", label: "Đang hoạt động", color: "success" },
     { value: "maintenance", label: "Bảo dưỡng", color: "warning" },
@@ -108,19 +144,30 @@ const Tractors = () => {
   ];
 
   // Status chip component
-  const getStatusChip = (status: string) => {
+  const getStatusChip = (status: TractorStatus) => {
     switch (status) {
-      case "active":
+      case TractorStatus.Active:
         return <Chip label="Đang hoạt động" color="success" size="small" />;
-      case "maintenance":
-        return <Chip label="Bảo dưỡng" color="warning" size="small" />;
-      case "repair":
-        return <Chip label="Đang sửa chữa" color="error" size="small" />;
-      case "inactive":
-        return <Chip label="Không hoạt động" color="default" size="small" />;
+      case TractorStatus.Inactive:
+        return <Chip label="Không hoạt động" color="error" size="small" />;
       default:
         return <Chip label="Không xác định" size="small" />;
     }
+  };
+
+  const getContainerTypeText = (type: ContainerType) => {
+    switch (type) {
+      case ContainerType.Feet20:
+        return "20'";
+      case ContainerType.Feet40:
+        return "40'";
+      default:
+        return "Không xác định";
+    }
+  };
+
+  const handleCreateSuccess = () => {
+    fetchTractors(); // Call the existing fetchTractors function
   };
 
   return (
@@ -148,7 +195,7 @@ const Tractors = () => {
                     Tổng số đầu kéo
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {tractors.length}
+                    {summary.total}
                   </Typography>
                 </Box>
                 <Box
@@ -183,10 +230,7 @@ const Tractors = () => {
                     Đang hoạt động
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {
-                      tractors.filter((tractor) => tractor.status === "active")
-                        .length
-                    }
+                    {summary.active}
                   </Typography>
                 </Box>
                 <Box
@@ -221,10 +265,7 @@ const Tractors = () => {
                     Cần đăng kiểm
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {
-                      tractors.filter((tractor) => tractor.status === "repair")
-                        .length
-                    }
+                    {summary.repair}
                   </Typography>
                 </Box>
                 <Box
@@ -259,11 +300,7 @@ const Tractors = () => {
                     Cần bảo dưỡng
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {
-                      tractors.filter(
-                        (tractor) => tractor.status === "maintenance"
-                      ).length
-                    }
+                    {summary.maintenance}
                   </Typography>
                 </Box>
                 <Box
@@ -307,6 +344,14 @@ const Tractors = () => {
               Danh sách đầu kéo
             </Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleOpenCreate}
+                size="small"
+              >
+                Thêm mới
+              </Button>
               <TextField
                 size="small"
                 placeholder="Tìm kiếm đầu kéo..."
@@ -341,39 +386,62 @@ const Tractors = () => {
             >
               <TableHead>
                 <TableRow>
-                  <TableCell>Biển số xe</TableCell>
-                  <TableCell>Hãng sản xuất</TableCell>
-                  <TableCell>Mẫu xe</TableCell>
-                  <TableCell>Đăng kiểm</TableCell>
-                  <TableCell>Đăng kiểm tiếp theo</TableCell>
-                  <TableCell>Bảo dưỡng</TableCell>
-                  <TableCell>Bảo dưỡng tiếp theo</TableCell>
-                  <TableCell>Trạng thái</TableCell>
+                  <TableCell align="center">Biển số xe</TableCell>
+                  <TableCell align="center">Hãng sản xuất</TableCell>
+                  <TableCell align="center">Loại container</TableCell>
+                  <TableCell align="center">Hạn đăng kiểm</TableCell>
+                  <TableCell align="center">Bảo dưỡng tiếp theo</TableCell>
+                  <TableCell align="center">Trạng thái</TableCell>
                   <TableCell align="center">Hành động</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredTractors.length > 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      <Typography variant="body2" color="text.secondary" py={3}>
+                        Đang tải dữ liệu...
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredTractors.length > 0 ? (
                   filteredTractors.map((tractor) => (
-                    <TableRow key={tractor.id}>
-                      <TableCell>{tractor.licensePlate}</TableCell>
-                      <TableCell>{tractor.manufacturer}</TableCell>
-                      <TableCell>{tractor.model}</TableCell>
-                      <TableCell>{tractor.registrationDate}</TableCell>
-                      <TableCell>{tractor.nextRegistrationDate}</TableCell>
-                      <TableCell>{tractor.nextMaintenanceDate}</TableCell>
-                      <TableCell>{tractor.MaintenanceDate}</TableCell>
-                      <TableCell>{getStatusChip(tractor.status)}</TableCell>
+                    <TableRow
+                      key={tractor.tractorId}
+                      hover
+                      onClick={() => handleRowClick(tractor.tractorId)}
+                      sx={{ cursor: "pointer" }}
+                    >
+                      <TableCell align="center">
+                        {tractor.licensePlate}
+                      </TableCell>
+                      <TableCell align="center">{tractor.brand}</TableCell>
+                      <TableCell align="center">
+                        {getContainerTypeText(tractor.containerType)}
+                      </TableCell>
+                      <TableCell align="center">
+                        {new Date(
+                          tractor.registrationExpirationDate
+                        ).toLocaleDateString("vi-VN")}
+                      </TableCell>
+                      <TableCell align="center">
+                        {new Date(
+                          tractor.nextMaintenanceDate
+                        ).toLocaleDateString("vi-VN")}
+                      </TableCell>
+                      <TableCell align="center">
+                        {getStatusChip(tractor.status)}
+                      </TableCell>
                       <TableCell align="center">
                         <IconButton
                           size="small"
-                          onClick={() => handleEdit(tractor.id)}
+                          onClick={() => handleEdit(tractor.tractorId)}
                         >
                           <EditIcon />
                         </IconButton>
                         <IconButton
                           size="small"
-                          onClick={() => handleDelete(tractor.id)}
+                          onClick={() => handleDelete(tractor.tractorId)}
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -395,7 +463,7 @@ const Tractors = () => {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={filteredTractors.length}
+            count={totalCount}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -407,7 +475,56 @@ const Tractors = () => {
             sx={{ borderTop: "1px solid rgba(224, 224, 224, 1)" }}
           />
         </Box>
+        <Modal
+          open={openCreate}
+          onClose={handleCloseCreate}
+          aria-labelledby="create-tractor-modal"
+        >
+          <Box
+            sx={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "80%",
+              maxWidth: 800,
+              bgcolor: "background.paper",
+              boxShadow: 24,
+              p: 4,
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
+          >
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <TractorCreate
+                onClose={handleCloseCreate}
+                onSuccess={handleCreateSuccess}
+              />
+            </LocalizationProvider>
+          </Box>
+        </Modal>
+
+        <Dialog
+          open={deleteDialog.open}
+          onClose={() => setDeleteDialog({ open: false, id: "" })}
+        >
+          <DialogTitle>Xác nhận xóa</DialogTitle>
+          <DialogContent>Bạn có chắc chắn muốn xóa đầu kéo này?</DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialog({ open: false, id: "" })}>
+              Hủy
+            </Button>
+            <Button onClick={handleConfirmDelete} color="error">
+              Xóa
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Paper>
+      <TractorDetails
+        open={!!tractorId}
+        tractorId={tractorId || null}
+        onClose={() => navigate("/staff-menu/tractors")}
+      />
     </Box>
   );
 };

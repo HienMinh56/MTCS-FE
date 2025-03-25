@@ -1,6 +1,6 @@
 import React from "react";
 import { useTheme } from "@mui/material";
-import "../index.css";
+import "../../index.css";
 
 interface TractorIllustrationProps {
   width?: number | string;

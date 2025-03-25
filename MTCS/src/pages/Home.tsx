@@ -10,7 +10,7 @@ import {
   Grid,
 } from "@mui/material";
 import Header from "../components/Header";
-import TractorIllustration from "../components/TractorIllustration";
+import TractorIllustration from "../components/Tractor/TractorIllustration";
 
 const MTCSLogistics: React.FC = () => {
   const theme = useTheme();
@@ -20,7 +20,7 @@ const MTCSLogistics: React.FC = () => {
   useEffect(() => {
     // Redirect staff and admin users to staff menu
     if (isAuthenticated && user && ["Staff", "Admin"].includes(user.role)) {
-      navigate("/staff-menu", { replace: true });
+      navigate("/staff-menu/orders", { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
 

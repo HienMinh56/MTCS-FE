@@ -15,12 +15,12 @@ import {
   Snackbar,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import PasswordField from "./PasswordVisibility";
-import ForgotPassword from "./ForgotPassword";
+import PasswordField from "../PasswordVisibility";
+import ForgotPassword from "../ForgotPassword";
 import Register from "./Register";
-import { login, LoginRequest } from "../services/authApi";
+import { login, LoginRequest } from "../../services/authApi";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface LoginProps {
   open: boolean;
@@ -113,7 +113,7 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
           onLoginSuccess();
         } else {
           if (userRole === "Staff") {
-            navigate("/staff-menu");
+            navigate("//orders");
           } else {
             window.location.reload();
           }

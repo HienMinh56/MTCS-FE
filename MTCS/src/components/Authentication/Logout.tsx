@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, ButtonProps } from "@mui/material";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface LogoutButtonProps extends ButtonProps {
   buttonType?: "button" | "menuItem";

@@ -13,8 +13,8 @@ import {
   CircularProgress,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import PasswordField from "./PasswordVisibility";
-import { register, RegisterRequest } from "../services/authApi";
+import PasswordField from "../PasswordVisibility";
+import { register, RegisterRequest } from "../../services/authApi";
 
 interface RegisterProps {
   open: boolean;

@@ -27,11 +27,11 @@ import PersonIcon from "@mui/icons-material/Person";
 import OrderManagement from "../components/Orders";
 import IncidentManagement from "../components/Incidents";
 import Drivers from "../components/Drivers";
-import Tractors from "../components/Tractors";
+import Tractors from "../components/Tractor/Tractors";
 import Trailers from "../components/Trailers";
 import Customers from "../components/Customers";
-import { useNavigate, useLocation } from "react-router-dom";
-import LogoutButton from "../components/Logout";
+import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
+import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
 import logo1 from "../assets/logo1.png";
 
@@ -297,7 +297,15 @@ const StaffMenu: React.FC = () => {
           backgroundColor: "#f8f9fa",
         }}
       >
-        {renderActiveComponent()}
+        <Routes>
+          <Route path="/orders" element={<OrderManagement />} />
+          <Route path="/incidents" element={<IncidentManagement />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/drivers" element={<Drivers />} />
+          <Route path="/tractors" element={<Tractors />} />
+          <Route path="/tractors/:tractorId" element={<Tractors />} />
+          <Route path="/trailers" element={<Trailers />} />
+        </Routes>
       </Box>
     </Box>
   );
