@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import {
   Typography,
   Container,
@@ -12,6 +14,15 @@ import TractorIllustration from "../components/TractorIllustration";
 
 const MTCSLogistics: React.FC = () => {
   const theme = useTheme();
+  const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect staff and admin users to staff menu
+    if (isAuthenticated && user && ["Staff", "Admin"].includes(user.role)) {
+      navigate("/staff-menu", { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
 
   return (
     <Box sx={{ bgcolor: "#f8f9fa", minHeight: "100vh" }}>

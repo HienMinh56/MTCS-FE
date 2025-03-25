@@ -94,12 +94,9 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
 
     try {
       const tokenData = await login(credentials);
-      console.log("Login successful, updating authentication state");
 
-      // Update auth state in context
       setIsAuthenticated(true);
 
-      // Dispatch an event to notify other components
       window.dispatchEvent(new Event("auth-changed"));
 
       setSnackbar({

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { AppBar, Toolbar, Box, Button, useTheme } from "@mui/material";
 import LoginIcon from "@mui/icons-material/Login";
+import LogoutIcon from "@mui/icons-material/Logout";
 import Login from "./Login";
 import logo1 from "../assets/logo1.png";
 import { useAuth } from "../contexts/AuthContext";
@@ -9,14 +10,13 @@ import Cookies from "js-cookie";
 const Header: React.FC = () => {
   const theme = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const [showLoginButton, setShowLoginButton] = useState(true);
 
   useEffect(() => {
     const checkAuth = () => {
       const token = Cookies.get("token");
       const shouldShow = !token;
-      console.log("Header cookie check:", !shouldShow);
       setShowLoginButton(shouldShow);
     };
 
@@ -37,6 +37,11 @@ const Header: React.FC = () => {
     setLoginOpen(false);
     const token = Cookies.get("token");
     setShowLoginButton(!token);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setShowLoginButton(true);
   };
 
   const handleLogoClick = () => {
@@ -77,7 +82,7 @@ const Header: React.FC = () => {
           />
 
           <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-            {showLoginButton && (
+            {showLoginButton ? (
               <Button
                 variant="contained"
                 startIcon={<LoginIcon />}
@@ -95,6 +100,25 @@ const Header: React.FC = () => {
                 }}
               >
                 Đăng nhập
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                startIcon={<LogoutIcon />}
+                onClick={handleLogout}
+                sx={{
+                  px: { xs: 2, md: 3 },
+                  py: 1,
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  textTransform: "none",
+                  background: `linear-gradient(135deg, ${theme.palette.mtcs.primary}, ${theme.palette.mtcs.primary})`,
+                  "&:hover": {
+                    background: `linear-gradient(135deg, ${theme.palette.mtcs.secondary}, ${theme.palette.mtcs.primary})`,
+                  },
+                }}
+              >
+                Đăng xuất
               </Button>
             )}
           </Box>

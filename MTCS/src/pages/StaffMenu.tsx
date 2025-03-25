@@ -21,7 +21,7 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import WarningIcon from '@mui/icons-material/Warning';
+import WarningIcon from "@mui/icons-material/Warning";
 import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import PersonIcon from "@mui/icons-material/Person";
 import OrderManagement from "../components/Orders";
@@ -45,10 +45,6 @@ const StaffMenu: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("orders");
 
   const userId = localStorage.getItem("userId") || "staff-user";
-
-  useEffect(() => {
-    console.log("StaffMenu is using userId:", userId);
-  }, [userId]);
 
   useEffect(() => {
     const path = location.pathname.split("/").pop();

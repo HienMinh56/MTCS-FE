@@ -6,7 +6,19 @@ import ProfilePage from "./pages/ProfilePage";
 import "./index.css";
 import MTCSLogistics from "./pages/Home";
 import { AuthProvider } from "./contexts/AuthContext";
-import { useEffect } from "react";
+import ProtectedRoute from "./components/ProtectedRoute";
+import UnauthorizedPage from "./pages/UnauthorizedPage";
+import { useAuth } from "./contexts/AuthContext";
+
+const HomeRoute = () => {
+  const { isAuthenticated, user } = useAuth();
+
+  if (isAuthenticated && user && ["Staff", "Admin"].includes(user.role)) {
+    return <Navigate to="/staff-menu" replace />;
+  }
+
+  return <MTCSLogistics />;
+};
 
 function App() {
   return (
@@ -14,11 +26,20 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<MTCSLogistics />} />
-            <Route path="/staff-menu/*" element={<StaffMenu />} />
-            {/* <Route path="/staff-menu/orders/:orderId/trip/:tripId" element={<TripPage />} /> */}
-            
-            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/" element={<HomeRoute />} />
+
+            <Route
+              element={<ProtectedRoute allowedRoles={["Staff", "Admin"]} />}
+            >
+              <Route path="/staff-menu/*" element={<StaffMenu />} />
+            </Route>
+
+            <Route element={<ProtectedRoute />}>
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
