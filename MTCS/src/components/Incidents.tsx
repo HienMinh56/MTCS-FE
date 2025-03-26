@@ -87,9 +87,9 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
   if (!incident) return null;
   
   // Group files by type
-  const incidentFiles = incident.incidentReportsFiles?.$values?.filter(file => file.type === 1) || [];
-  const invoiceFiles = incident.incidentReportsFiles?.$values?.filter(file => file.type === 2) || [];
-  const transferFiles = incident.incidentReportsFiles?.$values?.filter(file => file.type === 3) || [];
+  const incidentFiles = incident.incidentReportsFiles?.filter(file => file.type === 1) || [];
+  const invoiceFiles = incident.incidentReportsFiles?.filter(file => file.type === 2) || [];
+  const transferFiles = incident.incidentReportsFiles?.filter(file => file.type === 3) || [];
   
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -135,10 +135,31 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
             
             <Typography variant="subtitle2">Ngày tạo</Typography>
             <Typography variant="body1" gutterBottom>{new Date(incident.createdDate).toLocaleString()}</Typography>
+            
+            {incident.handledBy && (
+              <>
+                <Typography variant="subtitle2">Người xử lý</Typography>
+                <Typography variant="body1" gutterBottom>{incident.handledBy}</Typography>
+              </>
+            )}
+            
+            {incident.handledTime && (
+              <>
+                <Typography variant="subtitle2">Thời gian xử lý</Typography>
+                <Typography variant="body1" gutterBottom>{new Date(incident.handledTime).toLocaleString()}</Typography>
+              </>
+            )}
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle2">Mô tả</Typography>
             <Typography variant="body1" paragraph>{incident.description}</Typography>
+            
+            {incident.resolutionDetails && (
+              <>
+                <Typography variant="subtitle2">Chi tiết xử lý</Typography>
+                <Typography variant="body1" paragraph>{incident.resolutionDetails}</Typography>
+              </>
+            )}
           </Grid>
           
           {incidentFiles.length > 0 && (
@@ -156,7 +177,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
             </Grid>
           )}
           
-          {invoiceFiles.length > 0 && (
+          {invoiceFiles.length > 0 ? (
             <Grid item xs={12}>
               <Typography variant="subtitle2" gutterBottom>Ảnh hóa đơn</Typography>
               <ImageList cols={3} rowHeight={160} gap={8}>
@@ -169,9 +190,14 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                 ))}
               </ImageList>
             </Grid>
+          ) : (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>Ảnh hóa đơn</Typography>
+              <Typography variant="body2" color="text.secondary">Không có ảnh</Typography>
+            </Grid>
           )}
           
-          {transferFiles.length > 0 && (
+          {transferFiles.length > 0 ? (
             <Grid item xs={12}>
               <Typography variant="subtitle2" gutterBottom>Ảnh chuyển nhượng</Typography>
               <ImageList cols={3} rowHeight={160} gap={8}>
@@ -183,6 +209,11 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                   </ImageListItem>
                 ))}
               </ImageList>
+            </Grid>
+          ) : (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>Ảnh chuyển nhượng</Typography>
+              <Typography variant="body2" color="text.secondary">Không có ảnh</Typography>
             </Grid>
           )}
         </Grid>
