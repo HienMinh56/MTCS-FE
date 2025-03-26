@@ -10,6 +10,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import { useAuth } from "./contexts/AuthContext";
 import LocalizationProvider from "./providers/LocalizationProvider";
+import DriverDetailPage from "./pages/DriverDetailPage";
 
 const HomeRoute = () => {
   const { isAuthenticated, user } = useAuth();
@@ -34,7 +35,10 @@ function App() {
                 element={<ProtectedRoute allowedRoles={["Staff", "Admin"]} />}
               >
                 <Route path="/staff-menu/*" element={<StaffMenu />} />
-                            <Route path="/drivers/:driverId" element={<DriverDetailPage />} />
+                <Route
+                  path="/drivers/:driverId"
+                  element={<DriverDetailPage />}
+                />
               </Route>
 
               <Route element={<ProtectedRoute />}>
