@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -18,6 +18,7 @@ import {
   Grid,
   Card,
   CardContent,
+  CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -25,11 +26,40 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PersonIcon from "@mui/icons-material/Person";
 import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
+import { getAllDrivers, Driver, getDriverStatusText } from "../services/DriverApi";
+import { useNavigate } from "react-router-dom";
 
 const Drivers = () => {
+  const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch drivers from API
+  useEffect(() => {
+    const fetchDrivers = async () => {
+      setLoading(true);
+      try {
+        const data = await getAllDrivers();
+        // Add mock data for missing properties (this should be removed when API provides all data)
+        const enhancedData = data.map(driver => ({
+          ...driver,
+          phoneNumber: driver.phoneNumber || "N/A",
+          // Removed the birthDate mock data
+          totalKm: driver.totalKm || Math.floor(Math.random() * 2000 + 500),
+        }));
+        setDrivers(enhancedData);
+      } catch (error) {
+        console.error("Error fetching drivers:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDrivers();
+  }, []);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -46,58 +76,33 @@ const Drivers = () => {
     setSearchTerm(event.target.value);
   };
 
-  const handleEdit = (driverId: string) => {
-    console.log(`Edit driver with ID: ${driverId}`);
+  const handleEdit = (driverId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation(); // Prevents row click event from firing
+    }
+    navigateToDriverDetail(driverId);
   };
 
-  const handleDelete = (driverId: string) => {
+  const handleDelete = (driverId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevents row click event from firing
     console.log(`Delete driver with ID: ${driverId}`);
   };
-
-  // Fake driver data
-  const drivers = [
-    {
-      id: "D001",
-      name: "Nguyen Van A",
-      birthDate: "1985-01-01",
-      phone: "0123456789",
-      status: "active",
-      totalKm: 1250,
-    },
-    {
-      id: "D002",
-      name: "Tran Thi B",
-      birthDate: "1990-02-01",
-      phone: "0987654321",
-      status: "inactive",
-      totalKm: 980,
-    },
-    {
-      id: "D003",
-      name: "Le Van C",
-      birthDate: "1988-03-01",
-      phone: "0912345678",
-      status: "on_trip",
-      totalKm: 2340,
-    },
-    // Add more drivers as needed
-  ];
+  
+  const navigateToDriverDetail = (driverId: string) => {
+    navigate(`/drivers/${driverId}`);
+  };
 
   // Filtered drivers based on search term
   const filteredDrivers = drivers.filter((driver) =>
-    driver.name.toLowerCase().includes(searchTerm.toLowerCase())
+    driver.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    driver.driverId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (driver.email && driver.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Driver status options
-  const driverStatusOptions = [
-    { value: "active", label: "Hoạt động", color: "success" },
-    { value: "inactive", label: "Không hoạt động", color: "error" },
-    { value: "on_trip", label: "Đang trên đường", color: "warning" },
-  ];
-
   // Status chip component
-  const getStatusChip = (status: string) => {
-    switch (status) {
+  const getStatusChip = (status: number) => {
+    const statusText = getDriverStatusText(status);
+    switch (statusText) {
       case "active":
         return <Chip label="Hoạt động" color="success" size="small" />;
       case "inactive":
@@ -109,8 +114,9 @@ const Drivers = () => {
     }
   };
 
-  // Format birth date to display as DD/MM/YYYY
-  const formatBirthDate = (dateString: string) => {
+  // Format birth date to display as DD/MM/YYYY or return N/A if null/empty
+  const formatBirthDate = (dateString: string | undefined | null) => {
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
     return date.toLocaleDateString('vi-VN');
   };
@@ -176,7 +182,7 @@ const Drivers = () => {
                   </Typography>
                   <Typography variant="h5" component="div">
                     {
-                      drivers.filter((driver) => driver.status === "active")
+                      drivers.filter((driver) => getDriverStatusText(driver.status) === "active")
                         .length
                     }
                   </Typography>
@@ -214,7 +220,7 @@ const Drivers = () => {
                   </Typography>
                   <Typography variant="h5" component="div">
                     {
-                      drivers.filter((driver) => driver.status === "on_trip")
+                      drivers.filter((driver) => getDriverStatusText(driver.status) === "on_trip")
                         .length
                     }
                   </Typography>
@@ -285,60 +291,75 @@ const Drivers = () => {
         </Box>
 
         <Box sx={{ flexGrow: 1, overflow: "auto" }}>
-          <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
-            <Table
-              stickyHeader
-              size="small"
-              sx={{ minWidth: 650 }}
-              aria-label="drivers table"
-            >
-              <TableHead>
-                <TableRow>
-                  <TableCell>Họ tên</TableCell>
-                  <TableCell>Ngày sinh</TableCell>
-                  <TableCell>Số điện thoại</TableCell>
-                  <TableCell>Tổng số KM đã chạy</TableCell>
-                  <TableCell>Trạng thái</TableCell>
-                  <TableCell align="center">Hành động</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredDrivers.length > 0 ? (
-                  filteredDrivers.map((driver) => (
-                    <TableRow key={driver.id}>
-                      <TableCell>{driver.name}</TableCell>
-                      <TableCell>{formatBirthDate(driver.birthDate)}</TableCell>
-                      <TableCell>{driver.phone}</TableCell>
-                      <TableCell>{driver.totalKm.toLocaleString()} KM</TableCell>
-                      <TableCell>{getStatusChip(driver.status)}</TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEdit(driver.id)}
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
+              <Table
+                stickyHeader
+                size="small"
+                sx={{ minWidth: 650 }}
+                aria-label="drivers table"
+              >
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Họ tên</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Tổng số KM đã chạy</TableCell>
+                    <TableCell>Trạng thái</TableCell>
+                    <TableCell align="center">Hành động</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredDrivers.length > 0 ? (
+                    filteredDrivers
+                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                      .map((driver) => (
+                        <TableRow 
+                          key={driver.driverId} 
+                          onClick={() => navigateToDriverDetail(driver.driverId)}
+                          sx={{ 
+                            cursor: 'pointer',
+                            '&:hover': { 
+                              backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                            } 
+                          }}
                         >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(driver.id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
+                          <TableCell>{driver.fullName}</TableCell>
+                          <TableCell>{driver.email}</TableCell>
+                          <TableCell>{driver.totalKm?.toLocaleString()} KM</TableCell>
+                          <TableCell>{getStatusChip(driver.status)}</TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleEdit(driver.driverId, e)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleDelete(driver.driverId, e)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center">
+                        <Typography variant="body2" color="text.secondary" py={3}>
+                          Không có dữ liệu
+                        </Typography>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      <Typography variant="body2" color="text.secondary" py={3}>
-                        Không có dữ liệu
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"

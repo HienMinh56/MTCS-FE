@@ -7,6 +7,7 @@ import "./index.css";
 import MTCSLogistics from "./pages/Home";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useEffect } from "react";
+import DriverDetailPage from './pages/DriverDetailPage';
 
 function App() {
   return (
@@ -17,7 +18,7 @@ function App() {
             <Route path="/" element={<MTCSLogistics />} />
             <Route path="/staff-menu/*" element={<StaffMenu />} />
             {/* <Route path="/staff-menu/orders/:orderId/trip/:tripId" element={<TripPage />} /> */}
-            
+            <Route path="/drivers/:driverId" element={<DriverDetailPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Routes>
         </BrowserRouter>
