@@ -34,6 +34,7 @@ function App() {
                 element={<ProtectedRoute allowedRoles={["Staff", "Admin"]} />}
               >
                 <Route path="/staff-menu/*" element={<StaffMenu />} />
+                            <Route path="/drivers/:driverId" element={<DriverDetailPage />} />
               </Route>
 
               <Route element={<ProtectedRoute />}>
