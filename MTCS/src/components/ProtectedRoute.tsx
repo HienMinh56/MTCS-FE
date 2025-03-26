@@ -11,7 +11,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles = [],
   redirectPath = "/unauthorized",
 }) => {
-  const { isAuthenticated, user, hasRole } = useAuth();
+  const { isAuthenticated, hasRole } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {

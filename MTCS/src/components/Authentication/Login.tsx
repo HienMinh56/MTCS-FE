@@ -4,23 +4,22 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  TextField,
   Button,
   Box,
   Typography,
   IconButton,
-  Link,
   Alert,
-  CircularProgress,
   Snackbar,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import PasswordField from "../PasswordVisibility";
 import ForgotPassword from "../ForgotPassword";
 import Register from "./Register";
 import { login, LoginRequest } from "../../services/authApi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import LoginForm from "../../forms/LoginForm";
+import { jwtDecode } from "jwt-decode";
+import Cookies from "js-cookie";
 
 interface LoginProps {
   open: boolean;
@@ -29,10 +28,6 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
-  const [credentials, setCredentials] = useState<LoginRequest>({
-    email: "",
-    password: "",
-  });
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
@@ -47,78 +42,58 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
     severity: "success" as "success" | "error",
   });
   const navigate = useNavigate();
-  const { setIsAuthenticated } = useAuth();
+  const { setIsAuthenticated, setUser } = useAuth();
 
-  const validateForm = (): boolean => {
-    const newErrors: { email?: string; password?: string } = {};
-    let isValid = true;
-
-    if (!credentials.email) {
-      newErrors.email = "Email không được để trống";
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(credentials.email)) {
-      newErrors.email = "Email không hợp lệ";
-      isValid = false;
-    }
-
-    if (!credentials.password) {
-      newErrors.password = "Mật khẩu không được để trống";
-      isValid = false;
-    } else if (credentials.password.length < 6) {
-      newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCredentials((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
-    if (errors[name as keyof typeof errors]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+  const handleLoginSubmit = async (credentials: LoginRequest) => {
     setIsLoading(true);
     setErrors({});
 
     try {
-      const tokenData = await login(credentials);
+      const response = await login(credentials);
+
+      const token = Cookies.get("token");
+      let roleFromToken: string | undefined;
+
+      if (token) {
+        try {
+          const decoded = jwtDecode<any>(token);
+          const userId =
+            decoded.sub || decoded.userId || localStorage.getItem("userId");
+          const msRole =
+            decoded[
+              "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+            ];
+          roleFromToken = decoded.role || msRole;
+
+          if (userId && roleFromToken) {
+            setUser({ id: userId, role: roleFromToken });
+          }
+        } catch (error) {
+          console.error("Failed to decode token:", error);
+        }
+      }
 
       setIsAuthenticated(true);
-
       window.dispatchEvent(new Event("auth-changed"));
 
       setSnackbar({
         open: true,
-        message: "Đăng nhập thành công",
+        message: response.message,
         severity: "success",
       });
-
-      const userRole = localStorage.getItem("userRole");
 
       setTimeout(() => {
         onClose();
         if (onLoginSuccess) {
           onLoginSuccess();
         } else {
-          if (userRole === "Staff") {
-            navigate("//orders");
+          if (roleFromToken === "Staff") {
+            navigate("/staff-menu/orders");
           } else {
-            window.location.reload();
+            navigate(0);
           }
         }
-      }, 1000);
+      }, 2000);
     } catch (error) {
       let errorMessage = "Đăng nhập thất bại";
 
@@ -145,12 +120,12 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
 
   const handleRegisterClick = () => {
     setRegisterOpen(true);
-    onClose(); // Close login dialog when opening register
+    onClose();
   };
 
   const handleForgotPasswordClick = () => {
     setForgotPasswordOpen(true);
-    onClose(); // Close login dialog when opening forgot password
+    onClose();
   };
 
   return (
@@ -169,70 +144,24 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
           </Box>
         </DialogTitle>
         <DialogContent>
-          {errors.general && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {errors.general}
-            </Alert>
-          )}
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Email"
-              name="email"
-              margin="normal"
-              value={credentials.email}
-              onChange={handleChange}
-              error={!!errors.email}
-              helperText={errors.email}
-              disabled={isLoading}
-            />
-            <PasswordField
-              fullWidth
-              label="Mật khẩu"
-              name="password"
-              margin="normal"
-              value={credentials.password}
-              onChange={handleChange}
-              error={!!errors.password}
-              helperText={errors.password}
-              disabled={isLoading}
-            />
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
-              <Link
-                component="button"
-                variant="body2"
-                onClick={handleForgotPasswordClick}
-                disabled={isLoading}
-              >
-                Quên mật khẩu?
-              </Link>
-            </Box>
+          <LoginForm
+            onSubmit={handleLoginSubmit}
+            isLoading={isLoading}
+            onForgotPassword={handleForgotPasswordClick}
+            generalError={errors.general}
+          />
+          <Box sx={{ display: "flex", justifyContent: "center" }}>
+            <Typography variant="body2" sx={{ mr: 1 }}>
+              Chưa có tài khoản?
+            </Typography>
             <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              variant="text"
+              onClick={handleRegisterClick}
+              sx={{ textTransform: "none" }}
               disabled={isLoading}
             >
-              {isLoading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                "Đăng nhập"
-              )}
+              Đăng ký ngay
             </Button>
-            <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <Typography variant="body2" sx={{ mr: 1 }}>
-                Chưa có tài khoản?
-              </Typography>
-              <Button
-                variant="text"
-                onClick={handleRegisterClick}
-                sx={{ textTransform: "none" }}
-                disabled={isLoading}
-              >
-                Đăng ký ngay
-              </Button>
-            </Box>
           </Box>
         </DialogContent>
       </Dialog>
