@@ -32,6 +32,26 @@ export interface LoginResponse {
   message: string;
 }
 
+export interface UserProfile {
+  userId: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  gender: string;
+  birthday: string;
+  createdDate: string;
+  modifiedDate: string;
+}
+
+export interface ProfileUpdateRequest {
+  fullName?: string;
+  email?: string;
+  phoneNumber?: string;
+  gender?: string;
+  birthday?: string;
+  currentPassword?: string;
+}
+
 const parseJwt = (token: string) => {
   try {
     const base64Url = token.split(".")[1];
@@ -146,6 +166,69 @@ export const register = async (userData: RegisterRequest): Promise<string> => {
   }
 };
 
+export const getProfile = async (): Promise<UserProfile> => {
+  try {
+    const response = await axiosInstance.get<ApiResponse<UserProfile>>(
+      `${AUTH_BASE_PATH}/profile`
+    );
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(
+        response.data.messageVN ||
+          response.data.message ||
+          "Failed to fetch profile"
+      );
+    }
+
+    return response.data.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data) {
+      const responseData = error.response.data as ApiResponse<string>;
+      throw new Error(
+        responseData.messageVN ||
+          responseData.message ||
+          "Failed to fetch profile"
+      );
+    }
+    throw new Error("Failed to fetch profile");
+  }
+};
+
+export const updateProfile = async (
+  profileData: ProfileUpdateRequest
+): Promise<string> => {
+  try {
+    const response = await axiosInstance.put<ApiResponse<string>>(
+      `${AUTH_BASE_PATH}/profile`,
+      profileData
+    );
+
+    if (!response.data.success) {
+      throw new Error(
+        response.data.messageVN ||
+          response.data.message ||
+          "Failed to update profile"
+      );
+    }
+
+    return (
+      response.data.messageVN ||
+      response.data.message ||
+      "Profile updated successfully"
+    );
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data) {
+      const responseData = error.response.data as ApiResponse<string>;
+      throw new Error(
+        responseData.messageVN ||
+          responseData.message ||
+          "Failed to update profile"
+      );
+    }
+    throw new Error("Failed to update profile");
+  }
+};
+
 export const refreshTokens = async (): Promise<TokenData> => {
   const refreshToken = Cookies.get("refreshToken");
 
@@ -216,4 +299,6 @@ export default {
   register,
   refreshTokens,
   logout,
+  getProfile,
+  updateProfile,
 };

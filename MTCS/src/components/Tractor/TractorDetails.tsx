@@ -20,7 +20,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import {
   getTractorDetails,
-  inactivateTractor,
+  deactivateTractor,
 } from "../../services/tractorApi";
 import {
   TractorDetails as ITractorDetails,
@@ -92,7 +92,7 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
 
     setDeleteLoading(true);
     try {
-      const response = await inactivateTractor(tractorId);
+      const response = await deactivateTractor(tractorId);
 
       if (response.success) {
         setAlert({

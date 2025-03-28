@@ -27,7 +27,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import OrderManagement from "../components/Orders";
 import IncidentManagement from "../components/Incidents";
 import Drivers from "../components/Drivers";
-import Tractors from "../components/Tractor/Tractors";
+import Tractors from "./Tractors";
 import Trailers from "../components/Trailers";
 import Customers from "../components/Customers";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";

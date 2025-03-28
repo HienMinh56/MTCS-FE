@@ -92,9 +92,9 @@ export const createTractor = async (tractorData: {
   return response;
 };
 
-export const inactivateTractor = async (id: string) => {
+export const deactivateTractor = async (id: string) => {
   const response = await axiosInstance.put(
-    `/api/Tractor/inactivate-tractor/${id}`
+    `/api/Tractor/deactivate-tractor/${id}`
   );
   return response.data;
 };
