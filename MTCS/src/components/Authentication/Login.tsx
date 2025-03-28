@@ -49,7 +49,7 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
     setErrors({});
 
     try {
-      const response = await login(credentials);
+      await login(credentials);
 
       const token = Cookies.get("token");
       let roleFromToken: string | undefined;
@@ -73,27 +73,32 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
         }
       }
 
-      setIsAuthenticated(true);
-      window.dispatchEvent(new Event("auth-changed"));
-
+      // Show success toast before setting authentication state
       setSnackbar({
         open: true,
-        message: response.message,
+        message: "Đăng nhập thành công",
         severity: "success",
       });
 
+      // Delay setting authentication state to allow toast to be seen
       setTimeout(() => {
-        onClose();
-        if (onLoginSuccess) {
-          onLoginSuccess();
-        } else {
-          if (roleFromToken === "Staff") {
-            navigate("/staff-menu/orders");
+        setIsAuthenticated(true);
+        window.dispatchEvent(new Event("auth-changed"));
+
+        // Only navigate after toast has been shown
+        setTimeout(() => {
+          onClose();
+          if (onLoginSuccess) {
+            onLoginSuccess();
           } else {
-            navigate(0);
+            if (roleFromToken === "Staff") {
+              navigate("/staff-menu/orders");
+            } else {
+              navigate(0);
+            }
           }
-        }
-      }, 2000);
+        }, 1500);
+      }, 500);
     } catch (error) {
       let errorMessage = "Đăng nhập thất bại";
 

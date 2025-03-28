@@ -147,42 +147,59 @@ export const register = async (userData: RegisterRequest): Promise<string> => {
 };
 
 export const refreshTokens = async (): Promise<TokenData> => {
-  const currentToken = Cookies.get("token");
-  const currentRefreshToken = Cookies.get("refreshToken");
+  const refreshToken = Cookies.get("refreshToken");
 
-  if (!currentToken || !currentRefreshToken) {
-    throw new Error("No tokens to refresh");
+  if (!refreshToken) {
+    throw new Error("No refresh token available");
   }
 
   try {
-    const response = await axiosInstance.post<ApiResponse<TokenData>>(
-      `${AUTH_BASE_PATH}/refresh-token`,
+    // Send only the refresh token string in the request body as expected by the API
+    const refreshResponse = await axios.post<ApiResponse<TokenData>>(
+      `${
+        import.meta.env.VITE_API_BASE_URL || "https://localhost:7046"
+      }${AUTH_BASE_PATH}/refresh-token`,
+      JSON.stringify(refreshToken),
       {
-        token: currentToken,
-        refreshToken: currentRefreshToken,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
       }
     );
 
-    if (!response.data.success || !response.data.data) {
+    if (!refreshResponse.data.success || !refreshResponse.data.data) {
       throw new Error(
-        response.data.messageVN || // Backend logic error (primary error message)
-          response.data.message ||
+        refreshResponse.data.messageVN ||
+          refreshResponse.data.message ||
           "Token refresh failed"
       );
     }
 
-    storeTokens(response.data.data);
-    return response.data.data;
-  } catch (error) {
-    logout();
-    if (axios.isAxiosError(error) && error.response?.data) {
-      const responseData = error.response.data as ApiResponse;
-      // Prioritize messageVN for backend logic errors
-      throw new Error(
-        responseData.messageVN || responseData.message || "Token refresh failed"
-      );
+    const newTokens = refreshResponse.data.data;
+
+    Cookies.set("token", newTokens.token, {
+      secure: true,
+      sameSite: "strict",
+    });
+
+    Cookies.set("refreshToken", newTokens.refreshToken, {
+      secure: true,
+      sameSite: "strict",
+    });
+
+    const tokenData = parseJwt(newTokens.token);
+    if (tokenData && tokenData.sub) {
+      localStorage.setItem("userId", tokenData.sub);
     }
-    throw error;
+
+    window.dispatchEvent(new Event("auth-changed"));
+
+    return newTokens;
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    logout();
+    throw new Error("Token refresh failed");
   }
 };
 
@@ -190,37 +207,9 @@ export const logout = () => {
   Cookies.remove("token");
   Cookies.remove("refreshToken");
   localStorage.removeItem("userId");
-  // No need to remove userRole from localStorage as we're no longer storing it there
+  // Dispatch event to notify components about logout
+  window.dispatchEvent(new Event("auth-changed"));
 };
-
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    const isTokenExpired =
-      error.response?.headers?.["token-expired"] === "true";
-
-    if (
-      error.response?.status === 401 &&
-      isTokenExpired &&
-      !originalRequest._retry
-    ) {
-      originalRequest._retry = true;
-
-      try {
-        const newTokens = await refreshTokens();
-        originalRequest.headers.Authorization = `Bearer ${newTokens.token}`;
-        return axiosInstance(originalRequest);
-      } catch (refreshError) {
-        logout();
-        return Promise.reject(refreshError);
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
 
 export default {
   login,

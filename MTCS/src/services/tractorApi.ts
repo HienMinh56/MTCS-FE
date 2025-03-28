@@ -9,47 +9,57 @@ import axiosInstance from "../utils/axiosConfig";
 export const getTractors = async (
   page: number,
   pageSize: number,
+  searchKeyword?: string,
   status?: TractorStatus,
   maintenanceDueSoon?: boolean,
   registrationExpiringSoon?: boolean,
   maintenanceDueDays?: number,
   registrationExpiringDays?: number
 ) => {
-  const params = new URLSearchParams();
+  try {
+    const params = new URLSearchParams();
 
-  params.append("page", (page + 1).toString());
-  params.append("pageSize", pageSize.toString());
+    params.append("pageNumber", page.toString());
+    params.append("pageSize", pageSize.toString());
 
-  if (status !== undefined) {
-    params.append("status", status.toString());
-  }
+    if (searchKeyword) {
+      params.append("searchKeyword", searchKeyword);
+    }
 
-  if (maintenanceDueSoon !== undefined) {
-    params.append("maintenanceDueSoon", maintenanceDueSoon.toString());
-  }
+    if (status !== undefined) {
+      params.append("status", status.toString());
+    }
 
-  if (registrationExpiringSoon !== undefined) {
-    params.append(
-      "registrationExpiringSoon",
-      registrationExpiringSoon.toString()
+    if (maintenanceDueSoon !== undefined) {
+      params.append("maintenanceDueSoon", maintenanceDueSoon.toString());
+    }
+
+    if (registrationExpiringSoon !== undefined) {
+      params.append(
+        "registrationExpiringSoon",
+        registrationExpiringSoon.toString()
+      );
+    }
+
+    if (maintenanceDueDays !== undefined) {
+      params.append("maintenanceDueDays", maintenanceDueDays.toString());
+    }
+
+    if (registrationExpiringDays !== undefined) {
+      params.append(
+        "registrationExpiringDays",
+        registrationExpiringDays.toString()
+      );
+    }
+
+    const response = await axiosInstance.get<TractorResponse>(
+      `/api/Tractor?${params.toString()}`
     );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching tractors:", error);
+    throw error;
   }
-
-  if (maintenanceDueDays !== undefined) {
-    params.append("maintenanceDueDays", maintenanceDueDays.toString());
-  }
-
-  if (registrationExpiringDays !== undefined) {
-    params.append(
-      "registrationExpiringDays",
-      registrationExpiringDays.toString()
-    );
-  }
-
-  const response = await axiosInstance.get<TractorResponse>(
-    `/api/Tractor?${params.toString()}`
-  );
-  return response.data;
 };
 
 export const getTractorDetails = async (id: string) => {
@@ -80,4 +90,11 @@ export const createTractor = async (tractorData: {
     tractorData
   );
   return response;
+};
+
+export const inactivateTractor = async (id: string) => {
+  const response = await axiosInstance.put(
+    `/api/Tractor/inactivate-tractor/${id}`
+  );
+  return response.data;
 };

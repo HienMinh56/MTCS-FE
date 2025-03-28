@@ -24,31 +24,59 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Add response interceptor for token refresh
+let isRefreshing = false;
+let refreshSubscribers: Array<(token: string) => void> = [];
+
+const onTokenRefreshed = (token: string) => {
+  refreshSubscribers.forEach((callback) => callback(token));
+  refreshSubscribers = [];
+};
+
+const addRefreshSubscriber = (callback: (token: string) => void) => {
+  refreshSubscribers.push(callback);
+};
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const isTokenExpired =
-      error.response?.headers?.["token-expired"] === "true";
 
-    if (
-      error.response?.status === 401 &&
-      isTokenExpired &&
-      !originalRequest._retry
-    ) {
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        // Import needed functions inline to avoid circular dependency
-        const { refreshTokens } = await import("../services/authApi");
-        const newTokens = await refreshTokens();
-        originalRequest.headers.Authorization = `Bearer ${newTokens.token}`;
-        return axiosInstance(originalRequest);
-      } catch (refreshError) {
-        const { logout } = await import("../services/authApi");
-        logout();
-        return Promise.reject(refreshError);
+      if (!isRefreshing) {
+        isRefreshing = true;
+
+        try {
+          const { refreshTokens } = await import("../services/authApi");
+
+          const newTokens = await refreshTokens();
+
+          onTokenRefreshed(newTokens.token);
+          isRefreshing = false;
+
+          originalRequest.headers.Authorization = `Bearer ${newTokens.token}`;
+          return axiosInstance(originalRequest);
+        } catch (error) {
+          console.error("Token refresh failed:", error);
+          isRefreshing = false;
+
+          const { logout } = await import("../services/authApi");
+          logout();
+
+          return Promise.reject(error);
+        }
+      } else {
+        return new Promise((resolve) => {
+          addRefreshSubscriber((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(axiosInstance(originalRequest));
+          });
+        });
       }
     }
 

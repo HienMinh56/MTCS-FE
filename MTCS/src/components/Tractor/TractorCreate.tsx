@@ -46,12 +46,15 @@ const TractorCreate: React.FC<TractorCreateProps> = ({
           severity: "success",
         });
 
-        if (onSuccess) {
-          onSuccess();
-        }
-        if (onClose) {
-          onClose();
-        }
+        // Delay navigation to allow the toast to be visible
+        setTimeout(() => {
+          if (onSuccess) {
+            onSuccess();
+          }
+          if (onClose) {
+            onClose();
+          }
+        }, 1500);
       } else {
         // API returned success:false
         const errorMessage = formatApiError(response.data);
@@ -75,12 +78,16 @@ const TractorCreate: React.FC<TractorCreateProps> = ({
               severity: "success",
             });
 
-            if (onSuccess) {
-              onSuccess();
-            }
-            if (onClose) {
-              onClose();
-            }
+            // Delay navigation to allow the toast to be visible
+            setTimeout(() => {
+              if (onSuccess) {
+                onSuccess();
+              }
+              if (onClose) {
+                onClose();
+              }
+            }, 1500);
+
             setIsSubmitting(false);
             return;
           } else {
