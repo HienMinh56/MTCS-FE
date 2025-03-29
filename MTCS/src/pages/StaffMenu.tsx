@@ -28,7 +28,7 @@ import OrderManagement from "../components/Orders";
 import IncidentManagement from "../components/Incidents";
 import Drivers from "../components/Drivers";
 import Tractors from "./Tractors";
-import Trailers from "../components/Trailers";
+import Trailers from "./Trailers";
 import Customers from "../components/Customers";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
@@ -305,6 +305,7 @@ const StaffMenu: React.FC = () => {
           <Route path="/tractors" element={<Tractors />} />
           <Route path="/tractors/:tractorId" element={<Tractors />} />
           <Route path="/trailers" element={<Trailers />} />
+          <Route path="/trailers/:trailerId" element={<Trailers />} />
         </Routes>
       </Box>
     </Box>
