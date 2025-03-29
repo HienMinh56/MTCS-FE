@@ -12,6 +12,7 @@ import {
   IconButton,
   Backdrop,
   Paper,
+  Alert,
 } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -22,7 +23,7 @@ import { profileSchema, ProfileFormValues } from "./profileSchema";
 
 interface ProfileFormProps {
   initialValues: ProfileFormValues;
-  onSubmit: (data: ProfileFormValues) => void;
+  onSubmit: (data: ProfileFormValues) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -43,6 +44,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const {
     control,
@@ -76,6 +78,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
 
   const handleToggleEmailEdit = () => {
     setIsEditingEmail(!isEditingEmail);
+    setEmailError(null);
     if (!isEditingEmail) {
       // Reset email to initial value when starting to edit
       setValue("email", initialValues.email);
@@ -110,6 +113,13 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
   const handleEmailSubmit = async () => {
     try {
       setIsSubmittingEmail(true);
+      setEmailError(null);
+
+      // Check if email has changed
+      if (emailValue === initialValues.email) {
+        setEmailError("Email mới không thể giống email hiện tại");
+        return;
+      }
 
       const currentFormValues = getValues();
       const emailData = {
@@ -130,12 +140,17 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
       }
 
       await onSubmit(emailData);
-
-      // Close the email editing interface
+      // If we reach here, the API call was successful
       setIsEditingEmail(false);
       setCurrentPassword("");
       setValue("currentPassword", "");
     } catch (error) {
+      // Error is caught here, so we don't close the email editing overlay
+      if (error instanceof Error) {
+        setEmailError(error.message);
+      } else {
+        setEmailError("Có lỗi xảy ra khi cập nhật email");
+      }
       console.error("Error updating email:", error);
     } finally {
       setIsSubmittingEmail(false);
@@ -171,6 +186,12 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                 </Typography>
 
                 <Stack spacing={2}>
+                  {emailError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                      {emailError}
+                    </Alert>
+                  )}
+
                   <Box>
                     <Typography variant="body2" gutterBottom>
                       Email mới
@@ -204,6 +225,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                       variant="outlined"
                       size="small"
                       required
+                      autoComplete="new-password"
                       error={!!errors.currentPassword}
                       helperText={
                         errors.currentPassword?.message ||

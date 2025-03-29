@@ -141,8 +141,8 @@ const TractorForm: React.FC<TractorFormProps> = ({
               <FormControl fullWidth error={!!errors.containerType}>
                 <InputLabel>Loại Container</InputLabel>
                 <Select {...field} label="Loại Container">
-                  <MenuItem value={1}>20'</MenuItem>
-                  <MenuItem value={2}>40'</MenuItem>
+                  <MenuItem value={1}>Khô</MenuItem>
+                  <MenuItem value={2}>Lạnh</MenuItem>
                 </Select>
                 {errors.containerType && (
                   <FormHelperText>

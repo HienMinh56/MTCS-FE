@@ -4,8 +4,8 @@ export enum TractorStatus {
 }
 
 export enum ContainerType {
-  Feet20 = 1,
-  Feet40 = 2,
+  DryContainer = 1,
+  ReeferContainer = 2,
 }
 
 export interface Tractor {

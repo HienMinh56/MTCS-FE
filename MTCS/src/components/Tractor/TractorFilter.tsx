@@ -20,10 +20,11 @@ import {
   ToggleButtonGroup,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { TractorStatus } from "../../types/tractor";
+import { TractorStatus, ContainerType } from "../../types/tractor";
 
 interface FilterOptions {
   status?: TractorStatus;
+  containerType?: ContainerType;
   maintenanceDueSoon?: boolean;
   registrationExpiringSoon?: boolean;
 }
@@ -44,6 +45,9 @@ const TractorFilter: React.FC<TractorFilterProps> = ({
   const [status, setStatus] = useState<TractorStatus | undefined>(
     currentFilters.status
   );
+  const [containerType, setContainerType] = useState<ContainerType | undefined>(
+    currentFilters.containerType
+  );
   const [maintenanceDueSoon, setMaintenanceDueSoon] = useState<boolean>(
     currentFilters.maintenanceDueSoon || false
   );
@@ -55,6 +59,10 @@ const TractorFilter: React.FC<TractorFilterProps> = ({
 
     if (status !== undefined) {
       filterOptions.status = status;
+    }
+
+    if (containerType !== undefined) {
+      filterOptions.containerType = containerType;
     }
 
     if (maintenanceDueSoon) {
@@ -71,6 +79,7 @@ const TractorFilter: React.FC<TractorFilterProps> = ({
 
   const handleClearFilter = () => {
     setStatus(undefined);
+    setContainerType(undefined);
     setMaintenanceDueSoon(false);
     setRegistrationExpiringSoon(false);
     onApplyFilter({});
@@ -82,6 +91,13 @@ const TractorFilter: React.FC<TractorFilterProps> = ({
     newStatus: TractorStatus | null
   ) => {
     setStatus(newStatus || undefined);
+  };
+
+  const handleContainerTypeChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newContainerType: ContainerType | null
+  ) => {
+    setContainerType(newContainerType || undefined);
   };
 
   return (
@@ -142,6 +158,50 @@ const TractorFilter: React.FC<TractorFilterProps> = ({
               }}
             >
               Không hoạt động
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Loại Container
+          </Typography>
+          <ToggleButtonGroup
+            value={containerType}
+            exclusive
+            onChange={handleContainerTypeChange}
+            aria-label="container type"
+            fullWidth
+            size="small"
+            sx={{ mt: 1 }}
+          >
+            <ToggleButton
+              value={ContainerType.DryContainer}
+              sx={{
+                "&.Mui-selected": {
+                  backgroundColor: "info.light",
+                  color: "info.contrastText",
+                  "&:hover": {
+                    backgroundColor: "info.main",
+                  },
+                },
+              }}
+            >
+              Khô
+            </ToggleButton>
+            <ToggleButton
+              value={ContainerType.ReeferContainer}
+              sx={{
+                "&.Mui-selected": {
+                  backgroundColor: "primary.light",
+                  color: "primary.contrastText",
+                  "&:hover": {
+                    backgroundColor: "primary.main",
+                  },
+                },
+              }}
+            >
+              Lạnh
             </ToggleButton>
           </ToggleButtonGroup>
         </Box>

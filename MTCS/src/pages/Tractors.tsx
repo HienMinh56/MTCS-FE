@@ -23,7 +23,7 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import BuildIcon from "@mui/icons-material/Build";
 import EventIcon from "@mui/icons-material/Event";
 import AddIcon from "@mui/icons-material/Add";
-import { TractorStatus } from "../types/tractor";
+import { TractorStatus, ContainerType } from "../types/tractor";
 import TractorDetails from "../components/Tractor/TractorDetails";
 import TractorCreate from "../components/Tractor/TractorCreate";
 import TractorFilter from "../components/Tractor/TractorFilter";
@@ -46,6 +46,7 @@ const Tractors = () => {
   const [openFilter, setOpenFilter] = useState(false);
   const [filterOptions, setFilterOptions] = useState<{
     status?: TractorStatus;
+    containerType?: ContainerType;
     maintenanceDueSoon?: boolean;
     registrationExpiringSoon?: boolean;
   }>({});
@@ -71,6 +72,7 @@ const Tractors = () => {
 
   const handleApplyFilter = (filters: {
     status?: TractorStatus;
+    containerType?: ContainerType;
     maintenanceDueSoon?: boolean;
     registrationExpiringSoon?: boolean;
   }) => {
@@ -270,7 +272,7 @@ const Tractors = () => {
               </Button>
               <TextField
                 size="small"
-                placeholder="Tìm kiếm đầu kéo..."
+                placeholder="Tìm kiếm biển số xe..."
                 value={searchTerm}
                 onChange={handleSearch}
                 InputProps={{

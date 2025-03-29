@@ -176,9 +176,9 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
                 {
                   label: "Loại container",
                   value:
-                    details.containerType === ContainerType.Feet20
-                      ? "20'"
-                      : "40'",
+                    details.containerType === ContainerType.DryContainer
+                      ? "Khô"
+                      : "Lạnh",
                 },
                 { label: "Số chuyến hàng", value: details.orderCount },
               ].map((item, index) => (
@@ -261,31 +261,49 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
                 </Grid>
               ))}
             </Grid>
-          ) : null}
+          ) : (
+            <Typography variant="body2" color="textSecondary">
+              Không có thông tin chi tiết.
+            </Typography>
+          )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button
-            variant="contained"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={handleDeleteClick}
-          >
-            Vô hiệu hóa
-          </Button>
-          <Box sx={{ flexGrow: 1 }} />
-          <Button variant="outlined" onClick={onClose}>
+        <DialogActions>
+          <Button onClick={onClose} color="primary">
             Đóng
           </Button>
+          {onDelete && (
+            <Button
+              onClick={handleDeleteClick}
+              color="secondary"
+              startIcon={<DeleteIcon />}
+            >
+              Vô hiệu hóa
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
-
-      {/* Confirmation Dialog */}
-      <Dialog open={confirmDialog} onClose={() => setConfirmDialog(false)}>
+      <Snackbar
+        open={alert.open}
+        autoHideDuration={6000}
+        onClose={() => setAlert({ ...alert, open: false })}
+      >
+        <Alert
+          onClose={() => setAlert({ ...alert, open: false })}
+          severity={alert.severity}
+        >
+          {alert.message}
+        </Alert>
+      </Snackbar>
+      <Dialog
+        open={confirmDialog}
+        onClose={() => setConfirmDialog(false)}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>Xác nhận vô hiệu hóa</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Bạn có chắc chắn muốn vô hiệu hóa đầu kéo này không? Hành động này
-            không thể hoàn tác.
+            Bạn có chắc chắn muốn vô hiệu hóa đầu kéo này?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -294,31 +312,13 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
           </Button>
           <Button
             onClick={handleConfirmDelete}
-            color="error"
-            variant="contained"
+            color="secondary"
             disabled={deleteLoading}
-            autoFocus
           >
-            {deleteLoading ? "Đang xử lý..." : "Vô hiệu hóa"}
+            {deleteLoading ? <CircularProgress size={24} /> : "Xác nhận"}
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Alert Snackbar */}
-      <Snackbar
-        open={alert.open}
-        autoHideDuration={6000}
-        onClose={() => setAlert({ ...alert, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      >
-        <Alert
-          onClose={() => setAlert({ ...alert, open: false })}
-          severity={alert.severity}
-          variant="filled"
-        >
-          {alert.message}
-        </Alert>
-      </Snackbar>
     </>
   );
 };

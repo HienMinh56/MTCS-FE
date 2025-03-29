@@ -22,6 +22,7 @@ interface TractorTableProps {
   searchTerm?: string;
   filterOptions: {
     status?: TractorStatus;
+    containerType?: ContainerType;
     maintenanceDueSoon?: boolean;
     registrationExpiringSoon?: boolean;
   };
@@ -59,8 +60,25 @@ const TractorTable: React.FC<TractorTableProps> = ({
       );
 
       if (result.success) {
-        setTractors(result.data.tractors.items);
-        setTotalCount(result.data.tractors.totalCount);
+        let filteredItems = result.data.tractors.items;
+
+        // Apply containerType filter on the frontend
+        if (filterOptions.containerType !== undefined) {
+          filteredItems = filteredItems.filter(
+            (tractor) => tractor.containerType === filterOptions.containerType
+          );
+        }
+
+        setTractors(filteredItems);
+
+        // Adjust totalCount based on containerType filter
+        const filteredCount =
+          filterOptions.containerType !== undefined
+            ? filteredItems.length
+            : result.data.tractors.totalCount;
+
+        setTotalCount(filteredCount);
+
         onUpdateSummary({
           total: result.data.allCount,
           active: result.data.activeCount,
@@ -122,10 +140,10 @@ const TractorTable: React.FC<TractorTableProps> = ({
 
   const getContainerTypeText = (type: ContainerType) => {
     switch (type) {
-      case ContainerType.Feet20:
-        return "20'";
-      case ContainerType.Feet40:
-        return "40'";
+      case ContainerType.DryContainer:
+        return "Khô";
+      case ContainerType.ReeferContainer:
+        return "Lạnh";
       default:
         return "Không xác định";
     }
