@@ -11,6 +11,7 @@ import UnauthorizedPage from "./pages/UnauthorizedPage";
 import { useAuth } from "./contexts/AuthContext";
 import LocalizationProvider from "./providers/LocalizationProvider";
 import DriverDetailPage from "./pages/DriverDetailPage";
+import DistanceCalculatorPage from "./pages/DistanceCalculatorPage";
 
 const HomeRoute = () => {
   const { isAuthenticated, user } = useAuth();
@@ -38,6 +39,10 @@ function App() {
                 <Route
                   path="/drivers/:driverId"
                   element={<DriverDetailPage />}
+                />
+                <Route
+                  path="/distance-calculator"
+                  element={<DistanceCalculatorPage />}
                 />
               </Route>
 
