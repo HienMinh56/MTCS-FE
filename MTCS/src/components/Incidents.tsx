@@ -149,6 +149,13 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                 <Typography variant="body1" gutterBottom>{new Date(incident.handledTime).toLocaleString()}</Typography>
               </>
             )}
+
+            <Typography variant="subtitle2">Loại</Typography>
+            <Typography variant="body1" gutterBottom>
+              {incident.type === 1 ? "Có thể sửa" : 
+               incident.type === 2 ? "Không thể sửa" : 
+               incident.type}
+            </Typography>
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle2">Mô tả</Typography>
@@ -167,7 +174,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
               <Typography variant="subtitle2" gutterBottom>Ảnh sự cố</Typography>
               <ImageList cols={3} rowHeight={160} gap={8}>
                 {incidentFiles.map((file, index) => (
-                  <ImageListItem key={index}>
+                  <ImageListItem key={file.fileId}>
                     <img src={file.fileUrl} 
                          alt={`Ảnh sự cố ${index + 1}`} 
                          loading="lazy" />
@@ -182,7 +189,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
               <Typography variant="subtitle2" gutterBottom>Ảnh hóa đơn</Typography>
               <ImageList cols={3} rowHeight={160} gap={8}>
                 {invoiceFiles.map((file, index) => (
-                  <ImageListItem key={index}>
+                  <ImageListItem key={file.fileId}>
                     <img src={file.fileUrl} 
                          alt={`Ảnh hóa đơn ${index + 1}`} 
                          loading="lazy" />
@@ -202,7 +209,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
               <Typography variant="subtitle2" gutterBottom>Ảnh chuyển nhượng</Typography>
               <ImageList cols={3} rowHeight={160} gap={8}>
                 {transferFiles.map((file, index) => (
-                  <ImageListItem key={index}>
+                  <ImageListItem key={file.fileId}>
                     <img src={file.fileUrl} 
                          alt={`Ảnh chuyển nhượng ${index + 1}`} 
                          loading="lazy" />
@@ -216,6 +223,24 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
               <Typography variant="body2" color="text.secondary">Không có ảnh</Typography>
             </Grid>
           )}
+
+          {/* Driver Information */}
+          {/* {incident.trip && incident.trip.driver && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>Thông tin tài xế</Typography>
+              <Box sx={{ pl: 2 }}>
+                <Typography variant="body2">
+                  <strong>Tên:</strong> {incident.trip.driver.fullName}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Email:</strong> {incident.trip.driver.email}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Điện thoại:</strong> {incident.trip.driver.phoneNumber}
+                </Typography>
+              </Box>
+            </Grid>
+          )} */}
         </Grid>
       </DialogContent>
       <DialogActions>
