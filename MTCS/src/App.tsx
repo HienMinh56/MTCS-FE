@@ -11,6 +11,8 @@ import UnauthorizedPage from "./pages/UnauthorizedPage";
 import { useAuth } from "./contexts/AuthContext";
 import LocalizationProvider from "./providers/LocalizationProvider";
 import DriverDetailPage from "./pages/DriverDetailPage";
+import OrderDetailPage from "./pages/OrderDetailPage";
+import OrderApiTester from "./components/OrderApiTester";
 import DistanceCalculatorPage from "./pages/DistanceCalculatorPage";
 
 const HomeRoute = () => {
@@ -39,6 +41,10 @@ function App() {
                 <Route
                   path="/drivers/:driverId"
                   element={<DriverDetailPage />}
+                />
+                <Route
+                  path="/staff-menu/orders/:orderId"
+                  element={<OrderDetailPage />}
                 />
                 <Route
                   path="/distance-calculator"

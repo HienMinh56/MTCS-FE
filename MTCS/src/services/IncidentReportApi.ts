@@ -1,5 +1,13 @@
+import axios from "axios";
 import { ApiResponse } from "../types/api-types";
 import axiosInstance from "../utils/axiosConfig";
+
+const api = axios.create({
+  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 export interface IncidentReportFile {
   fileId: string;
@@ -80,9 +88,15 @@ export const getIncidentReportById = async (
 ): Promise<IncidentReports> => {
   try {
     const response = await axiosInstance.get<ApiResponse>(
-      `/api/IncidentReport/report/${reportId}`
+      `/api/IncidentReport?ReportId=${reportId}`
     );
-    return response.data.data as IncidentReports;
+    
+    // Check if the response data is in expected format
+    if (response.data.status === 1 && response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+      return response.data.data[0] as IncidentReports;
+    } else {
+      throw new Error("Invalid data format returned from API");
+    }
   } catch (error) {
     console.error(`Error fetching incident report with ID ${reportId}:`, error);
     throw error;
