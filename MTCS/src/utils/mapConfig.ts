@@ -1,17 +1,7 @@
-/**
- * Map-related configuration and utility functions
- */
-
-/**
- * Format distance from meters to kilometers with 2 decimal places
- */
 export const formatDistance = (meters: number): string => {
   return (meters / 1000).toFixed(2);
 };
 
-/**
- * Format duration from seconds to hours and minutes
- */
 export const formatDuration = (seconds: number): string => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -22,17 +12,14 @@ export const formatDuration = (seconds: number): string => {
   return `${minutes}m`;
 };
 
-// Default vehicle type for distance calculations
 export const DEFAULT_VEHICLE_TYPE = "truck";
 
-// Configuration for the geolocation API
 export const GEOLOCATION_OPTIONS = {
   enableHighAccuracy: true,
   timeout: 5000,
   maximumAge: 0,
 };
 
-// Common map-related messages
 export const MAP_MESSAGES = {
   CURRENT_LOCATION_SUCCESS: "Current location detected successfully",
   CURRENT_LOCATION_ERROR:
