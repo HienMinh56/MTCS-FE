@@ -93,8 +93,29 @@ export const createTractor = async (tractorData: {
 };
 
 export const deactivateTractor = async (id: string) => {
-  const response = await axiosInstance.put(
-    `/api/Tractor/deactivate-tractor/${id}`
-  );
-  return response.data;
+  try {
+    const response = await axiosInstance.put(
+      `/api/Tractor/deactivate-tractor/${id}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+    throw error;
+  }
+};
+
+export const activateTractor = async (id: string) => {
+  try {
+    const response = await axiosInstance.put(
+      `/api/Tractor/activate-tractor/${id}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+    throw error;
+  }
 };

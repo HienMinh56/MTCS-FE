@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -36,6 +36,7 @@ const Tractors = () => {
   const navigate = useNavigate();
   const { tractorId } = useParams();
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [summary, setSummary] = useState({
     total: 0,
     active: 0,
@@ -51,6 +52,7 @@ const Tractors = () => {
     registrationExpiringSoon?: boolean;
   }>({});
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
+  const isManualRefreshRef = useRef(false);
 
   const handleOpenCreate = () => setOpenCreate(true);
   const handleCloseCreate = () => setOpenCreate(false);
@@ -80,12 +82,19 @@ const Tractors = () => {
     setHasActiveFilters(Object.keys(filters).length > 0);
   };
 
+  const refreshTable = () => {
+    console.log("Refreshing table data...");
+    isManualRefreshRef.current = true;
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   const handleCreateSuccess = () => {
-    // Table will automatically update via its own fetchTractors
+    refreshTable();
   };
 
   const handleDeleteSuccess = () => {
-    // Table will automatically update via its own fetchTractors
+    console.log("Delete/activate success called, triggering refresh");
+    refreshTable();
   };
 
   return (
@@ -307,6 +316,7 @@ const Tractors = () => {
           searchTerm={searchTerm}
           filterOptions={filterOptions}
           onUpdateSummary={handleUpdateSummary}
+          refreshTrigger={refreshTrigger}
         />
 
         <Modal

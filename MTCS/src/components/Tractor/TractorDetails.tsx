@@ -18,13 +18,16 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import {
   getTractorDetails,
   deactivateTractor,
+  activateTractor,
 } from "../../services/tractorApi";
 import {
   TractorDetails as ITractorDetails,
   ContainerType,
+  TractorStatus,
 } from "../../types/tractor";
 
 interface Props {
@@ -42,8 +45,11 @@ const formatDate = (date: string | null) => {
 const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
   const [details, setDetails] = useState<ITractorDetails | null>(null);
   const [loading, setLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(false);
+  const [actionType, setActionType] = useState<"activate" | "deactivate">(
+    "deactivate"
+  );
   const [alert, setAlert] = useState<{
     open: boolean;
     message: string;
@@ -53,6 +59,8 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
     message: "",
     severity: "success",
   });
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [statusChanged, setStatusChanged] = useState(false);
 
   useEffect(() => {
     if (tractorId) {
@@ -83,55 +91,107 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
     }
   }, [tractorId, open]);
 
-  const handleDeleteClick = () => {
+  const handleActivateClick = () => {
+    setActionType("activate");
+    setErrorDetails(null);
     setConfirmDialog(true);
   };
 
-  const handleConfirmDelete = async () => {
+  const handleDeactivateClick = () => {
+    setActionType("deactivate");
+    setErrorDetails(null);
+    setConfirmDialog(true);
+  };
+
+  const handleConfirmAction = async () => {
     if (!tractorId) return;
 
-    setDeleteLoading(true);
+    setActionLoading(true);
     try {
-      const response = await deactivateTractor(tractorId);
+      let response;
+
+      if (actionType === "activate") {
+        response = await activateTractor(tractorId);
+      } else {
+        response = await deactivateTractor(tractorId);
+      }
 
       if (response.success) {
         setAlert({
           open: true,
-          message: "Đầu kéo đã được vô hiệu hóa thành công",
+          message:
+            actionType === "activate"
+              ? "Đầu kéo đã được kích hoạt thành công"
+              : "Đầu kéo đã được vô hiệu hóa thành công",
           severity: "success",
         });
 
+        // Immediately trigger the refresh callback
         if (onDelete) {
           onDelete();
         }
+
+        setStatusChanged(true);
         setConfirmDialog(false);
         onClose();
       } else {
+        // Check for detailed error message in messageVN for both activate and deactivate
+        if (response.messageVN) {
+          setErrorDetails(response.messageVN);
+
+          // Keep the dialog open only for "tractor in use" errors
+          if (!response.messageVN.includes("đang trong hành trình")) {
+            setConfirmDialog(false);
+          }
+        } else {
+          setConfirmDialog(false);
+        }
+
         setAlert({
           open: true,
-          message: response.messageVN || "Không thể vô hiệu hóa đầu kéo",
+          message:
+            response.messageVN ||
+            (actionType === "activate"
+              ? "Không thể kích hoạt đầu kéo"
+              : "Không thể vô hiệu hóa đầu kéo"),
           severity: "error",
         });
-        setConfirmDialog(false);
       }
-    } catch (error) {
-      console.error("Error deleting tractor:", error);
+    } catch (error: any) {
+      console.error(`Error ${actionType} tractor:`, error);
+
+      // Try to extract error message from the error object
+      const errorMessage =
+        error?.response?.data?.messageVN ||
+        (actionType === "activate"
+          ? "Đã xảy ra lỗi khi kích hoạt đầu kéo"
+          : "Đã xảy ra lỗi khi vô hiệu hóa đầu kéo");
+
       setAlert({
         open: true,
-        message: "Đã xảy ra lỗi khi vô hiệu hóa đầu kéo",
+        message: errorMessage,
         severity: "error",
       });
       setConfirmDialog(false);
     } finally {
-      setDeleteLoading(false);
+      setActionLoading(false);
     }
+  };
+
+  const handleClose = () => {
+    // One more check to ensure refresh happens
+    if (statusChanged && onDelete) {
+      onDelete();
+      setStatusChanged(false);
+    }
+    onClose();
   };
 
   return (
     <>
       <Dialog
         open={open}
-        onClose={onClose}
+        onClose={handleClose}
         maxWidth="md"
         fullWidth
         TransitionComponent={Fade}
@@ -147,7 +207,7 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
         >
           Chi tiết đầu kéo
           <IconButton
-            onClick={onClose}
+            onClick={handleClose}
             sx={{
               position: "absolute",
               right: 8,
@@ -268,18 +328,28 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} color="primary">
+          <Button onClick={handleClose} color="primary">
             Đóng
           </Button>
-          {onDelete && (
-            <Button
-              onClick={handleDeleteClick}
-              color="secondary"
-              startIcon={<DeleteIcon />}
-            >
-              Vô hiệu hóa
-            </Button>
-          )}
+          {onDelete &&
+            details &&
+            (details.status === TractorStatus.Active ? (
+              <Button
+                onClick={handleDeactivateClick}
+                color="error"
+                startIcon={<DeleteIcon />}
+              >
+                Vô hiệu hóa
+              </Button>
+            ) : (
+              <Button
+                onClick={handleActivateClick}
+                color="success"
+                startIcon={<CheckCircleIcon />}
+              >
+                Kích hoạt
+              </Button>
+            ))}
         </DialogActions>
       </Dialog>
       <Snackbar
@@ -300,23 +370,48 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Xác nhận vô hiệu hóa</DialogTitle>
+        <DialogTitle>
+          {actionType === "activate"
+            ? "Xác nhận kích hoạt"
+            : "Xác nhận vô hiệu hóa"}
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Bạn có chắc chắn muốn vô hiệu hóa đầu kéo này?
-          </DialogContentText>
+          {errorDetails ? (
+            <>
+              <DialogContentText color="error" sx={{ mb: 2 }}>
+                {actionType === "activate"
+                  ? "Không thể kích hoạt đầu kéo"
+                  : "Không thể vô hiệu hóa đầu kéo"}
+              </DialogContentText>
+              <Typography
+                variant="body2"
+                color="error"
+                sx={{ fontWeight: 500 }}
+              >
+                {errorDetails}
+              </Typography>
+            </>
+          ) : (
+            <DialogContentText>
+              {actionType === "activate"
+                ? "Bạn có chắc chắn muốn kích hoạt đầu kéo này?"
+                : "Bạn có chắc chắn muốn vô hiệu hóa đầu kéo này?"}
+            </DialogContentText>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmDialog(false)} color="primary">
-            Hủy
+            Đóng
           </Button>
-          <Button
-            onClick={handleConfirmDelete}
-            color="secondary"
-            disabled={deleteLoading}
-          >
-            {deleteLoading ? <CircularProgress size={24} /> : "Xác nhận"}
-          </Button>
+          {!errorDetails && (
+            <Button
+              onClick={handleConfirmAction}
+              color={actionType === "activate" ? "success" : "secondary"}
+              disabled={actionLoading}
+            >
+              {actionLoading ? <CircularProgress size={24} /> : "Xác nhận"}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </>

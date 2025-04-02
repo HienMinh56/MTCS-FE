@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -32,12 +32,14 @@ interface TractorTableProps {
     maintenance: number;
     repair: number;
   }) => void;
+  refreshTrigger?: number;
 }
 
 const TractorTable: React.FC<TractorTableProps> = ({
   searchTerm = "",
   filterOptions,
   onUpdateSummary,
+  refreshTrigger = 0,
 }) => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
@@ -45,10 +47,19 @@ const TractorTable: React.FC<TractorTableProps> = ({
   const [tractors, setTractors] = useState<Tractor[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const prevRefreshTriggerRef = useRef(refreshTrigger);
+  const isInitialMountRef = useRef(true);
+  const isPageChangeRef = useRef(false);
+  const shouldFetchDataRef = useRef(true);
 
-  const fetchTractors = async () => {
+  const fetchTractors = useCallback(async () => {
+    if (!shouldFetchDataRef.current) {
+      return;
+    }
+
     try {
       setLoading(true);
+      console.log("Fetching tractors data...");
 
       const result = await getTractors(
         page,
@@ -62,7 +73,6 @@ const TractorTable: React.FC<TractorTableProps> = ({
       if (result.success) {
         let filteredItems = result.data.tractors.items;
 
-        // Apply containerType filter on the frontend
         if (filterOptions.containerType !== undefined) {
           filteredItems = filteredItems.filter(
             (tractor) => tractor.containerType === filterOptions.containerType
@@ -70,8 +80,8 @@ const TractorTable: React.FC<TractorTableProps> = ({
         }
 
         setTractors(filteredItems);
+        console.log("Tractors data updated:", filteredItems.length, "items");
 
-        // Adjust totalCount based on containerType filter
         const filteredCount =
           filterOptions.containerType !== undefined
             ? filteredItems.length
@@ -90,30 +100,65 @@ const TractorTable: React.FC<TractorTableProps> = ({
         setTotalCount(0);
       }
     } catch (error) {
+      console.error("Error fetching tractors:", error);
       setTractors([]);
       setTotalCount(0);
     } finally {
       setLoading(false);
+      isPageChangeRef.current = false;
     }
-  };
+  }, [page, rowsPerPage, searchTerm, filterOptions, onUpdateSummary]);
 
   useEffect(() => {
-    fetchTractors();
-  }, [page, searchTerm, filterOptions]);
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      shouldFetchDataRef.current = true;
+      fetchTractors();
+    }
+  }, []);
 
   useEffect(() => {
-    setPage(1);
+    if (refreshTrigger !== prevRefreshTriggerRef.current) {
+      console.log(
+        "Refresh trigger changed:",
+        prevRefreshTriggerRef.current,
+        "->",
+        refreshTrigger
+      );
+      prevRefreshTriggerRef.current = refreshTrigger;
+      shouldFetchDataRef.current = true;
+      fetchTractors();
+    }
+  }, [refreshTrigger, fetchTractors]);
+
+  useEffect(() => {
+    if (!isInitialMountRef.current && isPageChangeRef.current) {
+      shouldFetchDataRef.current = true;
+      fetchTractors();
+    }
+  }, [fetchTractors]);
+
+  useEffect(() => {
+    if (!isInitialMountRef.current) {
+      setPage(1);
+      isPageChangeRef.current = true;
+      shouldFetchDataRef.current = true;
+    }
   }, [searchTerm, filterOptions]);
 
   const handleNextPage = () => {
     const lastPage = Math.ceil(totalCount / rowsPerPage);
     if (page < lastPage) {
+      isPageChangeRef.current = true;
+      shouldFetchDataRef.current = true;
       setPage((prev) => prev + 1);
     }
   };
 
   const handlePrevPage = () => {
     if (page > 1) {
+      isPageChangeRef.current = true;
+      shouldFetchDataRef.current = true;
       setPage((prev) => prev - 1);
     }
   };

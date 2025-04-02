@@ -18,12 +18,15 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import {
   getTrailerDetails,
   deactivateTrailer,
+  activateTrailer,
 } from "../../services/trailerApi";
 import { TrailerDetails as ITrailerDetails } from "../../types/trailer";
 import { ContainerSize } from "../../forms/trailer/trailerSchema";
+import { TrailerStatus } from "../../types/trailer";
 
 interface Props {
   open: boolean;
@@ -41,7 +44,9 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
   const [details, setDetails] = useState<ITrailerDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [activateLoading, setActivateLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(false);
+  const [confirmActivateDialog, setConfirmActivateDialog] = useState(false);
   const [alert, setAlert] = useState<{
     open: boolean;
     message: string;
@@ -85,6 +90,10 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
     setConfirmDialog(true);
   };
 
+  const handleActivateClick = () => {
+    setConfirmActivateDialog(true);
+  };
+
   const handleConfirmDelete = async () => {
     if (!trailerId) return;
 
@@ -122,6 +131,46 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
       setConfirmDialog(false);
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleConfirmActivate = async () => {
+    if (!trailerId) return;
+
+    setActivateLoading(true);
+    try {
+      const response = await activateTrailer(trailerId);
+
+      if (response.success) {
+        setAlert({
+          open: true,
+          message: "Rơ mooc đã được kích hoạt thành công",
+          severity: "success",
+        });
+
+        if (onDelete) {
+          onDelete();
+        }
+        setConfirmActivateDialog(false);
+        onClose();
+      } else {
+        setAlert({
+          open: true,
+          message: response.messageVN || "Không thể kích hoạt rơ mooc",
+          severity: "error",
+        });
+        setConfirmActivateDialog(false);
+      }
+    } catch (error) {
+      console.error("Error activating trailer:", error);
+      setAlert({
+        open: true,
+        message: "Đã xảy ra lỗi khi kích hoạt rơ mooc",
+        severity: "error",
+      });
+      setConfirmActivateDialog(false);
+    } finally {
+      setActivateLoading(false);
     }
   };
 
@@ -274,14 +323,26 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
           <Button onClick={onClose} color="primary">
             Đóng
           </Button>
-          {onDelete && (
-            <Button
-              onClick={handleDeleteClick}
-              color="secondary"
-              startIcon={<DeleteIcon />}
-            >
-              Vô hiệu hóa
-            </Button>
+          {onDelete && details && (
+            <>
+              {details.status === TrailerStatus.Active ? (
+                <Button
+                  onClick={handleDeleteClick}
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                >
+                  Vô hiệu hóa
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleActivateClick}
+                  color="success"
+                  startIcon={<PlayArrowIcon />}
+                >
+                  Kích hoạt
+                </Button>
+              )}
+            </>
           )}
         </DialogActions>
       </Dialog>
@@ -315,10 +376,52 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
           </Button>
           <Button
             onClick={handleConfirmDelete}
-            color="secondary"
+            sx={{
+              bgcolor: "#f44336",
+              color: "white",
+              "&:hover": {
+                bgcolor: "#d32f2f",
+              },
+            }}
+            variant="contained"
             disabled={deleteLoading}
           >
             {deleteLoading ? <CircularProgress size={24} /> : "Xác nhận"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={confirmActivateDialog}
+        onClose={() => setConfirmActivateDialog(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Xác nhận kích hoạt</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Bạn có chắc chắn muốn kích hoạt rơ mooc này?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmActivateDialog(false)}
+            color="primary"
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleConfirmActivate}
+            sx={{
+              bgcolor: "#4caf50",
+              color: "white",
+              "&:hover": {
+                bgcolor: "#388e3c",
+              },
+            }}
+            variant="contained"
+            disabled={activateLoading}
+          >
+            {activateLoading ? <CircularProgress size={24} /> : "Xác nhận"}
           </Button>
         </DialogActions>
       </Dialog>

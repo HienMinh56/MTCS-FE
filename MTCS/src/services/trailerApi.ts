@@ -98,3 +98,17 @@ export const deactivateTrailer = async (id: string) => {
   );
   return response.data;
 };
+
+export const activateTrailer = async (id: string) => {
+  try {
+    const response = await axiosInstance.put(
+      `/api/Trailer/activate-trailer/${id}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+    throw error;
+  }
+};
