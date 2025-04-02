@@ -26,7 +26,7 @@ import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import PersonIcon from "@mui/icons-material/Person";
 import OrderManagement from "../components/Order/OrderTable";
 import IncidentManagement from "../components/Incidents";
-import Drivers from "../components/Drivers";
+import Drivers from "../components/Driver/Drivers";
 import Tractors from "./Tractors";
 import Trailers from "./Trailers";
 import Customers from "../components/Customers";

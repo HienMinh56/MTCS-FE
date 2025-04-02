@@ -1,89 +1,84 @@
-import axios from "axios";
-import Cookies from "js-cookie";
+import axiosInstance from "../utils/axiosConfig";
 import { ApiResponse } from "../types/api-types";
-
-const api = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-api.interceptors.request.use(
-  (config) => {
-    const token = Cookies.get("token");
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 export interface Driver {
   driverId: string;
   fullName: string;
   email: string;
-  createdBy: string | null;
+  phoneNumber: string;
   status: number;
-  phoneNumber?: string;
-  dateOfBirth?: string | null; // Updated to match API response
+  createdBy?: string | null;
+  dateOfBirth?: string | null;
   totalKm?: number;
   createdDate?: string;
   modifiedDate?: string | null;
   modifiedBy?: string | null;
   totalWorkingTime?: number;
   currentWeekWorkingTime?: number;
+  totalOrder?: number;
   fileUrls?: string[];
-  // Add other properties as needed
 }
 
-interface DriversResponse extends ApiResponse {
-  data: {
-    items: Driver[];
-    currentPage: number;
-    totalPages: number;
-    pageSize: number;
-    totalCount: number;
-    hasPrevious: boolean;
-    hasNext: boolean;
-  };
+export interface PaginatedData<T> {
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  totalCount: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+  items: T[];
 }
 
-// Function to get all drivers
-export const getAllDrivers = async (): Promise<Driver[]> => {
+export interface DriversResponse extends ApiResponse {
+  data: PaginatedData<Driver>;
+}
+
+export interface DriverParams {
+  pageNumber?: number;
+  pageSize?: number;
+  status?: number;
+  keyword?: string;
+}
+
+export const getDrivers = async (
+  params?: DriverParams
+): Promise<DriversResponse> => {
   try {
-    const response = await api.get<DriversResponse>('/Driver');
-    return response.data.data.items;
+    const queryParams = new URLSearchParams();
+
+    if (params?.pageNumber)
+      queryParams.append("pageNumber", params.pageNumber.toString());
+    if (params?.pageSize)
+      queryParams.append("pageSize", params.pageSize.toString());
+    if (params?.status !== undefined)
+      queryParams.append("status", params.status.toString());
+    if (params?.keyword) queryParams.append("keyword", params.keyword);
+
+    const url = `${import.meta.env.VITE_API_BASE_URL}/api/Driver${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+    const response = await axiosInstance.get<DriversResponse>(url);
+    return response.data;
   } catch (error) {
-    console.error('Error fetching drivers:', error);
+    console.error("Error fetching drivers:", error);
     throw error;
   }
 };
 
-// Function to get a specific driver by ID
 export const getDriverById = async (driverId: string): Promise<Driver> => {
   try {
-    const response = await api.get<ApiResponse>(`/Driver/${driverId}/profile`);
+    const response = await axiosInstance.get<ApiResponse>(
+      `${
+        import.meta.env.VITE_API_BASE_URL
+      }/api/Driver/profile?driverId=${driverId}`
+    );
     return response.data.data;
   } catch (error) {
-    console.error('Error fetching driver details:', error);
+    console.error("Error fetching driver details:", error);
     throw error;
   }
 };
 
-// Function to view driver details - handles fetching and formatting
-export const viewDriverDetails = async (driverId: string): Promise<Driver> => {
-  try {
-    const driverData = await getDriverById(driverId);
-    return driverData;
-  } catch (error) {
-    console.error(`Error viewing driver with ID ${driverId}:`, error);
-    throw error;
-  }
-};
-
-// Map status code to text representation
 export const getDriverStatusText = (status: number): string => {
   switch (status) {
     case 1:
