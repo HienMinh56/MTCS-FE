@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -13,11 +13,11 @@ import {
   TextField,
   Button,
   InputAdornment,
-  Chip,
   IconButton,
   Grid,
   Card,
   CardContent,
+  CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -27,12 +27,97 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import PeopleIcon from "@mui/icons-material/People";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
+import { useNavigate } from "react-router-dom";
+import { getCustomers } from "../services/customerApi";
+import { Customer } from "../types/customer";
 
 const Customers = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      setLoading(true);
+      try {
+        const result = await getCustomers(
+          page + 1,
+          rowsPerPage,
+          searchTerm
+        );
+
+        // The API response doesn't match our expected structure
+        // Let's handle it properly by logging and providing fallbacks
+        console.log("Customer API response:", result);
+
+        if (result && result.orders && result.orders.items) {
+          setCustomers(result.orders.items);
+          setTotalCustomers(result.orders.totalCount || 0);
+          
+          // Calculate total orders from all customers
+          const orderSum = result.orders.items.reduce(
+            (sum, customer) => sum + (customer.totalOrders || 0), 
+            0
+          );
+          setTotalOrders(orderSum);
+        } else {
+          // If we receive the raw customer data with orders array
+          const mockCustomers = transformCustomerData(result);
+          if (mockCustomers && mockCustomers.length > 0) {
+            setCustomers(mockCustomers);
+            setTotalCustomers(mockCustomers.length);
+            setTotalOrders(countTotalOrders(mockCustomers));
+          } else {
+            console.warn("Unexpected API response structure:", result);
+            setCustomers([]);
+            setTotalCustomers(0);
+            setTotalOrders(0);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching customers:", error);
+        setCustomers([]);
+        setTotalCustomers(0);
+        setTotalOrders(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomers();
+  }, [page, rowsPerPage, searchTerm]);
+
+  // Transform the raw customer data response if needed
+  const transformCustomerData = (data: any): Customer[] => {
+    // If the data is an array of customers with embedded orders
+    if (Array.isArray(data) && data.length > 0 && data[0].customerId) {
+      return data.map(customer => ({
+        customerId: customer.customerId,
+        companyName: customer.companyName,
+        email: customer.email,
+        phoneNumber: customer.phoneNumber,
+        createdDate: customer.createdDate,
+        totalOrders: customer.orders ? customer.orders.length : 0
+      }));
+    }
+    
+    // If the data is already in the expected format
+    if (Array.isArray(data) && data.length > 0 && data[0].companyName) {
+      return data;
+    }
+    
+    return [];
+  };
+
+  // Count total orders for all customers
+  const countTotalOrders = (customers: Customer[]): number => {
+    return customers.reduce((sum, customer) => sum + (customer.totalOrders || 0), 0);
+  };
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -47,72 +132,31 @@ const Customers = () => {
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
+    setPage(0); // Reset to first page when searching
   };
 
   const handleEdit = (customerId: string) => {
-    console.log(`Edit customer with ID: ${customerId}`);
+    navigate(`/staff-menu/customers/${customerId}`);
   };
 
   const handleDelete = (customerId: string) => {
     console.log(`Delete customer with ID: ${customerId}`);
+    // Implement delete functionality
   };
 
-  // Fake customer data
-  const customers = [
-    {
-      id: "C001",
-      name: "Nguyen Van A",
-      email: "nguyenvana@example.com",
-      phone: "0123456789",
-      createdDate: "2025-01-01",
-      orderCount: 5,
-      status: "active",
-    },
-    {
-      id: "C002",
-      name: "Tran Thi B",
-      email: "tranthib@example.com",
-      phone: "0987654321",
-      createdDate: "2025-02-01",
-      orderCount: 3,
-      status: "inactive",
-    },
-    {
-      id: "C003",
-      name: "Le Van C",
-      email: "levanc@example.com",
-      phone: "0912345678",
-      createdDate: "2025-03-01",
-      orderCount: 8,
-      status: "pending",
-    },
-    // Add more customers as needed
-  ];
+  const handleViewCustomerDetail = (customerId: string) => {
+    navigate(`/staff-menu/customers/${customerId}`);
+  };
 
-  // Filtered customers based on search term
-  const filteredCustomers = customers.filter((customer) =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Customer status options
-  const statusOptions = [
-    { value: "active", label: "Hoạt động", color: "success" },
-    { value: "inactive", label: "Không hoạt động", color: "error" },
-    { value: "pending", label: "Chờ xác nhận", color: "warning" },
-  ];
-
-  // Status chip component
-  const getStatusChip = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Chip label="Hoạt động" color="success" size="small" />;
-      case "inactive":
-        return <Chip label="Không hoạt động" color="error" size="small" />;
-      case "pending":
-        return <Chip label="Chờ xác nhận" color="warning" size="small" />;
-      default:
-        return <Chip label="Không xác định" size="small" />;
-    }
+  // Calculate new customers (created within the last 7 days)
+  const getNewCustomersCount = () => {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    return customers.filter(customer => {
+      const createdDate = new Date(customer.createdDate || '');
+      return createdDate >= oneWeekAgo;
+    }).length;
   };
 
   return (
@@ -140,7 +184,7 @@ const Customers = () => {
                     Tổng số khách hàng
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {customers.length}
+                    {totalCustomers}
                   </Typography>
                 </Box>
                 <Box
@@ -175,7 +219,7 @@ const Customers = () => {
                     Khách hàng mới
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {getNewCustomersCount()}
                   </Typography>
                 </Box>
                 <Box
@@ -210,7 +254,7 @@ const Customers = () => {
                     Tổng đơn hàng
                   </Typography>
                   <Typography variant="h5" component="div">
-                    0
+                    {totalOrders}
                   </Typography>
                 </Box>
                 <Box
@@ -289,44 +333,88 @@ const Customers = () => {
             >
               <TableHead>
                 <TableRow>
-                  <TableCell>Họ và tên</TableCell>
+                  <TableCell>Công ty</TableCell>
                   <TableCell>Email</TableCell>
                   <TableCell>Số điện thoại</TableCell>
                   <TableCell>Ngày tạo</TableCell>
                   <TableCell>Số đơn hàng</TableCell>
-                  <TableCell>Trạng thái</TableCell>
                   <TableCell align="center">Hành động</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredCustomers.length > 0 ? (
-                  filteredCustomers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell>{customer.name}</TableCell>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      <Box
+                        sx={{
+                          py: 3,
+                          display: "flex",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <CircularProgress size={24} />
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : customers.length > 0 ? (
+                  customers.map((customer) => (
+                    <TableRow
+                      key={customer.customerId}
+                      hover
+                      onClick={() => handleViewCustomerDetail(customer.customerId)}
+                      sx={{ cursor: "pointer" }}
+                    >
+                      <TableCell>{customer.companyName}</TableCell>
                       <TableCell>{customer.email}</TableCell>
-                      <TableCell>{customer.phone}</TableCell>
-                      <TableCell>{customer.createdDate}</TableCell>
-                      <TableCell>{customer.orderCount}</TableCell>
-                      <TableCell>{getStatusChip(customer.status)}</TableCell>
+                      <TableCell>{customer.phoneNumber}</TableCell>
+                      <TableCell>
+                        {customer.createdDate 
+                          ? new Date(customer.createdDate).toLocaleDateString('vi-VN') 
+                          : 'N/A'}
+                      </TableCell>
+                      <TableCell>{customer.totalOrders}</TableCell>
                       <TableCell align="center">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEdit(customer.id)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(customer.id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewCustomerDetail(customer.customerId);
+                            }}
+                            title="Xem chi tiết"
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(customer.customerId);
+                            }}
+                            title="Chỉnh sửa"
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(customer.customerId);
+                            }}
+                            title="Xóa"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} align="center">
+                    <TableCell colSpan={6} align="center">
                       <Typography variant="body2" color="text.secondary" py={3}>
                         Không có dữ liệu
                       </Typography>
@@ -339,7 +427,7 @@ const Customers = () => {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={filteredCustomers.length}
+            count={totalCustomers}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}

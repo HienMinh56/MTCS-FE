@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
   DialogTitle, 
@@ -14,10 +14,12 @@ import {
   MenuItem,
   Typography,
   Alert,
-  Stack,
-  Snackbar
+  Snackbar,
+  CircularProgress
 } from '@mui/material';
 import { createContract } from '../../services/contractApi';
+import { getCustomers } from '../../services/customerApi';
+import { Customer } from '../../types/customer';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { format } from 'date-fns';
 import axios from 'axios';
@@ -51,6 +53,10 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
   const [status, setStatus] = useState<ContractStatus>(ContractStatus.Active);
   const [customerId, setCustomerId] = useState<string>(initialCustomerId || '');
   
+  // Customer dropdown data
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  
   // Files and file metadata
   const [files, setFiles] = useState<File[]>([]);
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
@@ -65,6 +71,71 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
     message: "",
     severity: "success" as "success" | "error",
   });
+
+  // Fetch customers when the modal opens
+  useEffect(() => {
+    if (open) {
+      fetchCustomers();
+    }
+  }, [open]);
+
+  const fetchCustomers = async () => {
+    try {
+      setLoadingCustomers(true);
+      // Use the existing getCustomers function with a larger pageSize to get more customers
+      const result = await getCustomers(1, 100);
+      
+      console.log("Customer result:", result);
+      
+      if (result && result.orders && Array.isArray(result.orders.items)) {
+        const customersList = result.orders.items;
+        
+        console.log("Processed customers list:", customersList);
+        
+        // Make sure the customer objects have the expected properties
+        const validCustomers = customersList.filter(c => 
+          c && typeof c === 'object' && c.customerId && c.companyName
+        );
+        
+        setCustomers(validCustomers);
+        
+        // If we have customers but no initial customerId, set the first customer as default for signedBy
+        if (validCustomers.length > 0) {
+          // Set the first company name as the default signedBy
+          if (!signedBy) {
+            setSignedBy(validCustomers[0].companyName);
+          }
+          
+          // If there's an initialCustomerId, find and set the corresponding company name
+          if (initialCustomerId) {
+            const selectedCustomer = validCustomers.find(c => c.customerId === initialCustomerId);
+            if (selectedCustomer) {
+              setSignedBy(selectedCustomer.companyName);
+            }
+          }
+        }
+      } else {
+        console.warn("Unexpected API response structure:", result);
+        setCustomers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      setSnackbar({
+        open: true,
+        message: "Không thể tải danh sách khách hàng",
+        severity: "error",
+      });
+      setCustomers([]);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+  
+  // Find customer ID from company name
+  const getCustomerIdFromName = (companyName: string): string => {
+    const customer = customers.find(c => c.companyName === companyName);
+    return customer ? customer.customerId : '';
+  };
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -109,8 +180,8 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       return false;
     }
 
-    if (!signedBy.trim()) {
-      setError('Vui lòng nhập người ký hợp đồng');
+    if (!signedBy) {
+      setError('Vui lòng chọn người ký hợp đồng');
       return false;
     }
 
@@ -134,8 +205,8 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       return false;
     }
 
-    if (!customerId.trim()) {
-      setError('Vui lòng nhập mã khách hàng');
+    if (!customerId) {
+      setError('Vui lòng chọn khách hàng');
       return false;
     }
 
@@ -195,6 +266,16 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       return false;
     }
     
+    // Get the customerId from the selected company
+    if (!initialCustomerId) {
+      const selectedCustomerId = getCustomerIdFromName(signedBy);
+      if (!selectedCustomerId) {
+        setError('Không thể xác định khách hàng từ người ký đã chọn');
+        return false;
+      }
+      setCustomerId(selectedCustomerId);
+    }
+    
     return true;
   };
 
@@ -208,6 +289,9 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
         return;
       }
       
+      // Use customerId from initialCustomerId if provided, otherwise get it from signedBy
+      const finalCustomerId = initialCustomerId || getCustomerIdFromName(signedBy);
+      
       // Combine date and time for signedTime
       const combinedDateTime = `${signedDate}T${signedTime}:00`;
       
@@ -219,7 +303,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       formData.append('startDate', startDate);
       formData.append('endDate', endDate);
       formData.append('status', status.toString());
-      formData.append('customerId', customerId); // Now using the state value
+      formData.append('customerId', finalCustomerId); // Now using the state value
       formData.append('orderId', orderId);
       
       // Add general description and note if needed
@@ -234,6 +318,10 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
         formData.append('fileStatuses', fileStatuses[index].toString());
       });
 
+      // Also send the selected company name
+      const companyName = getSelectedCompanyName();
+      formData.append('companyName', companyName);
+
       console.log('===== CONTRACT CREATE REQUEST DATA =====');
       console.log('FormData keys:', [...formData.keys()]);
       console.log('SignedDate:', signedDate);
@@ -241,6 +329,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       console.log('StartDate:', startDate);
       console.log('EndDate:', endDate);
       console.log('CustomerId:', customerId);
+      console.log('Company Name:', companyName);
       console.log('Files:', files);
       console.log('File Descriptions:', fileDescriptions);
       console.log('File Notes:', fileNotes);
@@ -334,25 +423,35 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Người ký"
-                fullWidth
-                value={signedBy}
-                onChange={(e) => setSignedBy(e.target.value)}
-                required
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Mã khách hàng"
-                fullWidth
-                value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-                required
-                disabled={!!initialCustomerId}
-              />
+            <Grid item xs={12}>
+              <FormControl fullWidth required>
+                <InputLabel>Người ký</InputLabel>
+                <Select
+                  value={signedBy}
+                  onChange={(e) => setSignedBy(e.target.value as string)}
+                  label="Người ký"
+                  disabled={loadingCustomers}
+                  startAdornment={
+                    loadingCustomers ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
+                        <CircularProgress size={20} />
+                      </Box>
+                    ) : null
+                  }
+                >
+                  {customers.length === 0 && !loadingCustomers ? (
+                    <MenuItem value="" disabled>
+                      Không có dữ liệu khách hàng
+                    </MenuItem>
+                  ) : (
+                    customers.map((customer) => (
+                      <MenuItem key={customer.customerId} value={customer.companyName || ''}>
+                        {customer.companyName || 'Unknown'}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
             </Grid>
 
             <Grid item xs={12} sm={6}>
