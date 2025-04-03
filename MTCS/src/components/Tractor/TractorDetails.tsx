@@ -15,10 +15,27 @@ import {
   Snackbar,
   Alert,
   DialogContentText,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Tooltip,
+  Link,
+  Card,
+  CardMedia,
+  CardContent,
+  CardActions,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import ImageIcon from "@mui/icons-material/Image";
+import DescriptionIcon from "@mui/icons-material/Description";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import {
   getTractorDetails,
   deactivateTractor,
@@ -28,6 +45,7 @@ import {
   TractorDetails as ITractorDetails,
   ContainerType,
   TractorStatus,
+  TractorFileDTO,
 } from "../../types/tractor";
 
 interface Props {
@@ -36,6 +54,27 @@ interface Props {
   onClose: () => void;
   onDelete?: () => void;
 }
+
+const FILE_CATEGORIES = ["Giấy Đăng ký", "Giấy Kiểm định", "Khác"];
+
+const isImageFile = (fileType: string): boolean => {
+  return (
+    fileType.includes("image") ||
+    ["jpg", "jpeg", "png", "gif"].some((ext) => fileType.includes(ext))
+  );
+};
+
+const getFileIcon = (fileType: string) => {
+  if (fileType.includes("pdf")) {
+    return <PictureAsPdfIcon color="error" />;
+  } else if (isImageFile(fileType)) {
+    return <ImageIcon color="primary" />;
+  } else if (fileType.includes("word") || fileType.includes("doc")) {
+    return <DescriptionIcon color="info" />;
+  } else {
+    return <InsertDriveFileIcon color="action" />;
+  }
+};
 
 const formatDate = (date: string | null) => {
   if (!date) return "N/A";
@@ -61,6 +100,15 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
   });
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [statusChanged, setStatusChanged] = useState(false);
+  const [imagePreview, setImagePreview] = useState<{
+    open: boolean;
+    src: string;
+    title: string;
+  }>({
+    open: false,
+    src: "",
+    title: "",
+  });
 
   useEffect(() => {
     if (tractorId) {
@@ -187,6 +235,182 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
     onClose();
   };
 
+  const openImagePreview = (file: TractorFileDTO) => {
+    setImagePreview({
+      open: true,
+      src: file.fileUrl,
+      title: file.fileName,
+    });
+  };
+
+  const closeImagePreview = () => {
+    setImagePreview({
+      ...imagePreview,
+      open: false,
+    });
+  };
+
+  const groupFilesByCategory = (files: TractorFileDTO[]) => {
+    const grouped: Record<string, TractorFileDTO[]> = {};
+
+    // Initialize all categories with empty arrays
+    FILE_CATEGORIES.forEach((category) => {
+      grouped[category] = [];
+    });
+
+    // Group files by their description
+    files.forEach((file) => {
+      const category =
+        file.description && FILE_CATEGORIES.includes(file.description)
+          ? file.description
+          : "Khác";
+
+      grouped[category].push(file);
+    });
+
+    return grouped;
+  };
+
+  const renderFileItem = (file: TractorFileDTO) => {
+    if (isImageFile(file.fileType)) {
+      return (
+        <Card
+          key={file.fileId}
+          sx={{
+            mb: 2,
+            maxWidth: 350,
+            boxShadow: 2,
+            "&:hover": {
+              boxShadow: 4,
+            },
+          }}
+        >
+          <CardMedia
+            component="img"
+            height="180"
+            image={file.fileUrl}
+            alt={file.fileName}
+            sx={{
+              objectFit: "contain",
+              backgroundColor: "rgba(0, 0, 0, 0.04)",
+              cursor: "pointer",
+            }}
+            onClick={() => openImagePreview(file)}
+          />
+          <CardContent sx={{ py: 1 }}>
+            <Typography variant="subtitle2" noWrap>
+              {file.fileName}
+            </Typography>
+            {file.description !== "Giấy Đăng ký" &&
+              file.description !== "Giấy Kiểm định" && (
+                <Typography
+                  variant="body2"
+                  color="text.primary"
+                  sx={{ mt: 0.5 }}
+                >
+                  Loại: {file.description}
+                </Typography>
+              )}
+            {file.note && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.5 }}
+              >
+                {file.note}
+              </Typography>
+            )}
+            <Typography variant="caption" color="text.secondary">
+              {formatDate(file.uploadDate)}
+            </Typography>
+          </CardContent>
+          <CardActions sx={{ pt: 0 }}>
+            <Tooltip title="Xem ảnh">
+              <IconButton size="small" onClick={() => openImagePreview(file)}>
+                <ZoomInIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Mở trong cửa sổ mới">
+              <IconButton
+                size="small"
+                component="a"
+                href={file.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <OpenInNewIcon />
+              </IconButton>
+            </Tooltip>
+          </CardActions>
+        </Card>
+      );
+    } else {
+      return (
+        <ListItem
+          key={file.fileId}
+          alignItems="flex-start"
+          secondaryAction={
+            <Tooltip title="Mở tài liệu">
+              <IconButton
+                edge="end"
+                component="a"
+                href={file.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="small"
+              >
+                <OpenInNewIcon />
+              </IconButton>
+            </Tooltip>
+          }
+        >
+          <ListItemIcon>{getFileIcon(file.fileType)}</ListItemIcon>
+          <ListItemText
+            primary={
+              <Link
+                href={file.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                underline="hover"
+                sx={{ fontWeight: 500 }}
+              >
+                {file.fileName}
+              </Link>
+            }
+            secondary={
+              <React.Fragment>
+                {file.description !== "Giấy Đăng ký" &&
+                  file.description !== "Giấy Kiểm định" && (
+                    <Typography
+                      component="span"
+                      variant="body2"
+                      color="text.primary"
+                      sx={{ display: "block" }}
+                    >
+                      Loại: {file.description}
+                    </Typography>
+                  )}
+                {file.note && (
+                  <Typography
+                    component="span"
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ display: "block" }}
+                  >
+                    {file.note}
+                  </Typography>
+                )}
+                <Typography variant="caption" color="text.secondary">
+                  {formatDate(file.uploadDate)}
+                </Typography>
+              </React.Fragment>
+            }
+          />
+        </ListItem>
+      );
+    }
+  };
+
   return (
     <>
       <Dialog
@@ -224,103 +448,340 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
               <CircularProgress />
             </Box>
           ) : details ? (
-            <Grid container spacing={1}>
-              {[
-                { label: "Biển số xe", value: details.licensePlate },
-                { label: "Hãng sản xuất", value: details.brand },
-                { label: "Năm sản xuất", value: details.manufactureYear },
-                {
-                  label: "Tải trọng tối đa",
-                  value: `${details.maxLoadWeight} tấn`,
-                },
-                {
-                  label: "Loại container",
-                  value:
-                    details.containerType === ContainerType.DryContainer
-                      ? "Khô"
-                      : "Lạnh",
-                },
-                { label: "Số chuyến hàng", value: details.orderCount },
-              ].map((item, index) => (
-                <Grid item xs={6} key={index}>
+            <>
+              <Grid container spacing={1}>
+                {[
+                  { label: "Biển số xe", value: details.licensePlate },
+                  { label: "Hãng sản xuất", value: details.brand },
+                  { label: "Năm sản xuất", value: details.manufactureYear },
+                  {
+                    label: "Tải trọng tối đa",
+                    value: `${details.maxLoadWeight} tấn`,
+                  },
+                  {
+                    label: "Loại container",
+                    value:
+                      details.containerType === ContainerType.DryContainer
+                        ? "Khô"
+                        : "Lạnh",
+                  },
+                  {
+                    label: "Số chuyến hàng đã hoàn thành",
+                    value: details.orderCount,
+                  },
+                ].map((item, index) => (
+                  <Grid item xs={6} key={index}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 1,
+                        height: "100%",
+                        backgroundColor: "white",
+                        borderRadius: 2,
+                        transition: "transform 0.2s, box-shadow 0.2s",
+                        "&:hover": {
+                          transform: "translateY(-2px)",
+                          boxShadow: 1,
+                        },
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        color="text.secondary"
+                        sx={{ mb: 0.25, fontWeight: 500 }}
+                      >
+                        {item.label}
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        {item.value}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+
+                {[
+                  {
+                    label: "Bảo dưỡng gần nhất",
+                    value: formatDate(details.lastMaintenanceDate),
+                  },
+                  {
+                    label: "Bảo dưỡng tiếp theo",
+                    value: formatDate(details.nextMaintenanceDate),
+                  },
+                  {
+                    label: "Ngày đăng kiểm",
+                    value: formatDate(details.registrationDate),
+                  },
+                  {
+                    label: "Hạn đăng kiểm",
+                    value: formatDate(details.registrationExpirationDate),
+                  },
+                ].map((item, index) => (
+                  <Grid item xs={6} key={`date-${index}`}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 1,
+                        height: "100%",
+                        backgroundColor: "rgba(25, 118, 210, 0.08)",
+                        borderRadius: 2,
+                        transition: "transform 0.2s, box-shadow 0.2s",
+                        "&:hover": {
+                          transform: "translateY(-2px)",
+                          boxShadow: 1,
+                        },
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        color="primary"
+                        sx={{ mb: 0.25, fontWeight: 500 }}
+                      >
+                        {item.label}
+                      </Typography>
+                      <Typography
+                        variant="body1"
+                        sx={{ fontWeight: 600, color: "primary.dark" }}
+                      >
+                        {item.value}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+
+              {/* Display tractor files by category */}
+              {details.files && details.files.length > 0 && (
+                <Box mt={3}>
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 1,
-                      height: "100%",
+                      p: 2,
                       backgroundColor: "white",
                       borderRadius: 2,
-                      transition: "transform 0.2s, box-shadow 0.2s",
-                      "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: 1,
-                      },
                     }}
                   >
-                    <Typography
-                      variant="subtitle2"
-                      color="text.secondary"
-                      sx={{ mb: 0.25, fontWeight: 500 }}
-                    >
-                      {item.label}
+                    <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                      Tài liệu đính kèm
                     </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                      {item.value}
-                    </Typography>
-                  </Paper>
-                </Grid>
-              ))}
+                    <Divider sx={{ mb: 2 }} />
 
-              {[
-                {
-                  label: "Bảo dưỡng gần nhất",
-                  value: formatDate(details.lastMaintenanceDate),
-                },
-                {
-                  label: "Bảo dưỡng tiếp theo",
-                  value: formatDate(details.nextMaintenanceDate),
-                },
-                {
-                  label: "Ngày đăng kiểm",
-                  value: formatDate(details.registrationDate),
-                },
-                {
-                  label: "Hạn đăng kiểm",
-                  value: formatDate(details.registrationExpirationDate),
-                },
-              ].map((item, index) => (
-                <Grid item xs={6} key={`date-${index}`}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 1,
-                      height: "100%",
-                      backgroundColor: "rgba(25, 118, 210, 0.08)",
-                      borderRadius: 2,
-                      transition: "transform 0.2s, box-shadow 0.2s",
-                      "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: 1,
-                      },
-                    }}
-                  >
-                    <Typography
-                      variant="subtitle2"
-                      color="primary"
-                      sx={{ mb: 0.25, fontWeight: 500 }}
-                    >
-                      {item.label}
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      sx={{ fontWeight: 600, color: "primary.dark" }}
-                    >
-                      {item.value}
-                    </Typography>
+                    {/* Layout the documents horizontally */}
+                    <Box sx={{ width: "100%" }}>
+                      <Grid container spacing={2}>
+                        {/* Render Giấy Đăng ký files */}
+                        <Grid item xs={12} md={6}>
+                          <Box sx={{ mb: 3 }}>
+                            <Typography
+                              variant="subtitle1"
+                              sx={{
+                                fontWeight: 500,
+                                mb: 1,
+                                color: "primary.main",
+                                borderBottom: "1px dashed #ccc",
+                                pb: 0.5,
+                              }}
+                            >
+                              Giấy Đăng ký
+                            </Typography>
+
+                            {/* Images for Giấy Đăng ký */}
+                            {details.files.filter(
+                              (file) =>
+                                file.description === "Giấy Đăng ký" &&
+                                isImageFile(file.fileType)
+                            ).length > 0 && (
+                              <Grid container spacing={2}>
+                                {details.files
+                                  .filter(
+                                    (file) =>
+                                      file.description === "Giấy Đăng ký" &&
+                                      isImageFile(file.fileType)
+                                  )
+                                  .map((file) => (
+                                    <Grid item xs={12} sm={6} key={file.fileId}>
+                                      {renderFileItem(file)}
+                                    </Grid>
+                                  ))}
+                              </Grid>
+                            )}
+
+                            {/* Non-image files for Giấy Đăng ký */}
+                            {details.files.filter(
+                              (file) =>
+                                file.description === "Giấy Đăng ký" &&
+                                !isImageFile(file.fileType)
+                            ).length > 0 && (
+                              <List dense>
+                                {details.files
+                                  .filter(
+                                    (file) =>
+                                      file.description === "Giấy Đăng ký" &&
+                                      !isImageFile(file.fileType)
+                                  )
+                                  .map((file) => renderFileItem(file))}
+                              </List>
+                            )}
+
+                            {/* Show message if no files in this category */}
+                            {details.files.filter(
+                              (file) => file.description === "Giấy Đăng ký"
+                            ).length === 0 && (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ py: 1 }}
+                              >
+                                Không có tài liệu
+                              </Typography>
+                            )}
+                          </Box>
+                        </Grid>
+
+                        {/* Render Giấy Kiểm định files */}
+                        <Grid item xs={12} md={6}>
+                          <Box sx={{ mb: 3 }}>
+                            <Typography
+                              variant="subtitle1"
+                              sx={{
+                                fontWeight: 500,
+                                mb: 1,
+                                color: "primary.main",
+                                borderBottom: "1px dashed #ccc",
+                                pb: 0.5,
+                              }}
+                            >
+                              Giấy Kiểm định
+                            </Typography>
+
+                            {/* Images for Giấy Kiểm định */}
+                            {details.files.filter(
+                              (file) =>
+                                file.description === "Giấy Kiểm định" &&
+                                isImageFile(file.fileType)
+                            ).length > 0 && (
+                              <Grid container spacing={2}>
+                                {details.files
+                                  .filter(
+                                    (file) =>
+                                      file.description === "Giấy Kiểm định" &&
+                                      isImageFile(file.fileType)
+                                  )
+                                  .map((file) => (
+                                    <Grid item xs={12} sm={6} key={file.fileId}>
+                                      {renderFileItem(file)}
+                                    </Grid>
+                                  ))}
+                              </Grid>
+                            )}
+
+                            {/* Non-image files for Giấy Kiểm định */}
+                            {details.files.filter(
+                              (file) =>
+                                file.description === "Giấy Kiểm định" &&
+                                !isImageFile(file.fileType)
+                            ).length > 0 && (
+                              <List dense>
+                                {details.files
+                                  .filter(
+                                    (file) =>
+                                      file.description === "Giấy Kiểm định" &&
+                                      !isImageFile(file.fileType)
+                                  )
+                                  .map((file) => renderFileItem(file))}
+                              </List>
+                            )}
+
+                            {/* Show message if no files in this category */}
+                            {details.files.filter(
+                              (file) => file.description === "Giấy Kiểm định"
+                            ).length === 0 && (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ py: 1 }}
+                              >
+                                Không có tài liệu
+                              </Typography>
+                            )}
+                          </Box>
+                        </Grid>
+                      </Grid>
+
+                      {/* Other documents */}
+                      {details.files.filter(
+                        (file) =>
+                          file.description !== "Giấy Đăng ký" &&
+                          file.description !== "Giấy Kiểm định"
+                      ).length > 0 && (
+                        <Box sx={{ mb: 3 }}>
+                          <Typography
+                            variant="subtitle1"
+                            sx={{
+                              fontWeight: 500,
+                              mb: 1,
+                              color: "primary.main",
+                              borderBottom: "1px dashed #ccc",
+                              pb: 0.5,
+                            }}
+                          >
+                            Khác
+                          </Typography>
+
+                          {/* Images for Khác */}
+                          {details.files.filter(
+                            (file) =>
+                              file.description !== "Giấy Đăng ký" &&
+                              file.description !== "Giấy Kiểm định" &&
+                              isImageFile(file.fileType)
+                          ).length > 0 && (
+                            <Grid container spacing={2}>
+                              {details.files
+                                .filter(
+                                  (file) =>
+                                    file.description !== "Giấy Đăng ký" &&
+                                    file.description !== "Giấy Kiểm định" &&
+                                    isImageFile(file.fileType)
+                                )
+                                .map((file) => (
+                                  <Grid
+                                    item
+                                    xs={12}
+                                    sm={6}
+                                    md={4}
+                                    key={file.fileId}
+                                  >
+                                    {renderFileItem(file)}
+                                  </Grid>
+                                ))}
+                            </Grid>
+                          )}
+
+                          {/* Non-image files for Khác */}
+                          {details.files.filter(
+                            (file) =>
+                              file.description !== "Giấy Đăng ký" &&
+                              file.description !== "Giấy Kiểm định" &&
+                              !isImageFile(file.fileType)
+                          ).length > 0 && (
+                            <List dense>
+                              {details.files
+                                .filter(
+                                  (file) =>
+                                    file.description !== "Giấy Đăng ký" &&
+                                    file.description !== "Giấy Kiểm định" &&
+                                    !isImageFile(file.fileType)
+                                )
+                                .map((file) => renderFileItem(file))}
+                            </List>
+                          )}
+                        </Box>
+                      )}
+                    </Box>
                   </Paper>
-                </Grid>
-              ))}
-            </Grid>
+                </Box>
+              )}
+            </>
           ) : (
             <Typography variant="body2" color="textSecondary">
               Không có thông tin chi tiết.
@@ -352,6 +813,53 @@ const TractorDetails = ({ open, tractorId, onClose, onDelete }: Props) => {
             ))}
         </DialogActions>
       </Dialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog
+        open={imagePreview.open}
+        onClose={closeImagePreview}
+        maxWidth="lg"
+        TransitionComponent={Fade}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          {imagePreview.title}
+          <IconButton
+            onClick={closeImagePreview}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, textAlign: "center" }}>
+          <img
+            src={imagePreview.src}
+            alt={imagePreview.title}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            component="a"
+            href={imagePreview.src}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Mở trong cửa sổ mới
+          </Button>
+          <Button onClick={closeImagePreview} color="primary">
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={alert.open}
         autoHideDuration={6000}

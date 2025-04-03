@@ -41,6 +41,18 @@ export interface TrailerResponse {
   errors: string[] | null;
 }
 
+export interface TrailerFileDTO {
+  fileId: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  description?: string;
+  note?: string;
+  uploadDate: string;
+  uploadBy: string;
+}
+
 export interface TrailerDetails {
   trailerId: string;
   licensePlate: string;
@@ -60,6 +72,7 @@ export interface TrailerDetails {
   modifiedBy: string | null;
   deletedDate: string | null;
   deletedBy: string | null;
+  files: TrailerFileDTO[];
 }
 
 export interface TrailerDetailsResponse {

@@ -249,7 +249,7 @@ const TractorForm: React.FC<TractorFormProps> = ({
             variant="outlined"
             color="inherit"
             onClick={onCancel}
-            className="mr-2"
+            sx={{ mr: 3 }}
           >
             Hủy
           </Button>

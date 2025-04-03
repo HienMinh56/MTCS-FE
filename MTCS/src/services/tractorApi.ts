@@ -74,20 +74,46 @@ export const deleteTractor = async (id: string) => {
   return response.data;
 };
 
-export const createTractor = async (tractorData: {
-  licensePlate: string;
-  brand: string;
-  manufactureYear: number;
-  maxLoadWeight: number;
-  lastMaintenanceDate: string;
-  nextMaintenanceDate: string;
-  registrationDate: string;
-  registrationExpirationDate: string;
-  containerType: number;
-}) => {
+export const createTractorWithFiles = async (
+  tractorData: {
+    licensePlate: string;
+    brand: string;
+    manufactureYear: number;
+    maxLoadWeight: number;
+    lastMaintenanceDate: string;
+    nextMaintenanceDate: string;
+    registrationDate: string;
+    registrationExpirationDate: string;
+    containerType: number;
+  },
+  fileUploads: Array<{
+    file: File;
+    description: string;
+    note?: string;
+  }>
+) => {
+  const formData = new FormData();
+
+  Object.entries(tractorData).forEach(([key, value]) => {
+    formData.append(key, value.toString());
+  });
+
+  fileUploads.forEach((upload, index) => {
+    formData.append(`fileUploads[${index}].file`, upload.file);
+    formData.append(`fileUploads[${index}].description`, upload.description);
+    if (upload.note) {
+      formData.append(`fileUploads[${index}].note`, upload.note);
+    }
+  });
+
   const response = await axiosInstance.post(
-    "/api/Tractor/create-tractor",
-    tractorData
+    "/api/Tractor/create-with-files",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
   );
   return response;
 };

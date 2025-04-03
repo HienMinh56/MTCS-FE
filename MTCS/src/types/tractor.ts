@@ -46,6 +46,18 @@ export interface TractorResponse {
   errors: string[] | null;
 }
 
+export interface TractorFileDTO {
+  fileId: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  description?: string;
+  note?: string;
+  uploadDate: string;
+  uploadBy: string;
+}
+
 export interface TractorDetails {
   tractorId: string;
   licensePlate: string;
@@ -65,6 +77,7 @@ export interface TractorDetails {
   modifiedBy: string | null;
   deletedDate: string | null;
   deletedBy: string | null;
+  files: TractorFileDTO[];
 }
 
 export interface TractorDetailsResponse {

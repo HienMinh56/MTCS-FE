@@ -260,7 +260,7 @@ const TrailerForm: React.FC<TrailerFormProps> = ({
             variant="outlined"
             color="inherit"
             onClick={onCancel}
-            className="mr-2"
+            sx={{ mr: 3 }}
           >
             Hủy
           </Button>

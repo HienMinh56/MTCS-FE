@@ -15,18 +15,39 @@ import {
   Snackbar,
   Alert,
   DialogContentText,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  ListItemSecondaryAction,
+  Divider,
+  Tooltip,
+  Link,
+  Card,
+  CardMedia,
+  CardContent,
+  CardActions,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import ImageIcon from "@mui/icons-material/Image";
+import DescriptionIcon from "@mui/icons-material/Description";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import {
   getTrailerDetails,
   deactivateTrailer,
   activateTrailer,
 } from "../../services/trailerApi";
-import { TrailerDetails as ITrailerDetails } from "../../types/trailer";
+import {
+  TrailerDetails as ITrailerDetails,
+  TrailerStatus,
+  TrailerFileDTO,
+} from "../../types/trailer";
 import { ContainerSize } from "../../forms/trailer/trailerSchema";
-import { TrailerStatus } from "../../types/trailer";
 
 interface Props {
   open: boolean;
@@ -34,6 +55,27 @@ interface Props {
   onClose: () => void;
   onDelete?: () => void;
 }
+
+const FILE_CATEGORIES = ["Giấy Đăng ký", "Giấy Kiểm định", "Khác"];
+
+const isImageFile = (fileType: string): boolean => {
+  return (
+    fileType.includes("image") ||
+    ["jpg", "jpeg", "png", "gif"].some((ext) => fileType.includes(ext))
+  );
+};
+
+const getFileIcon = (fileType: string) => {
+  if (fileType.includes("pdf")) {
+    return <PictureAsPdfIcon color="error" />;
+  } else if (isImageFile(fileType)) {
+    return <ImageIcon color="primary" />;
+  } else if (fileType.includes("word") || fileType.includes("doc")) {
+    return <DescriptionIcon color="info" />;
+  } else {
+    return <InsertDriveFileIcon color="action" />;
+  }
+};
 
 const formatDate = (date: string | null) => {
   if (!date) return "N/A";
@@ -43,10 +85,11 @@ const formatDate = (date: string | null) => {
 const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
   const [details, setDetails] = useState<ITrailerDetails | null>(null);
   const [loading, setLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [activateLoading, setActivateLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(false);
-  const [confirmActivateDialog, setConfirmActivateDialog] = useState(false);
+  const [actionType, setActionType] = useState<"activate" | "deactivate">(
+    "deactivate"
+  );
   const [alert, setAlert] = useState<{
     open: boolean;
     message: string;
@@ -55,6 +98,17 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
     open: false,
     message: "",
     severity: "success",
+  });
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [statusChanged, setStatusChanged] = useState(false);
+  const [imagePreview, setImagePreview] = useState<{
+    open: boolean;
+    src: string;
+    title: string;
+  }>({
+    open: false,
+    src: "",
+    title: "",
   });
 
   useEffect(() => {
@@ -86,92 +140,110 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
     }
   }, [trailerId, open]);
 
-  const handleDeleteClick = () => {
+  const handleActivateClick = () => {
+    setActionType("activate");
+    setErrorDetails(null);
     setConfirmDialog(true);
   };
 
-  const handleActivateClick = () => {
-    setConfirmActivateDialog(true);
+  const handleDeactivateClick = () => {
+    setActionType("deactivate");
+    setErrorDetails(null);
+    setConfirmDialog(true);
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmAction = async () => {
     if (!trailerId) return;
 
-    setDeleteLoading(true);
+    setActionLoading(true);
     try {
-      const response = await deactivateTrailer(trailerId);
+      let response;
+
+      if (actionType === "activate") {
+        response = await activateTrailer(trailerId);
+      } else {
+        response = await deactivateTrailer(trailerId);
+      }
 
       if (response.success) {
         setAlert({
           open: true,
-          message: "Rơ mooc đã được vô hiệu hóa thành công",
+          message:
+            actionType === "activate"
+              ? "Rơ mooc đã được kích hoạt thành công"
+              : "Rơ mooc đã được vô hiệu hóa thành công",
           severity: "success",
         });
 
         if (onDelete) {
           onDelete();
         }
+
+        setStatusChanged(true);
         setConfirmDialog(false);
         onClose();
       } else {
+        if (response.messageVN) {
+          setErrorDetails(response.messageVN);
+
+          if (!response.messageVN.includes("đang trong hành trình")) {
+            setConfirmDialog(false);
+          }
+        } else {
+          setConfirmDialog(false);
+        }
+
         setAlert({
           open: true,
-          message: response.messageVN || "Không thể vô hiệu hóa rơ mooc",
+          message:
+            response.messageVN ||
+            (actionType === "activate"
+              ? "Không thể kích hoạt rơ mooc"
+              : "Không thể vô hiệu hóa rơ mooc"),
           severity: "error",
         });
-        setConfirmDialog(false);
       }
-    } catch (error) {
-      console.error("Error deactivating trailer:", error);
+    } catch (error: any) {
+      console.error(`Error ${actionType} trailer:`, error);
+
+      const errorMessage =
+        error?.response?.data?.messageVN ||
+        (actionType === "activate"
+          ? "Đã xảy ra lỗi khi kích hoạt rơ mooc"
+          : "Đã xảy ra lỗi khi vô hiệu hóa rơ mooc");
+
       setAlert({
         open: true,
-        message: "Đã xảy ra lỗi khi vô hiệu hóa rơ mooc",
+        message: errorMessage,
         severity: "error",
       });
       setConfirmDialog(false);
     } finally {
-      setDeleteLoading(false);
+      setActionLoading(false);
     }
   };
 
-  const handleConfirmActivate = async () => {
-    if (!trailerId) return;
-
-    setActivateLoading(true);
-    try {
-      const response = await activateTrailer(trailerId);
-
-      if (response.success) {
-        setAlert({
-          open: true,
-          message: "Rơ mooc đã được kích hoạt thành công",
-          severity: "success",
-        });
-
-        if (onDelete) {
-          onDelete();
-        }
-        setConfirmActivateDialog(false);
-        onClose();
-      } else {
-        setAlert({
-          open: true,
-          message: response.messageVN || "Không thể kích hoạt rơ mooc",
-          severity: "error",
-        });
-        setConfirmActivateDialog(false);
-      }
-    } catch (error) {
-      console.error("Error activating trailer:", error);
-      setAlert({
-        open: true,
-        message: "Đã xảy ra lỗi khi kích hoạt rơ mooc",
-        severity: "error",
-      });
-      setConfirmActivateDialog(false);
-    } finally {
-      setActivateLoading(false);
+  const handleClose = () => {
+    if (statusChanged && onDelete) {
+      onDelete();
+      setStatusChanged(false);
     }
+    onClose();
+  };
+
+  const openImagePreview = (file: TrailerFileDTO) => {
+    setImagePreview({
+      open: true,
+      src: file.fileUrl,
+      title: file.fileName,
+    });
+  };
+
+  const closeImagePreview = () => {
+    setImagePreview({
+      ...imagePreview,
+      open: false,
+    });
   };
 
   const formatContainerSize = (size: number) => {
@@ -182,11 +254,151 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
       : `${size} feet`;
   };
 
+  const renderFileItem = (file: TrailerFileDTO) => {
+    if (isImageFile(file.fileType)) {
+      return (
+        <Card
+          key={file.fileId}
+          sx={{
+            mb: 2,
+            maxWidth: 350,
+            boxShadow: 2,
+            "&:hover": {
+              boxShadow: 4,
+            },
+          }}
+        >
+          <CardMedia
+            component="img"
+            height="180"
+            image={file.fileUrl}
+            alt={file.fileName}
+            sx={{
+              objectFit: "contain",
+              backgroundColor: "rgba(0, 0, 0, 0.04)",
+              cursor: "pointer",
+            }}
+            onClick={() => openImagePreview(file)}
+          />
+          <CardContent sx={{ py: 1 }}>
+            <Typography variant="subtitle2" noWrap>
+              {file.fileName}
+            </Typography>
+            {file.description !== "Giấy Đăng ký" &&
+              file.description !== "Giấy Kiểm định" && (
+                <Typography
+                  variant="body2"
+                  color="text.primary"
+                  sx={{ mt: 0.5 }}
+                >
+                  Loại: {file.description}
+                </Typography>
+              )}
+            {file.note && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.5 }}
+              >
+                {file.note}
+              </Typography>
+            )}
+            <Typography variant="caption" color="text.secondary">
+              {formatDate(file.uploadDate)}
+            </Typography>
+          </CardContent>
+          <CardActions sx={{ pt: 0 }}>
+            <Tooltip title="Xem ảnh">
+              <IconButton size="small" onClick={() => openImagePreview(file)}>
+                <ZoomInIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Mở trong cửa sổ mới">
+              <IconButton
+                size="small"
+                component="a"
+                href={file.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <OpenInNewIcon />
+              </IconButton>
+            </Tooltip>
+          </CardActions>
+        </Card>
+      );
+    } else {
+      return (
+        <ListItem
+          key={file.fileId}
+          alignItems="flex-start"
+          secondaryAction={
+            <Tooltip title="Mở tài liệu">
+              <IconButton
+                edge="end"
+                component="a"
+                href={file.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="small"
+              >
+                <OpenInNewIcon />
+              </IconButton>
+            </Tooltip>
+          }
+        >
+          <ListItemIcon>{getFileIcon(file.fileType)}</ListItemIcon>
+          <ListItemText
+            primary={
+              <Link
+                href={file.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                underline="hover"
+                sx={{ fontWeight: 500 }}
+              >
+                {file.fileName}
+              </Link>
+            }
+            secondary={
+              <React.Fragment>
+                {file.description !== "Giấy Đăng ký" &&
+                  file.description !== "Giấy Kiểm định" && (
+                    <Typography
+                      component="span"
+                      variant="body2"
+                      color="text.primary"
+                      sx={{ display: "block" }}
+                    >
+                      Loại: {file.description}
+                    </Typography>
+                  )}
+                {file.note && (
+                  <Typography
+                    component="span"
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ display: "block" }}
+                  >
+                    {file.note}
+                  </Typography>
+                )}
+                <Typography variant="caption" color="text.secondary">
+                  {formatDate(file.uploadDate)}
+                </Typography>
+              </React.Fragment>
+            }
+          />
+        </ListItem>
+      );
+    }
+  };
+
   return (
     <>
       <Dialog
         open={open}
-        onClose={onClose}
+        onClose={handleClose}
         maxWidth="md"
         fullWidth
         TransitionComponent={Fade}
@@ -202,7 +414,7 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
         >
           Chi tiết rơ mooc
           <IconButton
-            onClick={onClose}
+            onClick={handleClose}
             sx={{
               position: "absolute",
               right: 8,
@@ -219,100 +431,333 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
               <CircularProgress />
             </Box>
           ) : details ? (
-            <Grid container spacing={1}>
-              {[
-                { label: "Biển số xe", value: details.licensePlate },
-                { label: "Hãng sản xuất", value: details.brand },
-                { label: "Năm sản xuất", value: details.manufactureYear },
-                {
-                  label: "Tải trọng tối đa",
-                  value: `${details.maxLoadWeight} tấn`,
-                },
-                {
-                  label: "Kích thước container",
-                  value: formatContainerSize(details.containerSize),
-                },
-                { label: "Số chuyến hàng", value: details.orderCount },
-              ].map((item, index) => (
-                <Grid item xs={6} key={index}>
+            <>
+              <Grid container spacing={1}>
+                {[
+                  { label: "Biển số xe", value: details.licensePlate },
+                  { label: "Hãng sản xuất", value: details.brand },
+                  { label: "Năm sản xuất", value: details.manufactureYear },
+                  {
+                    label: "Tải trọng tối đa",
+                    value: `${details.maxLoadWeight} tấn`,
+                  },
+                  {
+                    label: "Kích thước container",
+                    value: formatContainerSize(details.containerSize),
+                  },
+                  { label: "Số chuyến hàng", value: details.orderCount },
+                ].map((item, index) => (
+                  <Grid item xs={6} key={index}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 1,
+                        height: "100%",
+                        backgroundColor: "white",
+                        borderRadius: 2,
+                        transition: "transform 0.2s, box-shadow 0.2s",
+                        "&:hover": {
+                          transform: "translateY(-2px)",
+                          boxShadow: 1,
+                        },
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        color="text.secondary"
+                        sx={{ mb: 0.25, fontWeight: 500 }}
+                      >
+                        {item.label}
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        {item.value}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+
+                {[
+                  {
+                    label: "Bảo dưỡng gần nhất",
+                    value: formatDate(details.lastMaintenanceDate),
+                  },
+                  {
+                    label: "Bảo dưỡng tiếp theo",
+                    value: formatDate(details.nextMaintenanceDate),
+                  },
+                  {
+                    label: "Ngày đăng kiểm",
+                    value: formatDate(details.registrationDate),
+                  },
+                  {
+                    label: "Hạn đăng kiểm",
+                    value: formatDate(details.registrationExpirationDate),
+                  },
+                ].map((item, index) => (
+                  <Grid item xs={6} key={`date-${index}`}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 1,
+                        height: "100%",
+                        backgroundColor: "rgba(25, 118, 210, 0.08)",
+                        borderRadius: 2,
+                        transition: "transform 0.2s, box-shadow 0.2s",
+                        "&:hover": {
+                          transform: "translateY(-2px)",
+                          boxShadow: 1,
+                        },
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        color="primary"
+                        sx={{ mb: 0.25, fontWeight: 500 }}
+                      >
+                        {item.label}
+                      </Typography>
+                      <Typography
+                        variant="body1"
+                        sx={{ fontWeight: 600, color: "primary.dark" }}
+                      >
+                        {item.value}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+
+              {/* Display trailer files by category */}
+              {details.files && details.files.length > 0 && (
+                <Box mt={3}>
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 1,
-                      height: "100%",
+                      p: 2,
                       backgroundColor: "white",
                       borderRadius: 2,
-                      transition: "transform 0.2s, box-shadow 0.2s",
-                      "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: 1,
-                      },
                     }}
                   >
-                    <Typography
-                      variant="subtitle2"
-                      color="text.secondary"
-                      sx={{ mb: 0.25, fontWeight: 500 }}
-                    >
-                      {item.label}
+                    <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                      Tài liệu đính kèm
                     </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                      {item.value}
-                    </Typography>
-                  </Paper>
-                </Grid>
-              ))}
+                    <Divider sx={{ mb: 2 }} />
 
-              {[
-                {
-                  label: "Bảo dưỡng gần nhất",
-                  value: formatDate(details.lastMaintenanceDate),
-                },
-                {
-                  label: "Bảo dưỡng tiếp theo",
-                  value: formatDate(details.nextMaintenanceDate),
-                },
-                {
-                  label: "Ngày đăng kiểm",
-                  value: formatDate(details.registrationDate),
-                },
-                {
-                  label: "Hạn đăng kiểm",
-                  value: formatDate(details.registrationExpirationDate),
-                },
-              ].map((item, index) => (
-                <Grid item xs={6} key={`date-${index}`}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 1,
-                      height: "100%",
-                      backgroundColor: "rgba(25, 118, 210, 0.08)",
-                      borderRadius: 2,
-                      transition: "transform 0.2s, box-shadow 0.2s",
-                      "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: 1,
-                      },
-                    }}
-                  >
-                    <Typography
-                      variant="subtitle2"
-                      color="primary"
-                      sx={{ mb: 0.25, fontWeight: 500 }}
-                    >
-                      {item.label}
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      sx={{ fontWeight: 600, color: "primary.dark" }}
-                    >
-                      {item.value}
-                    </Typography>
+                    <Box sx={{ width: "100%" }}>
+                      <Grid container spacing={2}>
+                        {/* Render Giấy Đăng ký files */}
+                        <Grid item xs={12} md={6}>
+                          <Box sx={{ mb: 3 }}>
+                            <Typography
+                              variant="subtitle1"
+                              sx={{
+                                fontWeight: 500,
+                                mb: 1,
+                                color: "primary.main",
+                                borderBottom: "1px dashed #ccc",
+                                pb: 0.5,
+                              }}
+                            >
+                              Giấy Đăng ký
+                            </Typography>
+
+                            {/* Images for Giấy Đăng ký */}
+                            {details.files.filter(
+                              (file) =>
+                                file.description === "Giấy Đăng ký" &&
+                                isImageFile(file.fileType)
+                            ).length > 0 && (
+                              <Grid container spacing={2}>
+                                {details.files
+                                  .filter(
+                                    (file) =>
+                                      file.description === "Giấy Đăng ký" &&
+                                      isImageFile(file.fileType)
+                                  )
+                                  .map((file) => (
+                                    <Grid item xs={12} sm={6} key={file.fileId}>
+                                      {renderFileItem(file)}
+                                    </Grid>
+                                  ))}
+                              </Grid>
+                            )}
+
+                            {/* Non-image files for Giấy Đăng ký */}
+                            {details.files.filter(
+                              (file) =>
+                                file.description === "Giấy Đăng ký" &&
+                                !isImageFile(file.fileType)
+                            ).length > 0 && (
+                              <List dense>
+                                {details.files
+                                  .filter(
+                                    (file) =>
+                                      file.description === "Giấy Đăng ký" &&
+                                      !isImageFile(file.fileType)
+                                  )
+                                  .map((file) => renderFileItem(file))}
+                              </List>
+                            )}
+
+                            {/* Show message if no files in this category */}
+                            {details.files.filter(
+                              (file) => file.description === "Giấy Đăng ký"
+                            ).length === 0 && (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ py: 1 }}
+                              >
+                                Không có tài liệu
+                              </Typography>
+                            )}
+                          </Box>
+                        </Grid>
+
+                        {/* Render Giấy Kiểm định files */}
+                        <Grid item xs={12} md={6}>
+                          <Box sx={{ mb: 3 }}>
+                            <Typography
+                              variant="subtitle1"
+                              sx={{
+                                fontWeight: 500,
+                                mb: 1,
+                                color: "primary.main",
+                                borderBottom: "1px dashed #ccc",
+                                pb: 0.5,
+                              }}
+                            >
+                              Giấy Kiểm định
+                            </Typography>
+
+                            {/* Images for Giấy Kiểm định */}
+                            {details.files.filter(
+                              (file) =>
+                                file.description === "Giấy Kiểm định" &&
+                                isImageFile(file.fileType)
+                            ).length > 0 && (
+                              <Grid container spacing={2}>
+                                {details.files
+                                  .filter(
+                                    (file) =>
+                                      file.description === "Giấy Kiểm định" &&
+                                      isImageFile(file.fileType)
+                                  )
+                                  .map((file) => (
+                                    <Grid item xs={12} sm={6} key={file.fileId}>
+                                      {renderFileItem(file)}
+                                    </Grid>
+                                  ))}
+                              </Grid>
+                            )}
+
+                            {/* Non-image files for Giấy Kiểm định */}
+                            {details.files.filter(
+                              (file) =>
+                                file.description === "Giấy Kiểm định" &&
+                                !isImageFile(file.fileType)
+                            ).length > 0 && (
+                              <List dense>
+                                {details.files
+                                  .filter(
+                                    (file) =>
+                                      file.description === "Giấy Kiểm định" &&
+                                      !isImageFile(file.fileType)
+                                  )
+                                  .map((file) => renderFileItem(file))}
+                              </List>
+                            )}
+
+                            {/* Show message if no files in this category */}
+                            {details.files.filter(
+                              (file) => file.description === "Giấy Kiểm định"
+                            ).length === 0 && (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ py: 1 }}
+                              >
+                                Không có tài liệu
+                              </Typography>
+                            )}
+                          </Box>
+                        </Grid>
+                      </Grid>
+
+                      {/* Other documents */}
+                      {details.files.filter(
+                        (file) =>
+                          file.description !== "Giấy Đăng ký" &&
+                          file.description !== "Giấy Kiểm định"
+                      ).length > 0 && (
+                        <Box sx={{ mb: 3 }}>
+                          <Typography
+                            variant="subtitle1"
+                            sx={{
+                              fontWeight: 500,
+                              mb: 1,
+                              color: "primary.main",
+                              borderBottom: "1px dashed #ccc",
+                              pb: 0.5,
+                            }}
+                          >
+                            Khác
+                          </Typography>
+
+                          {/* Images for Khác */}
+                          {details.files.filter(
+                            (file) =>
+                              file.description !== "Giấy Đăng ký" &&
+                              file.description !== "Giấy Kiểm định" &&
+                              isImageFile(file.fileType)
+                          ).length > 0 && (
+                            <Grid container spacing={2}>
+                              {details.files
+                                .filter(
+                                  (file) =>
+                                    file.description !== "Giấy Đăng ký" &&
+                                    file.description !== "Giấy Kiểm định" &&
+                                    isImageFile(file.fileType)
+                                )
+                                .map((file) => (
+                                  <Grid
+                                    item
+                                    xs={12}
+                                    sm={6}
+                                    md={4}
+                                    key={file.fileId}
+                                  >
+                                    {renderFileItem(file)}
+                                  </Grid>
+                                ))}
+                            </Grid>
+                          )}
+
+                          {/* Non-image files for Khác */}
+                          {details.files.filter(
+                            (file) =>
+                              file.description !== "Giấy Đăng ký" &&
+                              file.description !== "Giấy Kiểm định" &&
+                              !isImageFile(file.fileType)
+                          ).length > 0 && (
+                            <List dense>
+                              {details.files
+                                .filter(
+                                  (file) =>
+                                    file.description !== "Giấy Đăng ký" &&
+                                    file.description !== "Giấy Kiểm định" &&
+                                    !isImageFile(file.fileType)
+                                )
+                                .map((file) => renderFileItem(file))}
+                            </List>
+                          )}
+                        </Box>
+                      )}
+                    </Box>
                   </Paper>
-                </Grid>
-              ))}
-            </Grid>
+                </Box>
+              )}
+            </>
           ) : (
             <Typography variant="body2" color="textSecondary">
               Không có thông tin chi tiết.
@@ -320,32 +765,77 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} color="primary">
+          <Button onClick={handleClose} color="primary">
             Đóng
           </Button>
-          {onDelete && details && (
-            <>
-              {details.status === TrailerStatus.Active ? (
-                <Button
-                  onClick={handleDeleteClick}
-                  color="error"
-                  startIcon={<DeleteIcon />}
-                >
-                  Vô hiệu hóa
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleActivateClick}
-                  color="success"
-                  startIcon={<PlayArrowIcon />}
-                >
-                  Kích hoạt
-                </Button>
-              )}
-            </>
-          )}
+          {onDelete &&
+            details &&
+            (details.status === TrailerStatus.Active ? (
+              <Button
+                onClick={handleDeactivateClick}
+                color="error"
+                startIcon={<DeleteIcon />}
+              >
+                Vô hiệu hóa
+              </Button>
+            ) : (
+              <Button
+                onClick={handleActivateClick}
+                color="success"
+                startIcon={<CheckCircleIcon />}
+              >
+                Kích hoạt
+              </Button>
+            ))}
         </DialogActions>
       </Dialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog
+        open={imagePreview.open}
+        onClose={closeImagePreview}
+        maxWidth="lg"
+        TransitionComponent={Fade}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          {imagePreview.title}
+          <IconButton
+            onClick={closeImagePreview}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, textAlign: "center" }}>
+          <img
+            src={imagePreview.src}
+            alt={imagePreview.title}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            component="a"
+            href={imagePreview.src}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Mở trong cửa sổ mới
+          </Button>
+          <Button onClick={closeImagePreview} color="primary">
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={alert.open}
         autoHideDuration={6000}
@@ -364,65 +854,48 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Xác nhận vô hiệu hóa</DialogTitle>
+        <DialogTitle>
+          {actionType === "activate"
+            ? "Xác nhận kích hoạt"
+            : "Xác nhận vô hiệu hóa"}
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Bạn có chắc chắn muốn vô hiệu hóa rơ mooc này?
-          </DialogContentText>
+          {errorDetails ? (
+            <>
+              <DialogContentText color="error" sx={{ mb: 2 }}>
+                {actionType === "activate"
+                  ? "Không thể kích hoạt rơ mooc"
+                  : "Không thể vô hiệu hóa rơ mooc"}
+              </DialogContentText>
+              <Typography
+                variant="body2"
+                color="error"
+                sx={{ fontWeight: 500 }}
+              >
+                {errorDetails}
+              </Typography>
+            </>
+          ) : (
+            <DialogContentText>
+              {actionType === "activate"
+                ? "Bạn có chắc chắn muốn kích hoạt rơ mooc này?"
+                : "Bạn có chắc chắn muốn vô hiệu hóa rơ mooc này?"}
+            </DialogContentText>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmDialog(false)} color="primary">
             Hủy
           </Button>
-          <Button
-            onClick={handleConfirmDelete}
-            sx={{
-              bgcolor: "#f44336",
-              color: "white",
-              "&:hover": {
-                bgcolor: "#d32f2f",
-              },
-            }}
-            variant="contained"
-            disabled={deleteLoading}
-          >
-            {deleteLoading ? <CircularProgress size={24} /> : "Xác nhận"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog
-        open={confirmActivateDialog}
-        onClose={() => setConfirmActivateDialog(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>Xác nhận kích hoạt</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Bạn có chắc chắn muốn kích hoạt rơ mooc này?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setConfirmActivateDialog(false)}
-            color="primary"
-          >
-            Hủy
-          </Button>
-          <Button
-            onClick={handleConfirmActivate}
-            sx={{
-              bgcolor: "#4caf50",
-              color: "white",
-              "&:hover": {
-                bgcolor: "#388e3c",
-              },
-            }}
-            variant="contained"
-            disabled={activateLoading}
-          >
-            {activateLoading ? <CircularProgress size={24} /> : "Xác nhận"}
-          </Button>
+          {!errorDetails && (
+            <Button
+              onClick={handleConfirmAction}
+              color={actionType === "activate" ? "success" : "error"}
+              disabled={actionLoading}
+            >
+              {actionLoading ? <CircularProgress size={24} /> : "Xác nhận"}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </>
