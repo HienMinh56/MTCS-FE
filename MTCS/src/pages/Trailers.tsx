@@ -24,17 +24,15 @@ import BuildIcon from "@mui/icons-material/Build";
 import EventIcon from "@mui/icons-material/Event";
 import AddIcon from "@mui/icons-material/Add";
 import { TrailerStatus } from "../types/trailer";
-import TrailerDetails from "../components/Trailer/TrailerDetails";
 import TrailerCreate from "../components/Trailer/TrailerCreate";
 import TrailerFilter from "../components/Trailer/TrailerFilter";
 import TrailerTable from "../components/Trailer/TrailerTable";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 
 const Trailers = () => {
   const navigate = useNavigate();
-  const { trailerId } = useParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [summary, setSummary] = useState({
     total: 0,
@@ -84,10 +82,6 @@ const Trailers = () => {
   const handleCreateSuccess = () => {
     setRefreshKey((prevKey) => prevKey + 1);
     handleCloseCreate();
-  };
-
-  const handleDeleteSuccess = () => {
-    setRefreshKey((prevKey) => prevKey + 1);
   };
 
   return (
@@ -349,12 +343,6 @@ const Trailers = () => {
           currentFilters={filterOptions}
         />
       </Paper>
-      <TrailerDetails
-        open={!!trailerId}
-        trailerId={trailerId || null}
-        onClose={() => navigate("/staff-menu/trailers")}
-        onDelete={handleDeleteSuccess}
-      />
     </Box>
   );
 };

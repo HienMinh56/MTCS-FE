@@ -57,7 +57,6 @@ export const getTractors = async (
     );
     return response.data;
   } catch (error) {
-    console.error("Error fetching tractors:", error);
     throw error;
   }
 };

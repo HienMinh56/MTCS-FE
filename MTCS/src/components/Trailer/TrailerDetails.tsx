@@ -48,6 +48,7 @@ import {
   TrailerFileDTO,
 } from "../../types/trailer";
 import { ContainerSize } from "../../forms/trailer/trailerSchema";
+import DeactivateButton from "../common/DeactivateButton";
 
 interface Props {
   open: boolean;
@@ -771,18 +772,15 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
           {onDelete &&
             details &&
             (details.status === TrailerStatus.Active ? (
-              <Button
-                onClick={handleDeactivateClick}
-                color="error"
-                startIcon={<DeleteIcon />}
-              >
+              <DeactivateButton onClick={handleDeactivateClick}>
                 Vô hiệu hóa
-              </Button>
+              </DeactivateButton>
             ) : (
               <Button
                 onClick={handleActivateClick}
                 color="success"
                 startIcon={<CheckCircleIcon />}
+                variant="contained"
               >
                 Kích hoạt
               </Button>
@@ -853,11 +851,20 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
         onClose={() => setConfirmDialog(false)}
         maxWidth="xs"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
       >
         <DialogTitle>
-          {actionType === "activate"
-            ? "Xác nhận kích hoạt"
-            : "Xác nhận vô hiệu hóa"}
+          {actionType === "activate" ? (
+            <Box display="flex" alignItems="center" gap={1}>
+              <CheckCircleIcon color="success" />
+              <Typography variant="h6">Xác nhận kích hoạt</Typography>
+            </Box>
+          ) : (
+            <Box display="flex" alignItems="center" gap={1}>
+              <DeleteIcon color="error" />
+              <Typography variant="h6">Xác nhận vô hiệu hóa</Typography>
+            </Box>
+          )}
         </DialogTitle>
         <DialogContent>
           {errorDetails ? (
@@ -867,35 +874,72 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
                   ? "Không thể kích hoạt rơ mooc"
                   : "Không thể vô hiệu hóa rơ mooc"}
               </DialogContentText>
-              <Typography
-                variant="body2"
-                color="error"
-                sx={{ fontWeight: 500 }}
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  bgcolor: "error.light",
+                  borderRadius: 1,
+                }}
               >
-                {errorDetails}
-              </Typography>
+                <Typography
+                  variant="body2"
+                  color="error.dark"
+                  sx={{ fontWeight: 500 }}
+                >
+                  {errorDetails}
+                </Typography>
+              </Paper>
             </>
           ) : (
-            <DialogContentText>
-              {actionType === "activate"
-                ? "Bạn có chắc chắn muốn kích hoạt rơ mooc này?"
-                : "Bạn có chắc chắn muốn vô hiệu hóa rơ mooc này?"}
-            </DialogContentText>
+            <Box sx={{ color: "text.secondary" }}>
+              {actionType === "activate" ? (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography component="div">
+                    Bạn có chắc chắn muốn kích hoạt rơ mooc này?
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography component="div">
+                    Bạn có chắc chắn muốn vô hiệu hóa rơ mooc này?
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialog(false)} color="primary">
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setConfirmDialog(false)} color="inherit">
             Hủy
           </Button>
-          {!errorDetails && (
-            <Button
-              onClick={handleConfirmAction}
-              color={actionType === "activate" ? "success" : "error"}
-              disabled={actionLoading}
-            >
-              {actionLoading ? <CircularProgress size={24} /> : "Xác nhận"}
-            </Button>
-          )}
+          {!errorDetails &&
+            (actionType === "activate" ? (
+              <Button
+                onClick={handleConfirmAction}
+                color="success"
+                variant="contained"
+                disabled={actionLoading}
+                startIcon={
+                  actionLoading ? (
+                    <CircularProgress size={24} color="inherit" />
+                  ) : (
+                    <CheckCircleIcon />
+                  )
+                }
+              >
+                {actionLoading ? "Đang xử lý..." : "Kích hoạt"}
+              </Button>
+            ) : (
+              <DeactivateButton
+                onClick={handleConfirmAction}
+                disabled={actionLoading}
+                loading={actionLoading}
+                variant="contained"
+              >
+                Vô hiệu hóa
+              </DeactivateButton>
+            ))}
         </DialogActions>
       </Dialog>
     </>

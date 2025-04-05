@@ -24,17 +24,15 @@ import BuildIcon from "@mui/icons-material/Build";
 import EventIcon from "@mui/icons-material/Event";
 import AddIcon from "@mui/icons-material/Add";
 import { TractorStatus, ContainerType } from "../types/tractor";
-import TractorDetails from "../components/Tractor/TractorDetails";
 import TractorCreate from "../components/Tractor/TractorCreate";
 import TractorFilter from "../components/Tractor/TractorFilter";
 import TractorTable from "../components/Tractor/TractorTable";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 
 const Tractors = () => {
   const navigate = useNavigate();
-  const { tractorId } = useParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [summary, setSummary] = useState({
@@ -356,12 +354,6 @@ const Tractors = () => {
           currentFilters={filterOptions}
         />
       </Paper>
-      <TractorDetails
-        open={!!tractorId}
-        tractorId={tractorId || null}
-        onClose={() => navigate("/staff-menu/tractors")}
-        onDelete={handleDeleteSuccess}
-      />
     </Box>
   );
 };

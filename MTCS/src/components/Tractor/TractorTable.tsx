@@ -59,7 +59,6 @@ const TractorTable: React.FC<TractorTableProps> = ({
 
     try {
       setLoading(true);
-      console.log("Fetching tractors data...");
 
       const result = await getTractors(
         page,
@@ -80,7 +79,6 @@ const TractorTable: React.FC<TractorTableProps> = ({
         }
 
         setTractors(filteredItems);
-        console.log("Tractors data updated:", filteredItems.length, "items");
 
         const filteredCount =
           filterOptions.containerType !== undefined
@@ -100,7 +98,6 @@ const TractorTable: React.FC<TractorTableProps> = ({
         setTotalCount(0);
       }
     } catch (error) {
-      console.error("Error fetching tractors:", error);
       setTractors([]);
       setTotalCount(0);
     } finally {

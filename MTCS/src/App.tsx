@@ -12,6 +12,8 @@ import { useAuth } from "./contexts/AuthContext";
 import LocalizationProvider from "./providers/LocalizationProvider";
 import DriverDetailPage from "./pages/DriverDetailPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
+import TractorDetailPage from "./pages/TractorDetailPage";
+import TrailerDetailPage from "./pages/TrailerDetailPage";
 import OrderApiTester from "./components/OrderApiTester";
 import DistanceCalculatorPage from "./pages/DistanceCalculatorPage";
 
@@ -45,6 +47,14 @@ function App() {
                 <Route
                   path="/staff-menu/orders/:orderId"
                   element={<OrderDetailPage />}
+                />
+                <Route
+                  path="/staff-menu/tractors/:tractorId"
+                  element={<TractorDetailPage />}
+                />
+                <Route
+                  path="/staff-menu/trailers/:trailerId"
+                  element={<TrailerDetailPage />}
                 />
                 <Route
                   path="/distance-calculator"

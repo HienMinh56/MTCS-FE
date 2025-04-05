@@ -57,7 +57,6 @@ export const getTrailers = async (
     );
     return response.data;
   } catch (error) {
-    console.error("Error fetching trailers:", error);
     throw error;
   }
 };

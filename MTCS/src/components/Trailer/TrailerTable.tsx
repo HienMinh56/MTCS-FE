@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -33,12 +33,14 @@ interface TrailerTableProps {
     maintenance: number;
     repair: number;
   }) => void;
+  refreshTrigger?: number;
 }
 
 const TrailerTable: React.FC<TrailerTableProps> = ({
   searchTerm = "",
   filterOptions,
   onUpdateSummary,
+  refreshTrigger = 0,
 }) => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
@@ -46,8 +48,16 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
   const [trailers, setTrailers] = useState<Trailer[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const prevRefreshTriggerRef = useRef(refreshTrigger);
+  const isInitialMountRef = useRef(true);
+  const isPageChangeRef = useRef(false);
+  const shouldFetchDataRef = useRef(true);
 
-  const fetchTrailers = async () => {
+  const fetchTrailers = useCallback(async () => {
+    if (!shouldFetchDataRef.current) {
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -95,26 +105,60 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
       setTotalCount(0);
     } finally {
       setLoading(false);
+      isPageChangeRef.current = false;
     }
-  };
+  }, [page, rowsPerPage, searchTerm, filterOptions, onUpdateSummary]);
 
   useEffect(() => {
-    fetchTrailers();
-  }, [page, searchTerm, filterOptions]);
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      shouldFetchDataRef.current = true;
+      fetchTrailers();
+    }
+  }, []);
 
   useEffect(() => {
-    setPage(1);
+    if (refreshTrigger !== prevRefreshTriggerRef.current) {
+      console.log(
+        "Refresh trigger changed:",
+        prevRefreshTriggerRef.current,
+        "->",
+        refreshTrigger
+      );
+      prevRefreshTriggerRef.current = refreshTrigger;
+      shouldFetchDataRef.current = true;
+      fetchTrailers();
+    }
+  }, [refreshTrigger, fetchTrailers]);
+
+  useEffect(() => {
+    if (!isInitialMountRef.current && isPageChangeRef.current) {
+      shouldFetchDataRef.current = true;
+      fetchTrailers();
+    }
+  }, [fetchTrailers]);
+
+  useEffect(() => {
+    if (!isInitialMountRef.current) {
+      setPage(1);
+      isPageChangeRef.current = true;
+      shouldFetchDataRef.current = true;
+    }
   }, [searchTerm, filterOptions]);
 
   const handleNextPage = () => {
     const lastPage = Math.ceil(totalCount / rowsPerPage);
     if (page < lastPage) {
+      isPageChangeRef.current = true;
+      shouldFetchDataRef.current = true;
       setPage((prev) => prev + 1);
     }
   };
 
   const handlePrevPage = () => {
     if (page > 1) {
+      isPageChangeRef.current = true;
+      shouldFetchDataRef.current = true;
       setPage((prev) => prev - 1);
     }
   };
