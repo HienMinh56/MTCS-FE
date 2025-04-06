@@ -52,6 +52,8 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
   const isInitialMountRef = useRef(true);
   const isPageChangeRef = useRef(false);
   const shouldFetchDataRef = useRef(true);
+  const prevFilterRef = useRef(filterOptions);
+  const prevSearchTermRef = useRef(searchTerm);
 
   const fetchTrailers = useCallback(async () => {
     if (!shouldFetchDataRef.current) {
@@ -106,6 +108,7 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
     } finally {
       setLoading(false);
       isPageChangeRef.current = false;
+      shouldFetchDataRef.current = false;
     }
   }, [page, rowsPerPage, searchTerm, filterOptions, onUpdateSummary]);
 
@@ -119,12 +122,6 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
 
   useEffect(() => {
     if (refreshTrigger !== prevRefreshTriggerRef.current) {
-      console.log(
-        "Refresh trigger changed:",
-        prevRefreshTriggerRef.current,
-        "->",
-        refreshTrigger
-      );
       prevRefreshTriggerRef.current = refreshTrigger;
       shouldFetchDataRef.current = true;
       fetchTrailers();
@@ -136,15 +133,21 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
       shouldFetchDataRef.current = true;
       fetchTrailers();
     }
-  }, [fetchTrailers]);
+  }, [page, fetchTrailers]);
 
   useEffect(() => {
-    if (!isInitialMountRef.current) {
+    const filterChanged =
+      JSON.stringify(filterOptions) !== JSON.stringify(prevFilterRef.current);
+    const searchChanged = searchTerm !== prevSearchTermRef.current;
+
+    if (!isInitialMountRef.current && (filterChanged || searchChanged)) {
       setPage(1);
-      isPageChangeRef.current = true;
+      prevFilterRef.current = filterOptions;
+      prevSearchTermRef.current = searchTerm;
       shouldFetchDataRef.current = true;
+      fetchTrailers();
     }
-  }, [searchTerm, filterOptions]);
+  }, [searchTerm, filterOptions, fetchTrailers]);
 
   const handleNextPage = () => {
     const lastPage = Math.ceil(totalCount / rowsPerPage);
@@ -176,6 +179,8 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
     switch (status) {
       case TrailerStatus.Active:
         return <Chip label="Đang hoạt động" color="success" size="small" />;
+      case TrailerStatus.OnDuty:
+        return <Chip label="Đang vận chuyển" color="primary" size="small" />;
       case TrailerStatus.Inactive:
         return <Chip label="Không hoạt động" color="error" size="small" />;
       default:

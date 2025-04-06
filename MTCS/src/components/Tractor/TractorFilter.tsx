@@ -73,6 +73,7 @@ const TractorFilter: React.FC<TractorFilterProps> = ({
       filterOptions.registrationExpiringSoon = true;
     }
 
+    // Apply filter immediately
     onApplyFilter(filterOptions);
     onClose();
   };
@@ -86,11 +87,17 @@ const TractorFilter: React.FC<TractorFilterProps> = ({
     onClose();
   };
 
+  // Apply filter instantly when toggling status or container type
   const handleStatusChange = (
     event: React.MouseEvent<HTMLElement>,
     newStatus: TractorStatus | null
   ) => {
     setStatus(newStatus || undefined);
+
+    // Auto-apply for better responsiveness (optional, uncomment if needed)
+    // const filterOptions: FilterOptions = {...currentFilters};
+    // filterOptions.status = newStatus || undefined;
+    // onApplyFilter(filterOptions);
   };
 
   const handleContainerTypeChange = (
@@ -98,6 +105,11 @@ const TractorFilter: React.FC<TractorFilterProps> = ({
     newContainerType: ContainerType | null
   ) => {
     setContainerType(newContainerType || undefined);
+
+    // Auto-apply for better responsiveness (optional, uncomment if needed)
+    // const filterOptions: FilterOptions = {...currentFilters};
+    // filterOptions.containerType = newContainerType || undefined;
+    // onApplyFilter(filterOptions);
   };
 
   return (
@@ -144,6 +156,20 @@ const TractorFilter: React.FC<TractorFilterProps> = ({
               }}
             >
               Đang hoạt động
+            </ToggleButton>
+            <ToggleButton
+              value={TractorStatus.OnDuty}
+              sx={{
+                "&.Mui-selected": {
+                  backgroundColor: "primary.light",
+                  color: "primary.contrastText",
+                  "&:hover": {
+                    backgroundColor: "primary.main",
+                  },
+                },
+              }}
+            >
+              Đang vận chuyển
             </ToggleButton>
             <ToggleButton
               value={TractorStatus.Inactive}

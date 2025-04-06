@@ -150,6 +150,20 @@ const TrailerFilter: React.FC<TrailerFilterProps> = ({
               Đang hoạt động
             </ToggleButton>
             <ToggleButton
+              value={TrailerStatus.OnDuty}
+              sx={{
+                "&.Mui-selected": {
+                  backgroundColor: "primary.light",
+                  color: "primary.contrastText",
+                  "&:hover": {
+                    backgroundColor: "primary.main",
+                  },
+                },
+              }}
+            >
+              Đang vận chuyển
+            </ToggleButton>
+            <ToggleButton
               value={TrailerStatus.Inactive}
               sx={{
                 "&.Mui-selected": {

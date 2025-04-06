@@ -51,6 +51,8 @@ const TractorTable: React.FC<TractorTableProps> = ({
   const isInitialMountRef = useRef(true);
   const isPageChangeRef = useRef(false);
   const shouldFetchDataRef = useRef(true);
+  const prevFilterRef = useRef(filterOptions);
+  const prevSearchTermRef = useRef(searchTerm);
 
   const fetchTractors = useCallback(async () => {
     if (!shouldFetchDataRef.current) {
@@ -103,6 +105,7 @@ const TractorTable: React.FC<TractorTableProps> = ({
     } finally {
       setLoading(false);
       isPageChangeRef.current = false;
+      shouldFetchDataRef.current = false;
     }
   }, [page, rowsPerPage, searchTerm, filterOptions, onUpdateSummary]);
 
@@ -116,12 +119,6 @@ const TractorTable: React.FC<TractorTableProps> = ({
 
   useEffect(() => {
     if (refreshTrigger !== prevRefreshTriggerRef.current) {
-      console.log(
-        "Refresh trigger changed:",
-        prevRefreshTriggerRef.current,
-        "->",
-        refreshTrigger
-      );
       prevRefreshTriggerRef.current = refreshTrigger;
       shouldFetchDataRef.current = true;
       fetchTractors();
@@ -133,15 +130,21 @@ const TractorTable: React.FC<TractorTableProps> = ({
       shouldFetchDataRef.current = true;
       fetchTractors();
     }
-  }, [fetchTractors]);
+  }, [page, fetchTractors]);
 
   useEffect(() => {
-    if (!isInitialMountRef.current) {
+    const filterChanged =
+      JSON.stringify(filterOptions) !== JSON.stringify(prevFilterRef.current);
+    const searchChanged = searchTerm !== prevSearchTermRef.current;
+
+    if (!isInitialMountRef.current && (filterChanged || searchChanged)) {
       setPage(1);
-      isPageChangeRef.current = true;
+      prevFilterRef.current = filterOptions;
+      prevSearchTermRef.current = searchTerm;
       shouldFetchDataRef.current = true;
+      fetchTractors();
     }
-  }, [searchTerm, filterOptions]);
+  }, [searchTerm, filterOptions, fetchTractors]);
 
   const handleNextPage = () => {
     const lastPage = Math.ceil(totalCount / rowsPerPage);
@@ -175,6 +178,8 @@ const TractorTable: React.FC<TractorTableProps> = ({
         return <Chip label="Đang hoạt động" color="success" size="small" />;
       case TractorStatus.Inactive:
         return <Chip label="Không hoạt động" color="error" size="small" />;
+      case TractorStatus.OnDuty:
+        return <Chip label="Đang vận chuyển" color="primary" size="small" />;
       default:
         return <Chip label="Không xác định" size="small" />;
     }

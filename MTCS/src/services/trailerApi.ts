@@ -137,3 +137,84 @@ export const activateTrailer = async (id: string) => {
     throw error;
   }
 };
+
+export const updateTrailerWithFiles = async (
+  trailerId: string,
+  trailerData: {
+    licensePlate: string;
+    brand: string;
+    manufactureYear: number;
+    maxLoadWeight: number;
+    lastMaintenanceDate: string;
+    nextMaintenanceDate: string;
+    registrationDate: string;
+    registrationExpirationDate: string;
+    containerSize: number;
+  },
+  fileUploads: Array<{
+    file: File;
+    description: string;
+    note?: string;
+  }>,
+  filesToRemove: string[] = []
+) => {
+  const formData = new FormData();
+
+  // Add trailer data
+  Object.entries(trailerData).forEach(([key, value]) => {
+    formData.append(key, value.toString());
+  });
+
+  // Add files to remove
+  filesToRemove.forEach((fileId, index) => {
+    formData.append(`filesToRemove[${index}]`, fileId);
+  });
+
+  // Add new file uploads
+  fileUploads.forEach((upload, index) => {
+    formData.append(`fileUploads[${index}].file`, upload.file);
+    formData.append(`fileUploads[${index}].description`, upload.description);
+    if (upload.note) {
+      formData.append(`fileUploads[${index}].note`, upload.note);
+    }
+  });
+
+  try {
+    const response = await axiosInstance.put(
+      `/api/Trailer/update-with-files/${trailerId}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+    throw error;
+  }
+};
+
+export const updateTrailerFileDetails = async (
+  fileId: string,
+  fileData: {
+    description: string;
+    note: string;
+  }
+) => {
+  try {
+    const response = await axiosInstance.put(
+      `/api/Trailer/update-file/${fileId}`,
+      fileData
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+    throw error;
+  }
+};

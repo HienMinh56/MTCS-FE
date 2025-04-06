@@ -51,6 +51,9 @@ import EventIcon from "@mui/icons-material/Event";
 import WarningIcon from "@mui/icons-material/Warning";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import VerifiedIcon from "@mui/icons-material/Verified";
+import EditIcon from "@mui/icons-material/Edit";
+import DirectionsIcon from "@mui/icons-material/Directions";
+import TractorUpdate from "../components/Tractor/TractorUpdate";
 import {
   getTractorDetails,
   deactivateTractor,
@@ -121,6 +124,7 @@ const TractorDetailPage = () => {
     src: "",
     title: "",
   });
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -250,6 +254,36 @@ const TractorDetailPage = () => {
       ...imagePreview,
       open: false,
     });
+  };
+
+  const handleEditClick = () => {
+    setUpdateDialogOpen(true);
+  };
+
+  const handleUpdateSuccess = async () => {
+    // Refresh the details after successful update
+    if (tractorId) {
+      try {
+        setLoading(true);
+        const response = await getTractorDetails(tractorId);
+        if (response.success) {
+          setDetails(response.data);
+          setAlert({
+            open: true,
+            message: "Thông tin đầu kéo đã được cập nhật thành công",
+            severity: "success",
+          });
+        }
+      } catch (error) {
+        setAlert({
+          open: true,
+          message: "Đã có lỗi xảy ra khi tải lại thông tin đầu kéo",
+          severity: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const renderFileItem = (file: TractorFileDTO) => {
@@ -471,6 +505,8 @@ const TractorDetailPage = () => {
                 borderTop: `4px solid ${
                   details.status === TractorStatus.Active
                     ? theme.palette.success.main
+                    : details.status === TractorStatus.OnDuty
+                    ? theme.palette.primary.main
                     : theme.palette.error.main
                 }`,
               }}
@@ -489,6 +525,8 @@ const TractorDetailPage = () => {
                       bgcolor:
                         details.status === TractorStatus.Active
                           ? "success.main"
+                          : details.status === TractorStatus.OnDuty
+                          ? "primary.main"
                           : "error.main",
                       width: 60,
                       height: 60,
@@ -517,16 +555,22 @@ const TractorDetailPage = () => {
                   label={
                     details.status === TractorStatus.Active
                       ? "Đang hoạt động"
+                      : details.status === TractorStatus.OnDuty
+                      ? "Đang vận chuyển"
                       : "Không hoạt động"
                   }
                   color={
                     details.status === TractorStatus.Active
                       ? "success"
+                      : details.status === TractorStatus.OnDuty
+                      ? "primary"
                       : "error"
                   }
                   icon={
                     details.status === TractorStatus.Active ? (
                       <VerifiedIcon />
+                    ) : details.status === TractorStatus.OnDuty ? (
+                      <DirectionsIcon />
                     ) : (
                       <WarningIcon />
                     )
@@ -841,7 +885,18 @@ const TractorDetailPage = () => {
                 </Grid>
               </Grid>
 
-              <Box mt={3} display="flex" justifyContent="flex-end">
+              <Box mt={3} display="flex" justifyContent="space-between">
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<EditIcon />}
+                  onClick={handleEditClick}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{ px: 3, py: 1 }}
+                >
+                  Chỉnh sửa thông tin
+                </Button>
+
                 {details.status === TractorStatus.Active ? (
                   <Button
                     variant="contained"
@@ -852,6 +907,17 @@ const TractorDetailPage = () => {
                     sx={{ px: 3, py: 1 }}
                   >
                     Vô hiệu hóa đầu kéo
+                  </Button>
+                ) : details.status === TractorStatus.OnDuty ? (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    disabled
+                    startIcon={<DirectionsIcon />}
+                    size={isMobile ? "small" : "medium"}
+                    sx={{ px: 3, py: 1 }}
+                  >
+                    Đang vận chuyển
                   </Button>
                 ) : (
                   <Button
@@ -1360,6 +1426,14 @@ const TractorDetailPage = () => {
           {alert.message}
         </Alert>
       </Snackbar>
+
+      {/* Tractor Update Dialog */}
+      <TractorUpdate
+        open={updateDialogOpen}
+        onClose={() => setUpdateDialogOpen(false)}
+        tractorDetails={details}
+        onSuccess={handleUpdateSuccess}
+      />
     </Container>
   );
 };

@@ -1,6 +1,7 @@
 export enum TrailerStatus {
   Active = "Active",
   Inactive = "Inactive",
+  OnDuty = "OnDuty",
 }
 
 export interface Trailer {

@@ -51,6 +51,7 @@ import WarningIcon from "@mui/icons-material/Warning";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import AirportShuttleIcon from "@mui/icons-material/AirportShuttle";
+import EditIcon from "@mui/icons-material/Edit";
 import {
   getTrailerDetails,
   deactivateTrailer,
@@ -62,6 +63,7 @@ import {
   TrailerFileDTO,
 } from "../types/trailer";
 import { ContainerSize } from "../forms/trailer/trailerSchema";
+import TrailerUpdate from "../components/Trailer/TrailerUpdate";
 
 const FILE_CATEGORIES = ["Giấy Đăng ký", "Giấy Kiểm định", "Khác"];
 
@@ -121,6 +123,7 @@ const TrailerDetailPage = () => {
     src: "",
     title: "",
   });
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -416,6 +419,36 @@ const TrailerDetailPage = () => {
     const date = new Date(dateStr);
     const today = new Date();
     return date < today;
+  };
+
+  const handleEditClick = () => {
+    setUpdateDialogOpen(true);
+  };
+
+  const handleUpdateSuccess = async () => {
+    // Refresh the details after successful update
+    if (trailerId) {
+      try {
+        setLoading(true);
+        const response = await getTrailerDetails(trailerId);
+        if (response.success) {
+          setDetails(response.data);
+          setAlert({
+            open: true,
+            message: "Thông tin rơ-moóc đã được cập nhật thành công",
+            severity: "success",
+          });
+        }
+      } catch (error) {
+        setAlert({
+          open: true,
+          message: "Đã có lỗi xảy ra khi tải lại thông tin rơ-moóc",
+          severity: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   return (
@@ -846,7 +879,18 @@ const TrailerDetailPage = () => {
                 </Grid>
               </Grid>
 
-              <Box mt={3} display="flex" justifyContent="flex-end">
+              <Box mt={3} display="flex" justifyContent="space-between">
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<EditIcon />}
+                  onClick={handleEditClick}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{ px: 3, py: 1 }}
+                >
+                  Chỉnh sửa thông tin
+                </Button>
+
                 {details.status === TrailerStatus.Active ? (
                   <Button
                     variant="contained"
@@ -1367,6 +1411,14 @@ const TrailerDetailPage = () => {
           {alert.message}
         </Alert>
       </Snackbar>
+
+      {/* Trailer Update Dialog */}
+      <TrailerUpdate
+        open={updateDialogOpen}
+        onClose={() => setUpdateDialogOpen(false)}
+        trailerDetails={details}
+        onSuccess={handleUpdateSuccess}
+      />
     </Container>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box,
   Typography,
@@ -50,6 +50,7 @@ const Trailers = () => {
   }>({});
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleOpenCreate = () => setOpenCreate(true);
   const handleCloseCreate = () => setOpenCreate(false);
@@ -79,8 +80,12 @@ const Trailers = () => {
     setHasActiveFilters(Object.keys(filters).length > 0);
   };
 
+  const refreshTable = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   const handleCreateSuccess = () => {
-    setRefreshKey((prevKey) => prevKey + 1);
+    refreshTable();
     handleCloseCreate();
   };
 
@@ -300,10 +305,10 @@ const Trailers = () => {
 
         {/* Integrate the TrailerTable component */}
         <TrailerTable
-          key={refreshKey}
           searchTerm={searchTerm}
           filterOptions={filterOptions}
           onUpdateSummary={handleUpdateSummary}
+          refreshTrigger={refreshTrigger}
         />
 
         <Modal

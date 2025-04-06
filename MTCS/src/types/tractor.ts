@@ -1,6 +1,7 @@
 export enum TractorStatus {
   Active = "Active",
   Inactive = "Inactive",
+  OnDuty = "OnDuty",
 }
 
 export enum ContainerType {
