@@ -555,11 +555,11 @@ const OrderDetailPage: React.FC = () => {
             <Divider sx={{ mb: 2 }} />
 
             {/* Order Files section - Keep this intact */}
-            {orderDetails.orderFiles && orderDetails.orderFiles.length > 0 && (
-              <Box mb={3}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Tài liệu đơn hàng
-                </Typography>
+            <Box mb={3}>
+              <Typography variant="subtitle1" gutterBottom>
+                Tài liệu đơn hàng
+              </Typography>
+              {orderDetails.orderFiles && orderDetails.orderFiles.length > 0 ? (
                 <Grid container spacing={2}>
                   {orderDetails.orderFiles.map((fileObj, index) => {
                     // Handle both string URLs and OrderFile objects
@@ -643,8 +643,12 @@ const OrderDetailPage: React.FC = () => {
                     );
                   })}
                 </Grid>
-              </Box>
-            )}
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Không có giấy tờ đặt hàng
+                </Typography>
+              )}
+            </Box>
 
             {/* Contract Files section with Add button */}
             <Box
