@@ -76,3 +76,24 @@ export type PlaceAutocompleteParams = {
   radius?: number;
   more_compound?: boolean;
 };
+
+export interface PriceCalculationParams {
+  distance: number;
+  containerType: number; // 1 for khô, 2 for lạnh
+  containerSize: number; // 1 for 20', 2 for 40'
+  deliveryType: number; // 1 for nhập, 2 for xuất
+}
+
+export interface PriceResponse {
+  basePrice: number;
+  averagePrice: number;
+  highestPrice: number;
+}
+
+export interface PriceCalculationResponse {
+  success: boolean;
+  data: PriceResponse;
+  message: string;
+  messageVN: string;
+  errors: any;
+}

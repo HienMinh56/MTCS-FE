@@ -16,6 +16,8 @@ import {
   Menu,
   MenuItem,
   useTheme,
+  Tooltip,
+  Badge,
 } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
@@ -24,6 +26,7 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import WarningIcon from "@mui/icons-material/Warning";
 import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import PersonIcon from "@mui/icons-material/Person";
+import StraightenIcon from "@mui/icons-material/Straighten";
 import OrderManagement from "../components/Order/OrderTable";
 import IncidentManagement from "../components/Incidents";
 import Drivers from "../components/Driver/Drivers";
@@ -33,6 +36,7 @@ import Customers from "../components/Customers";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
+import DistanceCalculatorDialog from "../components/DistanceCalculatorDialog";
 import logo1 from "../assets/logo1.png";
 
 const drawerWidth = 240;
@@ -43,6 +47,7 @@ const StaffMenu: React.FC = () => {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeTab, setActiveTab] = useState<string>("orders");
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
 
   const userId = localStorage.getItem("userId") || "staff-user";
 
@@ -69,6 +74,14 @@ const StaffMenu: React.FC = () => {
   const handleOpenProfile = () => {
     setAnchorEl(null);
     navigate("/profile");
+  };
+
+  const handleOpenCalculator = () => {
+    setCalculatorOpen(true);
+  };
+
+  const handleCloseCalculator = () => {
+    setCalculatorOpen(false);
   };
 
   const menuItems = [
@@ -138,7 +151,7 @@ const StaffMenu: React.FC = () => {
           ml: { sm: `${drawerWidth}px` },
           background: "linear-gradient(90deg, #0146C7, #3369d1)",
           color: "white",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
           zIndex: (theme) => theme.zIndex.drawer + 1,
         }}
       >
@@ -158,7 +171,23 @@ const StaffMenu: React.FC = () => {
             }}
           />
 
-          <Box sx={{ display: "flex" }}>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Tooltip title="Công cụ tính khoảng cách">
+              <IconButton
+                color="inherit"
+                onClick={handleOpenCalculator}
+                sx={{
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  "&:hover": {
+                    backgroundColor: "rgba(255,255,255,0.2)",
+                  },
+                  transition: "all 0.2s",
+                }}
+              >
+                <StraightenIcon />
+              </IconButton>
+            </Tooltip>
+
             <NotificationComponent userId={userId} />
 
             <IconButton
@@ -168,8 +197,31 @@ const StaffMenu: React.FC = () => {
               aria-haspopup="true"
               onClick={handleProfileMenuOpen}
               color="inherit"
+              sx={{
+                ml: 0.5,
+                border: "2px solid rgba(255,255,255,0.2)",
+                "&:hover": {
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                },
+              }}
             >
-              <AccountCircleIcon />
+              <Badge
+                overlap="circular"
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                badgeContent={
+                  <Box
+                    sx={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      backgroundColor: "#4caf50",
+                      border: "2px solid white",
+                    }}
+                  />
+                }
+              >
+                <AccountCircleIcon />
+              </Badge>
             </IconButton>
           </Box>
           <Menu
@@ -178,9 +230,35 @@ const StaffMenu: React.FC = () => {
             keepMounted
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+                minWidth: 180,
+                boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+              },
+            }}
+            transformOrigin={{ horizontal: "right", vertical: "top" }}
+            anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
           >
-            <MenuItem onClick={handleOpenProfile}>Hồ sơ</MenuItem>
-            <MenuItem sx={{ color: "error.main" }}>
+            <MenuItem
+              onClick={handleOpenProfile}
+              sx={{
+                py: 1.5,
+                "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+              }}
+            >
+              <AccountCircleIcon
+                sx={{ mr: 1.5, color: theme.palette.primary.main }}
+              />
+              Hồ sơ
+            </MenuItem>
+            <MenuItem
+              sx={{
+                color: "error.main",
+                py: 1.5,
+                "&:hover": { backgroundColor: "rgba(211,47,47,0.04)" },
+              }}
+            >
               <LogoutButton buttonType="menuItem" onClick={handleMenuClose} />
             </MenuItem>
           </Menu>
@@ -308,6 +386,11 @@ const StaffMenu: React.FC = () => {
           <Route path="/trailers/:trailerId" element={<Trailers />} />
         </Routes>
       </Box>
+
+      <DistanceCalculatorDialog
+        open={calculatorOpen}
+        onClose={handleCloseCalculator}
+      />
     </Box>
   );
 };

@@ -15,7 +15,6 @@ import OrderDetailPage from "./pages/OrderDetailPage";
 import TractorDetailPage from "./pages/TractorDetailPage";
 import TrailerDetailPage from "./pages/TrailerDetailPage";
 import OrderApiTester from "./components/OrderApiTester";
-import DistanceCalculatorPage from "./pages/DistanceCalculatorPage";
 
 const HomeRoute = () => {
   const { isAuthenticated, user } = useAuth();
@@ -55,10 +54,6 @@ function App() {
                 <Route
                   path="/staff-menu/trailers/:trailerId"
                   element={<TrailerDetailPage />}
-                />
-                <Route
-                  path="/distance-calculator"
-                  element={<DistanceCalculatorPage />}
                 />
               </Route>
 

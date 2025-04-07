@@ -1,14 +1,19 @@
 import axios from "axios";
+import axiosInstance from "../utils/axiosConfig";
 import {
   Coordinates,
   DistanceMatrixResponse,
   DistanceCalculationParams,
   PlaceAutocompleteResponse,
   PlaceAutocompleteParams,
+  PriceCalculationParams,
+  PriceCalculationResponse,
 } from "../types/map";
 
 const GOONG_API_KEY = import.meta.env.VITE_GOONG_MAP_API_KEY;
 const GOONG_API_BASE_URL = "https://rsapi.goong.io";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "https://localhost:7046/api";
 
 export const calculateDistance = async ({
   origins,
@@ -122,5 +127,31 @@ export const getGeocodeByAddress = async (
   } catch (error) {
     console.error("Error geocoding address:", error);
     return null;
+  }
+};
+
+export const calculatePrice = async ({
+  distance,
+  containerType,
+  containerSize,
+  deliveryType,
+}: PriceCalculationParams): Promise<PriceCalculationResponse> => {
+  try {
+    const response = await axiosInstance.get<PriceCalculationResponse>(
+      `api/price-tables/calculate-price`,
+      {
+        params: {
+          distance,
+          containerType,
+          containerSize,
+          deliveryType,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error calculating price:", error);
+    throw error;
   }
 };

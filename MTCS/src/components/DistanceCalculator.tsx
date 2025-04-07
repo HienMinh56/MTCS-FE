@@ -4,7 +4,7 @@ import {
   DistanceMatrixResponse,
   PlacePrediction,
 } from "../types/map";
-import { calculateDistance } from "../services/mapApi";
+import { calculateDistance, calculatePrice } from "../services/mapApi";
 import {
   Box,
   Button,
@@ -24,6 +24,10 @@ import {
   useMediaQuery,
   Fade,
   Snackbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import LocationAutocomplete from "./LocationAutocomplete";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
@@ -35,6 +39,8 @@ import StraightenIcon from "@mui/icons-material/Straighten";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
 import {
   formatDistance,
   formatDuration,
@@ -70,6 +76,16 @@ const DistanceCalculator: React.FC = () => {
     message: "",
   });
   const [locationLoading, setLocationLoading] = useState(false);
+  const [containerType, setContainerType] = useState<number>(1);
+  const [containerSize, setContainerSize] = useState<number>(1);
+  const [deliveryType, setDeliveryType] = useState<number>(1);
+  const [priceResult, setPriceResult] = useState<{
+    basePrice: number;
+    averagePrice: number;
+    highestPrice: number;
+  } | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceError, setPriceError] = useState("");
 
   const addDestination = () => {
     setDestinations([
@@ -163,12 +179,12 @@ const DistanceCalculator: React.FC = () => {
       setLoading(true);
 
       if (!originLat || !originLng) {
-        throw new Error("Origin coordinates are required");
+        throw new Error("Cần có tọa độ điểm xuất phát");
       }
 
       const validDestinations = destinations.filter((d) => d.lat && d.lng);
       if (validDestinations.length === 0) {
-        throw new Error("At least one valid destination is required");
+        throw new Error("Cần có ít nhất một điểm đến hợp lệ");
       }
 
       const origins: Coordinates = {
@@ -197,7 +213,7 @@ const DistanceCalculator: React.FC = () => {
       }, 200);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to calculate distance"
+        err instanceof Error ? err.message : "Không thể tính khoảng cách"
       );
       console.error(err);
     } finally {
@@ -282,6 +298,41 @@ const DistanceCalculator: React.FC = () => {
     return { totalDistance, totalDuration };
   };
 
+  const handleCalculatePrice = async () => {
+    if (!totalDistance) return;
+
+    try {
+      setPriceLoading(true);
+      setPriceError("");
+
+      const response = await calculatePrice({
+        distance: Math.round(totalDistance / 1000), // Convert meters to kilometers
+        containerType,
+        containerSize,
+        deliveryType,
+      });
+
+      if (response.success && response.data) {
+        setPriceResult(response.data);
+        setNotification({
+          open: true,
+          message: response.messageVN || "Tính giá thành công",
+        });
+      } else {
+        setPriceError(response.messageVN || "Không thể tính giá vận chuyển");
+        setPriceResult(null);
+      }
+    } catch (error) {
+      console.error("Error calculating price:", error);
+      setPriceError(
+        error instanceof Error ? error.message : "Không thể tính giá vận chuyển"
+      );
+      setPriceResult(null);
+    } finally {
+      setPriceLoading(false);
+    }
+  };
+
   const { totalDistance, totalDuration } = calculateTotals();
 
   return (
@@ -294,9 +345,27 @@ const DistanceCalculator: React.FC = () => {
         my: 3,
         borderRadius: 2,
         backgroundColor: "#f9f9f9",
+        position: "relative",
       }}
     >
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography
+          variant="h5"
+          gutterBottom
+          fontWeight={600}
+          color="primary.main"
+        >
+          Tính khoảng cách và chi phí vận chuyển
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Nhập điểm xuất phát và điểm đến để tính toán khoảng cách, thời gian di
+          chuyển và chi phí ước tính.
+        </Typography>
+      </Box>
+
+      <Card
+        sx={{ mb: 3, borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+      >
         <CardContent>
           <Box
             sx={{
@@ -314,10 +383,10 @@ const DistanceCalculator: React.FC = () => {
                 }}
               />
               <Typography variant="subtitle1" gutterBottom fontWeight={500}>
-                Starting Point
+                Điểm xuất phát
               </Typography>
             </Box>
-            <Tooltip title="Use current location">
+            <Tooltip title="Sử dụng vị trí hiện tại">
               <IconButton
                 color="primary"
                 onClick={handleUseCurrentLocation}
@@ -334,10 +403,10 @@ const DistanceCalculator: React.FC = () => {
           </Box>
 
           <LocationAutocomplete
-            label="Enter starting location"
+            label="Nhập địa điểm xuất phát"
             value={originAddress}
             onChange={handleOriginLocationChange}
-            placeholder="Search for a location or address"
+            placeholder="Tìm kiếm địa điểm hoặc địa chỉ"
             currentLocation={getCurrentLocation()}
           />
 
@@ -345,7 +414,7 @@ const DistanceCalculator: React.FC = () => {
             <Box mt={1}>
               <Chip
                 icon={<LocationOnIcon />}
-                label={`Coordinates found: (${originLat}, ${originLng})`}
+                label="Đã tìm thấy vị trí"
                 color="success"
                 size="small"
                 sx={{ fontWeight: 500 }}
@@ -355,7 +424,9 @@ const DistanceCalculator: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
+      <Card
+        sx={{ mb: 3, borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+      >
         <CardContent>
           <Box
             sx={{
@@ -373,10 +444,10 @@ const DistanceCalculator: React.FC = () => {
                 }}
               />
               <Typography variant="subtitle1" fontWeight={500}>
-                Destinations
+                Điểm đến
               </Typography>
             </Box>
-            <Tooltip title="Add another destination">
+            <Tooltip title="Thêm điểm đến">
               <Button
                 startIcon={<AddIcon />}
                 onClick={addDestination}
@@ -384,7 +455,7 @@ const DistanceCalculator: React.FC = () => {
                 size="small"
                 sx={{ textTransform: "none" }}
               >
-                Add Destination
+                Thêm điểm đến
               </Button>
             </Tooltip>
           </Box>
@@ -413,7 +484,7 @@ const DistanceCalculator: React.FC = () => {
                         {index + 1}
                       </Typography>
                       {destinations.length > 1 && (
-                        <Tooltip title="Remove this destination">
+                        <Tooltip title="Xóa điểm đến này">
                           <IconButton
                             color="error"
                             size="small"
@@ -426,7 +497,7 @@ const DistanceCalculator: React.FC = () => {
                       )}
                     </Box>
                     <LocationAutocomplete
-                      label="Enter destination location"
+                      label="Nhập địa điểm đến"
                       value={dest.address}
                       onChange={(value, placeData, coordinates) =>
                         handleDestinationLocationChange(
@@ -436,7 +507,7 @@ const DistanceCalculator: React.FC = () => {
                           coordinates
                         )
                       }
-                      placeholder="Search for a location or address"
+                      placeholder="Tìm kiếm địa điểm hoặc địa chỉ"
                       currentLocation={getCurrentLocation()}
                     />
                     {dest.coordinatesSetByGeocoding && dest.lat && dest.lng && (
@@ -444,7 +515,7 @@ const DistanceCalculator: React.FC = () => {
                         <Box mt={1}>
                           <Chip
                             icon={<LocationOnIcon />}
-                            label={`Coordinates found: (${dest.lat}, ${dest.lng})`}
+                            label="Đã tìm thấy vị trí"
                             color="success"
                             size="small"
                             sx={{ fontWeight: 500 }}
@@ -487,8 +558,10 @@ const DistanceCalculator: React.FC = () => {
           textTransform: "none",
           fontWeight: 600,
           boxShadow: 3,
+          background: theme.palette.primary.main,
           "&:hover": {
             boxShadow: 5,
+            background: theme.palette.primary.dark,
           },
         }}
         startIcon={<DirectionsIcon />}
@@ -496,30 +569,64 @@ const DistanceCalculator: React.FC = () => {
         {loading ? (
           <CircularProgress size={24} color="inherit" />
         ) : canCalculate ? (
-          "Calculate Truck Route"
+          "Tính tuyến đường xe tải"
         ) : (
-          "Enter Valid Locations to Calculate"
+          "Nhập địa điểm để tính"
         )}
       </Button>
 
       {results && (
-        <Box sx={{ mt: 4 }} id="results-section">
-          <Typography
-            variant="h6"
-            gutterBottom
-            sx={{ display: "flex", alignItems: "center" }}
+        <Box
+          sx={{
+            mt: 4,
+            pt: 2,
+            borderTop: "1px dashed rgba(0,0,0,0.1)",
+            animation: "fadeIn 0.5s ease-in-out",
+            "@keyframes fadeIn": {
+              "0%": { opacity: 0, transform: "translateY(10px)" },
+              "100%": { opacity: 1, transform: "translateY(0)" },
+            },
+          }}
+          id="results-section"
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
           >
-            <DirectionsIcon sx={{ mr: 1 }} /> Route Results
-          </Typography>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ display: "flex", alignItems: "center", mb: 0 }}
+            >
+              <DirectionsIcon sx={{ mr: 1 }} /> Kết quả tuyến đường
+            </Typography>
+            <Chip
+              icon={<TimerIcon />}
+              label={formatDuration(totalDuration)}
+              color="primary"
+              variant="outlined"
+            />
+          </Box>
 
-          <Card sx={{ mb: 3, borderRadius: 2, backgroundColor: "#f0f7ff" }}>
+          <Card
+            sx={{
+              mb: 3,
+              borderRadius: 2,
+              backgroundColor: "#f0f7ff",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+            }}
+          >
             <CardContent>
               <Typography
                 variant="subtitle2"
                 color="text.secondary"
                 gutterBottom
               >
-                Route Summary
+                Tổng quan tuyến đường
               </Typography>
               <Box
                 sx={{
@@ -541,7 +648,7 @@ const DistanceCalculator: React.FC = () => {
                     sx={{ mr: 1, color: theme.palette.primary.main }}
                   />
                   <Typography>
-                    <strong>Total Distance:</strong>{" "}
+                    <strong>Tổng quãng đường:</strong>{" "}
                     {formatDistance(totalDistance)} km
                   </Typography>
                 </Box>
@@ -551,7 +658,7 @@ const DistanceCalculator: React.FC = () => {
                     sx={{ mr: 1, color: theme.palette.secondary.main }}
                   />
                   <Typography>
-                    <strong>Total Duration:</strong>{" "}
+                    <strong>Tổng thời gian:</strong>{" "}
                     {formatDuration(totalDuration)}
                   </Typography>
                 </Box>
@@ -563,9 +670,9 @@ const DistanceCalculator: React.FC = () => {
                 sx={{ display: "flex", alignItems: "center" }}
               >
                 <InfoOutlinedIcon fontSize="small" sx={{ mr: 0.5 }} />
-                Starting from:{" "}
+                Xuất phát từ:{" "}
                 <Typography component="span" fontWeight="bold" sx={{ ml: 0.5 }}>
-                  {originAddress || `${originLat}, ${originLng}`}
+                  {originAddress || "Vị trí đã chọn"}
                 </Typography>
               </Typography>
             </CardContent>
@@ -573,7 +680,7 @@ const DistanceCalculator: React.FC = () => {
 
           {results.rows[0]?.elements.map((element, index) => (
             <Card
-              key={index}
+              key={`destination-${index}`}
               sx={{
                 mb: 2,
                 borderRadius: 2,
@@ -581,20 +688,33 @@ const DistanceCalculator: React.FC = () => {
                   element.status === "OK"
                     ? `4px solid ${theme.palette.success.main}`
                     : `4px solid ${theme.palette.error.main}`,
-                transition:
-                  "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+                transition: "all 0.2s ease-in-out",
                 "&:hover": {
                   transform: "translateY(-2px)",
                   boxShadow: 3,
                 },
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                position: "relative",
+                overflow: "hidden",
+                "&::before":
+                  element.status === "OK"
+                    ? {
+                        content: '""',
+                        position: "absolute",
+                        width: "100%",
+                        height: "100%",
+                        background: `linear-gradient(90deg, ${theme.palette.success.light}22, transparent)`,
+                        top: 0,
+                        left: 0,
+                      }
+                    : {},
               }}
             >
               <CardContent>
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                      {destinations[index].address ||
-                        `${destinations[index].lat}, ${destinations[index].lng}`}
+                      {destinations[index].address || "Vị trí đã chọn"}
                     </Typography>
                     <Typography
                       variant="caption"
@@ -625,7 +745,7 @@ const DistanceCalculator: React.FC = () => {
                       >
                         {index + 1}
                       </Box>
-                      Status:{" "}
+                      Trạng thái:{" "}
                       <Box
                         component="span"
                         sx={{
@@ -637,7 +757,7 @@ const DistanceCalculator: React.FC = () => {
                           ml: 0.5,
                         }}
                       >
-                        {element.status}
+                        {element.status === "OK" ? "Thành công" : "Lỗi"}
                       </Box>
                     </Typography>
                   </Grid>
@@ -658,7 +778,7 @@ const DistanceCalculator: React.FC = () => {
                               variant="caption"
                               color="text.secondary"
                             >
-                              Distance
+                              Khoảng cách
                             </Typography>
                           </Box>
                         </Box>
@@ -677,7 +797,7 @@ const DistanceCalculator: React.FC = () => {
                               variant="caption"
                               color="text.secondary"
                             >
-                              Estimated Time
+                              Thời gian ước tính
                             </Typography>
                           </Box>
                         </Box>
@@ -688,6 +808,287 @@ const DistanceCalculator: React.FC = () => {
               </CardContent>
             </Card>
           ))}
+
+          <Card
+            sx={{
+              mt: 3,
+              borderRadius: 2,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              border: "1px solid rgba(0,0,0,0.05)",
+              background: "linear-gradient(145deg, #ffffff, #f9f9ff)",
+              position: "relative",
+              overflow: "hidden",
+              "&::before": {
+                content: '""',
+                position: "absolute",
+                width: "200px",
+                height: "200px",
+                background:
+                  "radial-gradient(circle, rgba(0,112,243,0.05) 0%, transparent 70%)",
+                top: "-100px",
+                right: "-100px",
+                borderRadius: "50%",
+              },
+            }}
+          >
+            <CardContent>
+              <Typography
+                variant="subtitle1"
+                gutterBottom
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  mb: 2,
+                  fontWeight: 600,
+                }}
+              >
+                <MonetizationOnIcon
+                  sx={{ mr: 1, color: theme.palette.primary.main }}
+                />
+                Tính giá vận chuyển
+              </Typography>
+
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth size="small" variant="outlined">
+                    <InputLabel>Loại container</InputLabel>
+                    <Select
+                      value={containerType}
+                      label="Loại container"
+                      onChange={(e) =>
+                        setContainerType(e.target.value as number)
+                      }
+                    >
+                      <MenuItem value={1}>Container khô</MenuItem>
+                      <MenuItem value={2}>Container lạnh</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth size="small" variant="outlined">
+                    <InputLabel>Kích thước</InputLabel>
+                    <Select
+                      value={containerSize}
+                      label="Kích thước"
+                      onChange={(e) =>
+                        setContainerSize(e.target.value as number)
+                      }
+                    >
+                      <MenuItem value={1}>20 feet</MenuItem>
+                      <MenuItem value={2}>40 feet</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth size="small" variant="outlined">
+                    <InputLabel>Loại vận chuyển</InputLabel>
+                    <Select
+                      value={deliveryType}
+                      label="Loại vận chuyển"
+                      onChange={(e) =>
+                        setDeliveryType(e.target.value as number)
+                      }
+                    >
+                      <MenuItem value={1}>Nhập</MenuItem>
+                      <MenuItem value={2}>Xuất</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={handleCalculatePrice}
+                disabled={priceLoading || totalDistance === 0}
+                startIcon={
+                  priceLoading ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <ReceiptLongIcon />
+                  )
+                }
+                sx={{
+                  mb: 2,
+                  borderRadius: 2,
+                  py: 1,
+                  px: 3,
+                  textTransform: "none",
+                  fontWeight: 500,
+                  borderWidth: "1.5px",
+                }}
+              >
+                Tính giá
+              </Button>
+
+              {priceError && (
+                <Alert
+                  severity="warning"
+                  sx={{
+                    mb: 2,
+                    borderRadius: 2,
+                    fontSize: "0.875rem",
+                    "& .MuiAlert-icon": {
+                      alignItems: "center",
+                    },
+                  }}
+                >
+                  {priceError}
+                </Alert>
+              )}
+
+              {priceResult && (
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    bgcolor: "#f5faff",
+                    borderRadius: 2,
+                    border: "1px solid rgba(25, 118, 210, 0.12)",
+                    animation: "fadeIn 0.5s ease",
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    color="primary"
+                    gutterBottom
+                    fontWeight={600}
+                  >
+                    Khoảng giá (VND):
+                  </Typography>
+                  <Grid container spacing={3} sx={{ mb: 1 }}>
+                    <Grid item xs={4}>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: "rgba(0,0,0,0.02)",
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "center",
+                          transition: "all 0.2s",
+                          "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mb: 0.5 }}
+                        >
+                          Giá cơ bản:
+                        </Typography>
+                        <Typography variant="h6" fontWeight="medium">
+                          {new Intl.NumberFormat("vi-VN").format(
+                            priceResult.basePrice
+                          )}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: "rgba(25, 118, 210, 0.08)",
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "center",
+                          border: "1px solid rgba(25, 118, 210, 0.12)",
+                          transition: "all 0.2s",
+                          "&:hover": { bgcolor: "rgba(25, 118, 210, 0.12)" },
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          color="primary"
+                          sx={{ mb: 0.5 }}
+                        >
+                          Giá trung bình:
+                        </Typography>
+                        <Typography
+                          variant="h6"
+                          fontWeight="bold"
+                          color="primary.main"
+                        >
+                          {new Intl.NumberFormat("vi-VN").format(
+                            priceResult.averagePrice
+                          )}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: "rgba(0,0,0,0.02)",
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "center",
+                          transition: "all 0.2s",
+                          "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mb: 0.5 }}
+                        >
+                          Giá cao nhất:
+                        </Typography>
+                        <Typography variant="h6" fontWeight="medium">
+                          {new Intl.NumberFormat("vi-VN").format(
+                            priceResult.highestPrice
+                          )}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                  <Divider sx={{ my: 1.5 }} />
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: 1,
+                    }}
+                  >
+                    <Chip
+                      size="small"
+                      icon={<StraightenIcon fontSize="small" />}
+                      label={`${Math.round(totalDistance / 1000)} km`}
+                      variant="outlined"
+                      color="primary"
+                    />
+                    <Chip
+                      size="small"
+                      icon={<LocalShippingIcon fontSize="small" />}
+                      label={
+                        containerType === 1 ? "Container khô" : "Container lạnh"
+                      }
+                      variant="outlined"
+                    />
+                    <Chip
+                      size="small"
+                      label={containerSize === 1 ? "20 feet" : "40 feet"}
+                      variant="outlined"
+                    />
+                    <Chip
+                      size="small"
+                      label={deliveryType === 1 ? "Nhập" : "Xuất"}
+                      variant="outlined"
+                    />
+                  </Box>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
         </Box>
       )}
 

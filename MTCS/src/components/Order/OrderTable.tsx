@@ -67,7 +67,7 @@ function a11yProps(index: number) {
   };
 }
 
-const OrderManagement = () => {
+const OrderManagement: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [tabValue, setTabValue] = useState(0);
@@ -154,7 +154,7 @@ const OrderManagement = () => {
   const handleViewOrderDetail = (orderId: string) => {
     navigate(`/staff-menu/orders/${orderId}`);
   };
-  
+
   const handleAddNew = () => {
     setCreateDialogOpen(true);
   };
@@ -166,7 +166,7 @@ const OrderManagement = () => {
   const handleOrderCreationSuccess = () => {
     // Close the dialog
     setCreateDialogOpen(false);
-    
+
     // Refresh the order list to show the newly created order
     const fetchOrders = async () => {
       setLoading(true);
@@ -478,7 +478,7 @@ const OrderManagement = () => {
             >
               {orderStatusOptions.map((status, index) => (
                 <Tab
-                  key={status.value}
+                  key={`status-${index}`}
                   label={
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <Typography component="span" variant="body2">
@@ -530,9 +530,9 @@ const OrderManagement = () => {
                     </TableCell>
                   </TableRow>
                 ) : orders.length > 0 ? (
-                  orders.map((order) => (
+                  orders.map((order, index) => (
                     <TableRow
-                      key={order.trackingCode}
+                      key={order.trackingCode || `order-${index}`}
                       hover
                       onClick={() => handleViewOrderDetail(order.orderId)}
                       sx={{ cursor: "pointer" }}
@@ -561,7 +561,13 @@ const OrderManagement = () => {
                         />
                       </TableCell>
                       <TableCell align="center">
-                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "center",
+                            gap: 1,
+                          }}
+                        >
                           <IconButton
                             size="small"
                             color="primary"
@@ -618,22 +624,22 @@ const OrderManagement = () => {
       </Paper>
 
       {/* Order Create Dialog */}
-      <Dialog 
-        open={createDialogOpen} 
+      <Dialog
+        open={createDialogOpen}
         onClose={handleCloseCreateDialog}
         fullWidth
         maxWidth="md"
         PaperProps={{
           sx: {
             borderRadius: 2,
-            maxHeight: '90vh'
-          }
+            maxHeight: "90vh",
+          },
         }}
       >
         <DialogContent sx={{ p: 0 }}>
-          <OrderCreate 
-            onClose={handleCloseCreateDialog} 
-            onSuccess={handleOrderCreationSuccess} 
+          <OrderCreate
+            onClose={handleCloseCreateDialog}
+            onSuccess={handleOrderCreationSuccess}
           />
         </DialogContent>
       </Dialog>

@@ -1,12 +1,14 @@
-import React from 'react';
-import DriverDetailDialog from '../components/DriverDetailDialog';
-import { Container } from '@mui/material';
+import React from "react";
+import DriverDetailDialog from "../components/DriverDetailDialog";
+import { Container, Box } from "@mui/material";
 
 const DriverDetailPage: React.FC = () => {
   return (
-    <Container>
-      <DriverDetailDialog standalone={true} />
-    </Container>
+    <Box sx={{ padding: 2 }}>
+      <Container maxWidth="lg">
+        <DriverDetailDialog standalone={true} />
+      </Container>
+    </Box>
   );
 };
 
