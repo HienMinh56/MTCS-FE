@@ -239,16 +239,14 @@ const OrderDetailPage: React.FC = () => {
     switch (status) {
       case OrderStatus.Pending:
         return { label: "Chờ xử lý", color: "warning" };
-      case OrderStatus.InProgress:
-        return { label: "Đang xử lý", color: "info" };
-      case OrderStatus.Complete:
-        return { label: "Hoàn thành", color: "success" };
       case OrderStatus.Scheduled:
         return { label: "Đã lên lịch", color: "info" };
       case OrderStatus.Delivering:
         return { label: "Đang giao hàng", color: "info" };
       case OrderStatus.Shipped:
         return { label: "Đã giao hàng", color: "info" };
+      case OrderStatus.Complete:
+        return { label: "Hoàn thành", color: "success" };
       default:
         return { label: "Không xác định", color: "default" };
     }
@@ -655,13 +653,6 @@ const OrderDetailPage: React.FC = () => {
             label={getStatusDisplay(orderDetails.status).label}
             color={getStatusDisplay(orderDetails.status).color as any}
           />
-          <Button 
-            variant="outlined" 
-            color="secondary"
-            onClick={handleStatusUpdateOpen}
-          >
-            Cập nhật trạng thái
-          </Button>
           <Button 
             variant="outlined" 
             color="primary" 
@@ -1169,9 +1160,6 @@ const OrderDetailPage: React.FC = () => {
               </MenuItem>
               <MenuItem value={OrderStatus.Shipped}>
                 {getStatusDisplay(OrderStatus.Shipped).label}
-              </MenuItem>
-              <MenuItem value={OrderStatus.InProgress}>
-                {getStatusDisplay(OrderStatus.InProgress).label}
               </MenuItem>
               <MenuItem value={OrderStatus.Complete}>
                 {getStatusDisplay(OrderStatus.Complete).label}

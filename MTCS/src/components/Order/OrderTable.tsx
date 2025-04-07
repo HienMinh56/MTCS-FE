@@ -103,7 +103,7 @@ const OrderManagement = () => {
             : tabValue === 1
             ? OrderStatus.Pending
             : tabValue === 2
-            ? OrderStatus.InProgress
+            ? OrderStatus.Scheduled // Changed from InProgress to Scheduled
             : OrderStatus.Complete;
 
         const result = await getOrders(
@@ -190,7 +190,7 @@ const OrderManagement = () => {
             : tabValue === 1
             ? OrderStatus.Pending
             : tabValue === 2
-            ? OrderStatus.InProgress
+            ? OrderStatus.Scheduled
             : OrderStatus.Complete;
 
         const result = await getOrders(
@@ -277,11 +277,6 @@ const OrderManagement = () => {
     {
       value: OrderStatus.Shipped,
       label: "Đã giao hàng",
-      color: "info",
-    },
-    {
-      value: OrderStatus.InProgress,
-      label: "Đang xử lý",
       color: "info",
     },
     {
@@ -468,6 +463,45 @@ const OrderManagement = () => {
                   }}
                 >
                   <CancelIcon color="error" />
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={6} sm={6} md={3}>
+          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
+            <CardContent sx={{ py: 1.5, px: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Box>
+                  <Typography
+                    color="text.secondary"
+                    variant="body2"
+                    gutterBottom
+                  >
+                    Đã lên lịch
+                  </Typography>
+                  <Typography variant="h5" component="div">
+                    {
+                      orders.filter(
+                        (order) => order.status === OrderStatus.Scheduled
+                      ).length
+                    }
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    backgroundColor: "rgba(33, 150, 243, 0.08)",
+                    p: 1,
+                    borderRadius: "50%",
+                  }}
+                >
+                  <AccessTimeIcon color="info" />
                 </Box>
               </Box>
             </CardContent>
