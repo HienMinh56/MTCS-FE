@@ -34,18 +34,31 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
       console.log('Formatted data for API:', formattedData);
       console.log('Files:', data.files);
       
-      // Create a new array for file descriptions and notes that matches the length of files
+      // Get files and their metadata
+      const files = data.files || [];
       const fileDescriptions = data.fileDescriptions || [];
       const fileNotes = data.fileNotes || [];
+      
+      // Ensure we have enough descriptions and notes for each file
+      while (fileDescriptions.length < files.length) {
+        fileDescriptions.push('');
+      }
+      
+      while (fileNotes.length < files.length) {
+        fileNotes.push('');
+      }
+      
+      console.log('Files count:', files.length);
+      console.log('Descriptions count:', fileDescriptions.length);
+      console.log('Notes count:', fileNotes.length);
       
       // Ensure we're passing the files and related metadata to the API call
       const response = await createOrder({
         ...formattedData,
-        files: data.files || null,
-        // Use the first description/note as general values if available,
-        // or use the specific ones for each file
-        description: fileDescriptions.length > 0 ? fileDescriptions : (data.description || []),
-        notes: fileNotes.length > 0 ? fileNotes : (data.notes || []),
+        orderPlacer: data.orderPlacer || "", // Match with the BE field name (OrderPlace in the backend)
+        files: files.length > 0 ? files : null,
+        description: fileDescriptions.length > 0 ? fileDescriptions : [],
+        notes: fileNotes.length > 0 ? fileNotes : [],
       });
       
       console.log('===== ORDER CREATE RESPONSE =====');

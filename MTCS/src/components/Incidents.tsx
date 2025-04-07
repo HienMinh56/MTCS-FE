@@ -27,6 +27,7 @@ import {
   ImageList,
   ImageListItem,
   CircularProgress,
+  Alert,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
@@ -38,6 +39,7 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import { getAllIncidentReports, getIncidentReportById, IncidentReports } from "../services/IncidentReportApi";
+import ReplaceTripModal from "./ReplaceTripModal";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -84,6 +86,9 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
   incident: Incident | null; 
   onClose: () => void;
 }) => {
+  const [openReplaceTripModal, setOpenReplaceTripModal] = useState(false);
+  const [createTripSuccess, setCreateTripSuccess] = useState(false);
+  
   if (!incident) return null;
   
   // Group files by type
@@ -91,10 +96,21 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
   const invoiceFiles = incident.incidentReportsFiles?.filter(file => file.type === 2) || [];
   const transferFiles = incident.incidentReportsFiles?.filter(file => file.type === 3) || [];
   
+  const handleReplaceTripSuccess = () => {
+    setCreateTripSuccess(true);
+    // Reset success message after 3 seconds
+    setTimeout(() => setCreateTripSuccess(false), 3000);
+  };
+  
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Chi tiết sự cố #{incident.reportId}</DialogTitle>
       <DialogContent dividers>
+        {createTripSuccess && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Đã tạo chuyến thay thế thành công!
+          </Alert>
+        )}
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2">Mã sự cố</Typography>
@@ -122,13 +138,11 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                 size="small" 
                 label={
                   incident.status === "Handling" ? "Đang xử lý" :
-                  incident.status === "Completed" ? "Đã xử lý" : 
-                  incident.status === "Pending" ? "Chờ xử lý" : "Đã hủy"
+                  "Đã xử lý" // Changed to always show "Đã xử lý" for non-handling statuses
                 } 
                 color={
                   incident.status === "Handling" ? "info" :
-                  incident.status === "Completed" ? "success" : 
-                  incident.status === "Pending" ? "warning" : "error"
+                  "success" // Changed to always show success color for non-handling statuses
                 } 
               />
             </Typography>
@@ -244,8 +258,23 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
         </Grid>
       </DialogContent>
       <DialogActions>
+        <Button 
+          variant="contained" 
+          color="primary"
+          onClick={() => setOpenReplaceTripModal(true)}
+        >
+          Tạo chuyến thay thế
+        </Button>
         <Button onClick={onClose}>Đóng</Button>
       </DialogActions>
+
+      {/* Replacement Trip Modal */}
+      <ReplaceTripModal
+        open={openReplaceTripModal}
+        onClose={() => setOpenReplaceTripModal(false)}
+        tripId={incident.tripId}
+        onSuccess={handleReplaceTripSuccess}
+      />
     </Dialog>
   );
 };
@@ -320,7 +349,17 @@ const IncidentManagement = () => {
     setSelectedIncident(null);
   };
 
-  // Incident status options with Vietnamese labels
+  // Updated to properly count all non-handling statuses as "Đã xử lý"
+  const getResolvedCount = () => {
+    return incidents.filter((incident) => 
+      incident.status === "Completed" || 
+      incident.status === "Cancelled" || 
+      incident.status === "Canceled" ||
+      (incident.status !== "Handling" && incident.status !== "Pending")
+    ).length;
+  };
+
+  // Incident status options with Vietnamese labels - fixed count method
   const incidentStatusOptions = [
     { value: "all", label: "Tất cả", color: "default", count: incidents.length },
     {
@@ -333,7 +372,8 @@ const IncidentManagement = () => {
       value: "Completed",
       label: "Đã xử lý",
       color: "success",
-      count: incidents.filter((incident) => incident.status === "Completed").length,
+      // Use the helper function to get the correct count
+      count: getResolvedCount()
     }
   ];
 
@@ -346,6 +386,15 @@ const IncidentManagement = () => {
   const getFilteredIncidentsByStatus = (status: string) => {
     if (status === "all") {
       return filteredIncidents;
+    }
+    if (status === "Completed") {
+      // Include all non-handling and non-pending statuses as "Đã xử lý"
+      return filteredIncidents.filter((incident) => 
+        incident.status === "Completed" || 
+        incident.status === "Cancelled" || 
+        incident.status === "Canceled" ||
+        (incident.status !== "Handling" && incident.status !== "Pending")
+      );
     }
     return filteredIncidents.filter((incident) => incident.status === status);
   };
@@ -446,10 +495,7 @@ const IncidentManagement = () => {
                     Đã xử lý
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {
-                      incidents.filter((incident) => incident.status === "Completed")
-                        .length
-                    }
+                    {getResolvedCount()}
                   </Typography>
                 </Box>
                 <Box
@@ -605,18 +651,14 @@ const IncidentManagement = () => {
                                       ? "Chờ xử lý"
                                       : incident.status === "Handling"
                                       ? "Đang xử lý"
-                                      : incident.status === "Completed"
-                                      ? "Đã xử lý"
-                                      : "Đã hủy"
+                                      : "Đã xử lý" // Changed to always show "Đã xử lý" for non-handling/pending statuses
                                   }
                                   color={
                                     incident.status === "Pending"
                                       ? "warning"
                                       : incident.status === "Handling"
                                       ? "info"
-                                      : incident.status === "Completed"
-                                      ? "success"
-                                      : "error"
+                                      : "success" // Changed to always show success color for non-handling/pending statuses
                                   }
                                 />
                               </TableCell>
