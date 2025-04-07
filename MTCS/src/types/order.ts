@@ -1,6 +1,8 @@
 export enum OrderStatus {
   Pending = "Pending",
-  InProgress = "InProgress",
+  Scheduled = "Scheduled",
+  Delivering = "Delivering",
+  Shipped = "Shipped",
   Complete = "Complete",
 }
 
@@ -10,8 +12,18 @@ export enum DeliveryType {
 }
 
 export enum ContainerType {
-  Container20 = 1,
-  Container40 = 2,
+  "Container Khô" = 1,
+  "Container Lạnh" = 2,
+}
+
+export enum ContainerSize {
+  "Container 20 FT" = 20,
+  "Container 40 FT" = 40,
+}
+
+export enum IsPay {
+  Yes = 1,
+  No = 2
 }
 
 export interface PaginatedResult<T> {
@@ -94,8 +106,9 @@ export interface OrderDetails {
     contactPhone: string;
     orderPlacer: string;
     distance: number | null;
-    customer: string | null;
+    containerSize: ContainerSize;
     orderFiles: [OrderFile["fileUrl"]] | null;
+    completeTime: string | null;
 }
 
 export interface OrderDetailsResponse {
