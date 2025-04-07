@@ -21,7 +21,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { OrderFormValues, orderSchema } from "./orderSchema";
-import { ContainerType, DeliveryType } from "../../types/order";
+import { ContainerType, ContainerSize, DeliveryType } from "../../types/order";
 import dayjs from "dayjs";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { styled } from "@mui/material/styles";
@@ -44,6 +44,7 @@ interface OrderFormProps {
   onCancel: () => void;
   isSubmitting: boolean;
   initialValues?: Partial<OrderFormValues>;
+  isEditMode?: boolean;
 }
 
 const OrderForm: React.FC<OrderFormProps> = ({
@@ -51,6 +52,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
   onCancel,
   isSubmitting,
   initialValues,
+  isEditMode = false,
 }) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
@@ -71,8 +73,10 @@ const OrderForm: React.FC<OrderFormProps> = ({
       weight: initialValues?.weight || 0,
       pickUpDate: initialValues?.pickUpDate || dayjs().add(1, "day").toDate(),
       deliveryDate: initialValues?.deliveryDate || dayjs().add(2, "day").toDate(),
+      completeTime: initialValues?.completeTime || null, // Added completeTime
       note: initialValues?.note || "",
-      containerType: initialValues?.containerType || ContainerType.Container20,
+      containerType: initialValues?.containerType || ContainerType["Container Khô"], // Updated for new value
+      containerSize: initialValues?.containerSize || ContainerSize["Container 20 FT"], // Added containerSize
       deliveryType: initialValues?.deliveryType || DeliveryType.Import,
       pickUpLocation: initialValues?.pickUpLocation || "",
       deliveryLocation: initialValues?.deliveryLocation || "",
@@ -81,7 +85,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
       contactPerson: initialValues?.contactPerson || "",
       contactPhone: initialValues?.contactPhone || "",
       distance: initialValues?.distance || null,
-      orderPlacer: initialValues?.orderPlacer || "",
+      orderPlacer: initialValues?.orderPlacer || "", // Added orderPlacer
       containerNumber: initialValues?.containerNumber || "",
       description: initialValues?.description || [""],
       notes: initialValues?.notes || [""],
@@ -99,12 +103,30 @@ const OrderForm: React.FC<OrderFormProps> = ({
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      const newFiles = Array.from(event.target.files);
-      setSelectedFiles((prevFiles) => [...prevFiles, ...newFiles]);
+      const newFilesArray = Array.from(event.target.files);
+      const currentFiles = selectedFiles; // Store current files before updating
+      
+      // Update files array
+      setSelectedFiles((prevFiles) => [...prevFiles, ...newFilesArray]);
       
       // Add empty descriptions and notes for each new file
-      setFileDescriptions(prev => [...prev, ...newFiles.map(() => '')]);
-      setFileNotes(prev => [...prev, ...newFiles.map(() => '')]);
+      setFileDescriptions(prev => {
+        const result = [...prev];
+        // Ensure we have a description for each file
+        while (result.length < currentFiles.length + newFilesArray.length) {
+          result.push('');
+        }
+        return result;
+      });
+      
+      setFileNotes(prev => {
+        const result = [...prev];
+        // Ensure we have a note for each file
+        while (result.length < currentFiles.length + newFilesArray.length) {
+          result.push('');
+        }
+        return result;
+      });
     }
   };
 
@@ -127,11 +149,37 @@ const OrderForm: React.FC<OrderFormProps> = ({
   };
 
   const onFormSubmit = (data: OrderFormValues) => {
+    // Verify the arrays have the same length before submission
+    const filesToSubmit = selectedFiles.length > 0 ? selectedFiles : null;
+    let descriptionsToSubmit = [...fileDescriptions];
+    let notesToSubmit = [...fileNotes];
+    
+    // Make sure descriptions and notes arrays have exactly the same length as files
+    if (filesToSubmit) {
+      // Ensure arrays match file count
+      while (descriptionsToSubmit.length < filesToSubmit.length) {
+        descriptionsToSubmit.push('');
+      }
+      
+      while (notesToSubmit.length < filesToSubmit.length) {
+        notesToSubmit.push('');
+      }
+      
+      // Trim arrays to match file count
+      descriptionsToSubmit = descriptionsToSubmit.slice(0, filesToSubmit.length);
+      notesToSubmit = notesToSubmit.slice(0, filesToSubmit.length);
+    }
+    
+    // Log counts to verify they match
+    console.log("Files to submit:", filesToSubmit?.length || 0);
+    console.log("Descriptions to submit:", descriptionsToSubmit.length);
+    console.log("Notes to submit:", notesToSubmit.length);
+    
     onSubmit({
       ...data,
-      files: selectedFiles.length > 0 ? selectedFiles : null,
-      fileDescriptions: selectedFiles.length > 0 ? fileDescriptions : null,
-      fileNotes: selectedFiles.length > 0 ? fileNotes : null
+      files: filesToSubmit,
+      fileDescriptions: descriptionsToSubmit,
+      fileNotes: notesToSubmit
     });
   };
 
@@ -196,6 +244,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 )}
               />
             </Grid>
+            {/* Add OrderPlacer field */}
             <Grid item xs={12} md={6}>
               <Controller
                 name="orderPlacer"
@@ -252,16 +301,44 @@ const OrderForm: React.FC<OrderFormProps> = ({
                       label="Loại container"
                       disabled={isSubmitting}
                     >
-                      <MenuItem value={ContainerType.Container20}>
-                        Container 20
+                      <MenuItem value={ContainerType["Container Khô"]}>
+                        Container Khô
                       </MenuItem>
-                      <MenuItem value={ContainerType.Container40}>
-                        Container 40
+                      <MenuItem value={ContainerType["Container Lạnh"]}>
+                        Container Lạnh
                       </MenuItem>
                     </Select>
                     {errors.containerType && (
                       <FormHelperText>
                         {errors.containerType.message}
+                      </FormHelperText>
+                    )}
+                  </FormControl>
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="containerSize"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth error={!!errors.containerSize} required>
+                    <InputLabel>Kích thước container</InputLabel>
+                    <Select
+                      {...field}
+                      label="Kích thước container"
+                      disabled={isSubmitting}
+                    >
+                      <MenuItem value={ContainerSize["Container 20 FT"]}>
+                        Container 20 FT
+                      </MenuItem>
+                      <MenuItem value={ContainerSize["Container 40 FT"]}>
+                        Container 40 FT
+                      </MenuItem>
+                    </Select>
+                    {errors.containerSize && (
+                      <FormHelperText>
+                        {errors.containerSize.message}
                       </FormHelperText>
                     )}
                   </FormControl>
@@ -314,29 +391,35 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 )}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
-              <Controller
-                name="temperature"
-                control={control}
-                render={({ field: { onChange, ...field } }) => (
-                  <TextField
-                    {...field}
-                    label="Nhiệt độ"
-                    type="number"
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">°C</InputAdornment>
-                      ),
-                    }}
-                    onChange={(e) => onChange(Number(e.target.value))}
-                    fullWidth
-                    error={!!errors.temperature}
-                    helperText={errors.temperature?.message}
-                    disabled={isSubmitting}
-                  />
-                )}
-              />
-            </Grid>
+            
+            {/* Temperature field - only show for Container Lạnh */}
+            {containerType === ContainerType["Container Lạnh"] && (
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="temperature"
+                  control={control}
+                  render={({ field: { onChange, ...field } }) => (
+                    <TextField
+                      {...field}
+                      label="Nhiệt độ"
+                      type="number"
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">°C</InputAdornment>
+                        ),
+                      }}
+                      onChange={(e) => onChange(Number(e.target.value))}
+                      fullWidth
+                      error={!!errors.temperature}
+                      helperText={errors.temperature?.message}
+                      disabled={isSubmitting}
+                      required
+                    />
+                  )}
+                />
+              </Grid>
+            )}
+            
             <Grid item xs={12} md={6}>
               <Controller
                 name="price"
@@ -507,6 +590,27 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 )}
               />
             </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="completeTime"
+                control={control}
+                render={({ field: { value, onChange, ...restField } }) => (
+                  <DatePicker
+                    label="Thời gian hoàn thành (tùy chọn)"
+                    value={value ? dayjs(value) : null}
+                    onChange={(date) => onChange(date ? date.toDate() : null)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        error: !!errors.completeTime,
+                        helperText: errors.completeTime?.message,
+                        disabled: isSubmitting,
+                      },
+                    }}
+                  />
+                )}
+              />
+            </Grid>
           </Grid>
         </Grid>
 
@@ -609,80 +713,82 @@ const OrderForm: React.FC<OrderFormProps> = ({
               </Box>
             </Grid>
 
-            {/* File Upload Section */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
-                Tệp đính kèm
-              </Typography>
-              <Button
-                component="label"
-                variant="outlined"
-                startIcon={<CloudUploadIcon />}
-                sx={{ mb: 2 }}
-                disabled={isSubmitting}
-              >
-                Chọn tệp
-                <VisuallyHiddenInput
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
+            {/* File Upload Section - Show only in create mode or edit mode with specific conditions */}
+            {!isEditMode && (
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Tệp đính kèm
+                </Typography>
+                <Button
+                  component="label"
+                  variant="outlined"
+                  startIcon={<CloudUploadIcon />}
+                  sx={{ mb: 2 }}
                   disabled={isSubmitting}
-                />
-              </Button>
-              {selectedFiles.length > 0 && (
-                <Paper variant="outlined" sx={{ p: 2, mt: 1 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Tệp đã chọn:
-                  </Typography>
-                  {selectedFiles.map((file, index) => (
-                    <Box 
-                      key={index} 
-                      sx={{ 
-                        mb: 3, 
-                        p: 2, 
-                        border: '1px solid rgba(0, 0, 0, 0.12)',
-                        borderRadius: 1
-                      }}
-                    >
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between',
-                        alignItems: 'center', 
-                        mb: 2 
-                      }}>
-                        <Typography variant="body2">{file.name}</Typography>
-                        <IconButton
+                >
+                  Chọn tệp
+                  <VisuallyHiddenInput
+                    type="file"
+                    multiple
+                    onChange={handleFileChange}
+                    disabled={isSubmitting}
+                  />
+                </Button>
+                {selectedFiles.length > 0 && (
+                  <Paper variant="outlined" sx={{ p: 2, mt: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Tệp đã chọn:
+                    </Typography>
+                    {selectedFiles.map((file, index) => (
+                      <Box 
+                        key={index} 
+                        sx={{ 
+                          mb: 3, 
+                          p: 2, 
+                          border: '1px solid rgba(0, 0, 0, 0.12)',
+                          borderRadius: 1
+                        }}
+                      >
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          alignItems: 'center', 
+                          mb: 2 
+                        }}>
+                          <Typography variant="body2">{file.name}</Typography>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleFileRemove(index)}
+                            disabled={isSubmitting}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                        
+                        <TextField
+                          label="Mô tả file"
+                          value={fileDescriptions[index] || ''}
+                          onChange={(e) => handleFileDescriptionChange(index, e.target.value)}
+                          fullWidth
+                          margin="normal"
                           size="small"
-                          color="error"
-                          onClick={() => handleFileRemove(index)}
-                          disabled={isSubmitting}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                        />
+                        
+                        <TextField
+                          label="Ghi chú file"
+                          value={fileNotes[index] || ''}
+                          onChange={(e) => handleFileNoteChange(index, e.target.value)}
+                          fullWidth
+                          margin="normal"
+                          size="small"
+                        />
                       </Box>
-                      
-                      <TextField
-                        label="Mô tả file"
-                        value={fileDescriptions[index] || ''}
-                        onChange={(e) => handleFileDescriptionChange(index, e.target.value)}
-                        fullWidth
-                        margin="normal"
-                        size="small"
-                      />
-                      
-                      <TextField
-                        label="Ghi chú file"
-                        value={fileNotes[index] || ''}
-                        onChange={(e) => handleFileNoteChange(index, e.target.value)}
-                        fullWidth
-                        margin="normal"
-                        size="small"
-                      />
-                    </Box>
-                  ))}
-                </Paper>
-              )}
-            </Grid>
+                    ))}
+                  </Paper>
+                )}
+              </Grid>
+            )}
           </Grid>
         </Grid>
 
@@ -709,7 +815,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
               color="primary"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Đang xử lý..." : "Lưu"}
+              {isSubmitting ? "Đang xử lý..." : isEditMode ? "Cập nhật" : "Lưu"}
             </Button>
           </Box>
         </Grid>

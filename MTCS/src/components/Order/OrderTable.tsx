@@ -23,6 +23,8 @@ import {
   CircularProgress,
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogActions,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
@@ -34,9 +36,14 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
-import { getOrders } from "../../services/orderApi";
+import DownloadIcon from "@mui/icons-material/Download";
+import { getOrders, exportExcel } from "../../services/orderApi";
 import { OrderStatus, Order, DeliveryType } from "../../types/order";
 import OrderCreate from "./OrderCreate";
+import { DatePicker } from "@mui/x-date-pickers";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -79,6 +86,12 @@ const OrderManagement: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const navigate = useNavigate();
+  
+  // New state variables for export feature
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [fromDate, setFromDate] = useState<dayjs.Dayjs | null>(null);
+  const [toDate, setToDate] = useState<dayjs.Dayjs | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -210,6 +223,38 @@ const OrderManagement: React.FC = () => {
 
     fetchOrders();
   };
+  
+  // New functions for export feature
+  const handleOpenExportModal = () => {
+    setExportModalOpen(true);
+  };
+  
+  const handleCloseExportModal = () => {
+    setExportModalOpen(false);
+    setFromDate(null);
+    setToDate(null);
+  };
+  
+  const handleExportExcel = async () => {
+    try {
+      setExportLoading(true);
+      
+      // Format dates as strings in YYYY-MM-DD format
+      const formattedData = {
+        fromDate: fromDate ? fromDate.format('YYYY-MM-DD') : null,
+        toDate: toDate ? toDate.format('YYYY-MM-DD') : null
+      };
+      
+      await exportExcel(formattedData);
+      
+      // Close the modal after export completes
+      handleCloseExportModal();
+    } catch (error) {
+      console.error("Error exporting Excel:", error);
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   // Order status options with Vietnamese labels
   const orderStatusOptions = [
@@ -218,6 +263,21 @@ const OrderManagement: React.FC = () => {
       value: OrderStatus.Pending,
       label: "Chờ xử lý",
       color: "warning",
+    },
+    {
+      value: OrderStatus.Scheduled,
+      label: "Đã lên lịch",
+      color: "info",
+    },
+    {
+      value: OrderStatus.Delivering,
+      label: "Đang giao hàng",
+      color: "info",
+    },
+    {
+      value: OrderStatus.Shipped,
+      label: "Đã giao hàng",
+      color: "info",
     },
     {
       value: OrderStatus.InProgress,
@@ -236,6 +296,12 @@ const OrderManagement: React.FC = () => {
     switch (status) {
       case OrderStatus.Pending:
         return { label: "Chờ xử lý", color: "warning" };
+      case OrderStatus.Scheduled:
+        return { label: "Đã lên lịch", color: "info" };
+      case OrderStatus.Delivering:
+        return { label: "Đang giao hàng", color: "info" };
+      case OrderStatus.Shipped:
+        return { label: "Đã giao hàng", color: "info" };
       case OrderStatus.InProgress:
         return { label: "Đang xử lý", color: "info" };
       case OrderStatus.Complete:
@@ -456,6 +522,15 @@ const OrderManagement: React.FC = () => {
                 Lọc
               </Button>
               <Button
+                variant="outlined"
+                color="success"
+                startIcon={<DownloadIcon />}
+                size="small"
+                onClick={handleOpenExportModal}
+              >
+                Xuất Excel
+              </Button>
+              <Button
                 variant="contained"
                 color="primary"
                 startIcon={<AddIcon />}
@@ -642,6 +717,70 @@ const OrderManagement: React.FC = () => {
             onSuccess={handleOrderCreationSuccess}
           />
         </DialogContent>
+      </Dialog>
+      
+      {/* Excel Export Dialog */}
+      <Dialog
+        open={exportModalOpen}
+        onClose={handleCloseExportModal}
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle>
+          Xuất dữ liệu đơn hàng
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1, width: 400 }}>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Từ ngày
+                </Typography>
+                <DatePicker
+                  value={fromDate}
+                  onChange={(newValue) => setFromDate(newValue)}
+                  format="DD/MM/YYYY"
+                  slotProps={{
+                    textField: { 
+                      fullWidth: true, 
+                      size: "small" 
+                    }
+                  }}
+                />
+              </Box>
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Đến ngày
+                </Typography>
+                <DatePicker
+                  value={toDate}
+                  onChange={(newValue) => setToDate(newValue)}
+                  format="DD/MM/YYYY"
+                  slotProps={{
+                    textField: { 
+                      fullWidth: true, 
+                      size: "small" 
+                    }
+                  }}
+                />
+              </Box>
+            </LocalizationProvider>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseExportModal}>
+            Hủy
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleExportExcel}
+            startIcon={<DownloadIcon />}
+            disabled={exportLoading}
+          >
+            {exportLoading ? "Đang xuất..." : "Xuất Excel"}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

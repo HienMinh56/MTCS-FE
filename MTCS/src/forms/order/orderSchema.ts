@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ContainerType, DeliveryType } from "../../types/order";
+import { ContainerType, ContainerSize, DeliveryType } from "../../types/order";
 
 // Zod schema matching BE validation
 export const orderSchema = z
@@ -13,7 +13,8 @@ export const orderSchema = z
       .number()
       .min(-30, "Nhiệt độ không được thấp hơn -30°C")
       .max(40, "Nhiệt độ không được cao hơn 40°C")
-      .optional(),
+      .optional()
+      .nullable(),
     weight: z
       .number()
       .min(0.1, "Trọng lượng phải lớn hơn 0")
@@ -24,12 +25,14 @@ export const orderSchema = z
     deliveryDate: z.date().refine((date) => date >= new Date(), {
       message: "Ngày giao hàng phải trong tương lai",
     }),
+    completeTime: z.date().nullable().optional(), // Added completeTime field
     note: z
       .string()
       .min(1, "Ghi chú là bắt buộc")
       .max(500, "Ghi chú không được vượt quá 500 ký tự")
       .nonempty("Ghi chú là bắt buộc"),
-    containerType: z.nativeEnum(ContainerType),
+    containerType: z.nativeEnum(ContainerType), // Updated for new ContainerType values
+    containerSize: z.nativeEnum(ContainerSize), // Added containerSize field
     deliveryType: z.nativeEnum(DeliveryType),
     pickUpLocation: z
       .string()
@@ -65,9 +68,9 @@ export const orderSchema = z
     distance: z.number().nullable(),
     orderPlacer: z
       .string()
-      .min(1, "Tên người đặt hàng là bắt buộc")
-      .max(50, "Tên người đặt hàng không được vượt quá 50 ký tự")
-      .nonempty("Tên người đặt hàng là bắt buộc"),
+      .min(1, "Người đặt hàng là bắt buộc")
+      .max(50, "Người đặt hàng không được vượt quá 50 ký tự")
+      .nonempty("Người đặt hàng là bắt buộc"),
     containerNumber: z
       .string()
       .min(1, "Số container là bắt buộc")
@@ -95,8 +98,12 @@ export const formatOrderFormForApi = (data: OrderFormValues) => {
     ...data,
     pickUpDate: data.pickUpDate.toISOString().split("T")[0],
     deliveryDate: data.deliveryDate.toISOString().split("T")[0],
+    completeTime: data.completeTime ? data.completeTime.toISOString().split("T")[0] : null,
+    temperature: data.containerType === ContainerType["Container Lạnh"] ? data.temperature : null,
     description: data.description || [],
     notes: data.notes || [],
+    // Make sure orderPlacer field is included
+    orderPlacer: data.orderPlacer || "",
   };
   
   console.log('Field by field validation check:');
@@ -105,8 +112,10 @@ export const formatOrderFormForApi = (data: OrderFormValues) => {
   console.log('weight:', formattedData.weight ? '✓' : '✗');
   console.log('pickUpDate:', formattedData.pickUpDate ? '✓' : '✗');
   console.log('deliveryDate:', formattedData.deliveryDate ? '✓' : '✗');
+  console.log('completeTime:', formattedData.completeTime ? '✓' : '(null but optional)');
   console.log('note:', formattedData.note ? '✓' : '✗');
   console.log('containerType:', formattedData.containerType ? '✓' : '✗');
+  console.log('containerSize:', formattedData.containerSize ? '✓' : '✗');
   console.log('deliveryType:', formattedData.deliveryType ? '✓' : '✗');
   console.log('pickUpLocation:', formattedData.pickUpLocation ? '✓' : '✗');
   console.log('deliveryLocation:', formattedData.deliveryLocation ? '✓' : '✗');
@@ -115,8 +124,8 @@ export const formatOrderFormForApi = (data: OrderFormValues) => {
   console.log('contactPerson:', formattedData.contactPerson ? '✓' : '✗');
   console.log('contactPhone:', formattedData.contactPhone ? '✓' : '✗');
   console.log('distance:', formattedData.distance !== null ? '✓' : '✗');
-  console.log('orderPlacer:', formattedData.orderPlacer ? '✓' : '✗');
   console.log('containerNumber:', formattedData.containerNumber ? '✓' : '✗');
+  console.log('orderPlacer:', formattedData.orderPlacer ? '✓' : '✗');
   
   return formattedData;
 };

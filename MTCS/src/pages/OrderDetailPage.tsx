@@ -14,20 +14,44 @@ import {
   Chip,
   Tooltip,
   IconButton,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  DialogActions,
+  TextField,
+  Switch,
+  FormControlLabel,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Checkbox,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
+import DeleteIcon from "@mui/icons-material/Delete";
 import {
   OrderDetails,
   ContainerType,
+  ContainerSize,
   DeliveryType,
   OrderStatus,
+  IsPay,
+  OrderFile,
 } from "../types/order";
-import { getOrderDetails } from "../services/orderApi";
+import { getOrderDetails, updateOrder } from "../services/orderApi";
 import { getContracts, createContract } from "../services/contractApi";
 import { ContractFile } from "../types/contract";
 import { format } from "date-fns";
 import AddContractFileModal from "../components/contract/AddContractFileModal";
+import OrderForm from "../forms/order/OrderForm";
+import { OrderFormValues } from "../forms/order/orderSchema";
 
 const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -39,110 +63,134 @@ const OrderDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [openAddContractModal, setOpenAddContractModal] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState<string | null>(null);
+  const [statusUpdateOpen, setStatusUpdateOpen] = useState(false);
+  const [newStatus, setNewStatus] = useState<OrderStatus | "">("");
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    note: "",
+    price: 0,
+    contactPerson: "",
+    containerNumber: "",
+    contactPhone: "",
+    orderPlacer: "",
+    isPay: IsPay.No,
+    temperature: null as number | null,
+    filesToRemove: [] as string[],
+    filesToAdd: [] as File[],
+    description: [""] as string[],
+    notes: [""] as string[],
+  });
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
+  const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
+  const [fileNotes, setFileNotes] = useState<string[]>([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
+    try {
+      if (!orderId) {
+        console.error("No orderId provided in URL params");
+        setError("Không thể tải thông tin đơn hàng: Thiếu mã đơn hàng");
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      console.log("Fetching order details for ID:", orderId);
+
+      // Fetch order details
+      let orderData;
       try {
-        if (!orderId) {
-          console.error("No orderId provided in URL params");
-          setError("Không thể tải thông tin đơn hàng: Thiếu mã đơn hàng");
+        orderData = await getOrderDetails(orderId);
+        console.log("Order details received:", orderData);
+        setOrderDetails(orderData);
+
+        if (!orderData) {
+          setError("Không tìm thấy thông tin đơn hàng");
           setLoading(false);
           return;
         }
+      } catch (orderError) {
+        console.error("Error fetching order details:", orderError);
+        setError("Lỗi khi tải thông tin đơn hàng");
+        setLoading(false);
+        return;
+      }
 
-        setLoading(true);
-        console.log("Fetching order details for ID:", orderId);
+      // Try to fetch contract files using getContracts
+      try {
+        if (orderData && orderData.customerId) {
+          console.log(
+            "Fetching contracts for customer ID:",
+            orderData.customerId
+          );
 
-        // Fetch order details
-        let orderData;
-        try {
-          orderData = await getOrderDetails(orderId);
-          console.log("Order details received:", orderData);
-          setOrderDetails(orderData);
+          // Get all contracts for this customer
+          const contractsData = await getContracts(
+            1,
+            100,
+            orderData.customerId
+          );
+          console.log("Contracts received:", contractsData);
 
-          if (!orderData) {
-            setError("Không tìm thấy thông tin đơn hàng");
-            setLoading(false);
-            return;
-          }
-        } catch (orderError) {
-          console.error("Error fetching order details:", orderError);
-          setError("Lỗi khi tải thông tin đơn hàng");
-          setLoading(false);
-          return;
-        }
+          let extractedFiles: ContractFile[] = [];
 
-        // Try to fetch contract files using getContracts
-        try {
-          if (orderData && orderData.customerId) {
+          // Process all contracts for this customer to find related files
+          if (Array.isArray(contractsData) && contractsData.length > 0) {
             console.log(
-              "Fetching contracts for customer ID:",
-              orderData.customerId
+              `Found ${contractsData.length} contracts for customer ID: ${orderData.customerId}`
             );
 
-            // Get all contracts for this customer
-            const contractsData = await getContracts(
-              1,
-              100,
-              orderData.customerId
-            );
-            console.log("Contracts received:", contractsData);
+            // For each contract with matching customerId AND status=1, extract contract files
+            for (const contract of contractsData) {
+              if (
+                contract.customerId === orderData.customerId &&
+                contract.status === 1 && // Only show files from active contracts
+                contract.contractFiles?.length > 0
+              ) {
+                extractedFiles = [
+                  ...extractedFiles,
+                  ...contract.contractFiles,
+                ];
+              }
+            }
 
-            let extractedFiles: ContractFile[] = [];
-
-            // Process all contracts for this customer to find related files
-            if (Array.isArray(contractsData) && contractsData.length > 0) {
+            if (extractedFiles.length > 0) {
               console.log(
-                `Found ${contractsData.length} contracts for customer ID: ${orderData.customerId}`
+                `Found ${extractedFiles.length} contract files to display from active contracts`,
+                extractedFiles
               );
-
-              // For each contract with matching customerId AND status=1, extract contract files
-              for (const contract of contractsData) {
-                if (
-                  contract.customerId === orderData.customerId &&
-                  contract.status === 1 && // Only show files from active contracts
-                  contract.contractFiles?.length > 0
-                ) {
-                  extractedFiles = [
-                    ...extractedFiles,
-                    ...contract.contractFiles,
-                  ];
-                }
-              }
-
-              if (extractedFiles.length > 0) {
-                console.log(
-                  `Found ${extractedFiles.length} contract files to display from active contracts`,
-                  extractedFiles
-                );
-                setContractFiles(extractedFiles);
-              } else {
-                console.log(
-                  "No contract files found for this customer in active contracts"
-                );
-                setContractFiles([]);
-              }
+              setContractFiles(extractedFiles);
             } else {
-              console.log("No contracts found for this customer");
+              console.log(
+                "No contract files found for this customer in active contracts"
+              );
               setContractFiles([]);
             }
           } else {
-            console.log("No customer ID available to fetch contract files");
+            console.log("No contracts found for this customer");
             setContractFiles([]);
           }
-        } catch (fileError) {
-          console.error("Could not fetch contract files:", fileError);
+        } else {
+          console.log("No customer ID available to fetch contract files");
           setContractFiles([]);
         }
-
-        setLoading(false);
-      } catch (err) {
-        console.error("Error in data fetching process:", err);
-        setError("Không thể tải thông tin đơn hàng. Vui lòng thử lại sau.");
-        setLoading(false);
+      } catch (fileError) {
+        console.error("Could not fetch contract files:", fileError);
+        setContractFiles([]);
       }
-    };
 
+      setLoading(false);
+    } catch (err) {
+      console.error("Error in data fetching process:", err);
+      setError("Không thể tải thông tin đơn hàng. Vui lòng thử lại sau.");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [orderId]);
 
@@ -156,9 +204,20 @@ const OrderDetailPage: React.FC = () => {
 
   const getContainerTypeName = (type: ContainerType) => {
     switch (type) {
-      case ContainerType.Container20:
+      case ContainerType["Container Khô"]:
+        return "Container Khô";
+      case ContainerType["Container Lạnh"]:
+        return "Container Lạnh";
+      default:
+        return "Không xác định";
+    }
+  };
+
+  const getContainerSizeName = (size: ContainerSize) => {
+    switch (size) {
+      case ContainerSize["Container 20 FT"]:
         return "Container 20 FT";
-      case ContainerType.Container40:
+      case ContainerSize["Container 40 FT"]:
         return "Container 40 FT";
       default:
         return "Không xác định";
@@ -184,6 +243,12 @@ const OrderDetailPage: React.FC = () => {
         return { label: "Đang xử lý", color: "info" };
       case OrderStatus.Complete:
         return { label: "Hoàn thành", color: "success" };
+      case OrderStatus.Scheduled:
+        return { label: "Đã lên lịch", color: "info" };
+      case OrderStatus.Delivering:
+        return { label: "Đang giao hàng", color: "info" };
+      case OrderStatus.Shipped:
+        return { label: "Đã giao hàng", color: "info" };
       default:
         return { label: "Không xác định", color: "default" };
     }
@@ -201,8 +266,198 @@ const OrderDetailPage: React.FC = () => {
     setOpenAddContractModal(false);
   };
 
+  const handleOpenEditDialog = () => {
+    if (orderDetails) {
+      // Populate the edit form with current values
+      setEditFormData({
+        note: orderDetails.note || "",
+        price: orderDetails.price || 0,
+        contactPerson: orderDetails.contactPerson || "",
+        containerNumber: orderDetails.containerNumber || "",
+        contactPhone: orderDetails.contactPhone || "",
+        orderPlacer: orderDetails.orderPlacer || "",
+        isPay: orderDetails.isPay || IsPay.No,
+        temperature: orderDetails.temperature || null,
+        filesToRemove: [],
+        filesToAdd: [],
+        description: [],
+        notes: [],
+      });
+      
+      // Reset file selections
+      setNewFiles([]);
+      setFilesToDelete([]);
+      setFileDescriptions([]);
+      setFileNotes([]);
+      
+      setOpenEditDialog(true);
+    }
+  };
+
+  const handleCloseEditDialog = () => {
+    setOpenEditDialog(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditFormData({
+      ...editFormData,
+      [name]: name === "price" ? Number(value) : value,
+    });
+  };
+
+  const handleSelectChange = (e: React.ChangeEvent<{ value: unknown }>) => {
+    const { name, value } = e.target;
+    setEditFormData({
+      ...editFormData,
+      [name]: value,
+    });
+  };
+
+  const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditFormData({
+      ...editFormData,
+      isPay: e.target.checked ? IsPay.Yes : IsPay.No,
+    });
+  };
+
+  const handleFileToggle = (fileUrl: string) => {
+    if (filesToDelete.includes(fileUrl)) {
+      setFilesToDelete(filesToDelete.filter(url => url !== fileUrl));
+    } else {
+      setFilesToDelete([...filesToDelete, fileUrl]);
+    }
+  };
+
+  const handleNewFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      setNewFiles([...newFiles, ...filesArray]);
+      
+      // Add empty descriptions and notes for each new file
+      const newDescriptions = Array(filesArray.length).fill('');
+      const newNotes = Array(filesArray.length).fill('');
+      
+      setFileDescriptions([...fileDescriptions, ...newDescriptions]);
+      setFileNotes([...fileNotes, ...newNotes]);
+    }
+  };
+
+  const handleRemoveNewFile = (index: number) => {
+    const updatedFiles = [...newFiles];
+    updatedFiles.splice(index, 1);
+    setNewFiles(updatedFiles);
+    
+    const updatedDescriptions = [...fileDescriptions];
+    updatedDescriptions.splice(index, 1);
+    setFileDescriptions(updatedDescriptions);
+    
+    const updatedNotes = [...fileNotes];
+    updatedNotes.splice(index, 1);
+    setFileNotes(updatedNotes);
+  };
+
+  const handleFileDescriptionChange = (index: number, value: string) => {
+    const newDescriptions = [...fileDescriptions];
+    newDescriptions[index] = value;
+    setFileDescriptions(newDescriptions);
+  };
+
+  const handleFileNoteChange = (index: number, value: string) => {
+    const newNotes = [...fileNotes];
+    newNotes[index] = value;
+    setFileNotes(newNotes);
+  };
+
+  const handleUpdateOrder = async () => {
+    if (!orderDetails || !orderId) return;
+    
+    setIsSubmitting(true);
+    try {
+      // Log values before update for debugging
+      console.log("Current order details:", orderDetails);
+      console.log("Updating with values:", {
+        contactPhone: editFormData.contactPhone,
+        contactPerson: editFormData.contactPerson,
+        // other fields...
+      });
+      
+      // Prepare update data - make sure to explicitly include every field
+      const updateData = {
+        orderId: orderId,
+        status: orderDetails.status,
+        note: editFormData.note || "",
+        price: editFormData.price,
+        contactPerson: editFormData.contactPerson || "",
+        containerNumber: editFormData.containerNumber || "",
+        contactPhone: editFormData.contactPhone || "",
+        orderPlacer: editFormData.orderPlacer || "",
+        isPay: editFormData.isPay,
+        temperature: orderDetails.containerType === ContainerType["Container Lạnh"] 
+          ? editFormData.temperature 
+          : null,
+        description: fileDescriptions, // Field name for backend: descriptions
+        notes: fileNotes, // Field name for backend: notes
+        // Field name for backend: fileIdsToRemove
+        filesToRemove: filesToDelete.length > 0 ? filesToDelete : null,
+        // Field name for backend: addedFiles
+        filesToAdd: newFiles.length > 0 ? newFiles : null,
+      };
+      
+      console.log("Sending update data:", updateData);
+      
+      // Check if we're adding new files
+      if (newFiles.length > 0) {
+        console.log("Adding new files:", newFiles.map(f => f.name));
+        
+        // Ensure we have descriptions and notes for each file
+        if (fileDescriptions.length < newFiles.length) {
+          console.log("Adding missing descriptions");
+          while (fileDescriptions.length < newFiles.length) {
+            fileDescriptions.push('');
+          }
+        }
+        
+        if (fileNotes.length < newFiles.length) {
+          console.log("Adding missing notes");
+          while (fileNotes.length < newFiles.length) {
+            fileNotes.push('');
+          }
+        }
+      }
+      
+      const result = await updateOrder(updateData);
+      console.log("Order updated successfully:", result);
+      
+      setUpdateSuccess("Đơn hàng đã được cập nhật thành công");
+      handleCloseEditDialog();
+      fetchData(); // Refresh data
+      
+      setTimeout(() => {
+        setUpdateSuccess(null);
+      }, 5000);
+      
+    } catch (err) {
+      console.error("Error updating order:", err);
+      
+      // Add more detailed error handling
+      let errorMessage = "Không thể cập nhật đơn hàng. Vui lòng thử lại sau.";
+      
+      if (err.response) {
+        console.error("API response error:", err.response.data);
+        if (err.response.data && err.response.data.message) {
+          errorMessage = err.response.data.message;
+        }
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleContractAdded = async () => {
-    // Refresh contract files after a new one is added
+    // Existing code for contract handling
     if (orderDetails && orderDetails.customerId) {
       try {
         // Get all contracts for this customer
@@ -237,6 +492,63 @@ const OrderDetailPage: React.FC = () => {
       } catch (error) {
         console.error("Error refreshing contract files:", error);
       }
+    }
+  };
+
+  const handleStatusUpdateOpen = () => {
+    setNewStatus(orderDetails?.status || "");
+    setStatusUpdateOpen(true);
+  };
+
+  const handleStatusUpdateClose = () => {
+    setStatusUpdateOpen(false);
+  };
+
+  const handleStatusChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    setNewStatus(event.target.value as OrderStatus);
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!orderDetails || !orderId || newStatus === "") return;
+    
+    setStatusUpdateLoading(true);
+    try {
+      // Prepare update data with just the status change
+      const updateData = {
+        orderId: orderId,
+        status: newStatus as OrderStatus,
+        // Keep all existing values from orderDetails to ensure nothing gets reset
+        note: orderDetails.note || "",
+        price: orderDetails.price,
+        contactPerson: orderDetails.contactPerson || "",
+        containerNumber: orderDetails.containerNumber || "",
+        contactPhone: orderDetails.contactPhone || "",
+        orderPlacer: orderDetails.orderPlacer || "",
+        isPay: orderDetails.isPay || IsPay.No,
+        temperature: orderDetails.temperature,
+        description: [],
+        notes: [],
+        filesToRemove: null,
+        filesToAdd: null,
+      };
+      
+      console.log("Updating order status with data:", updateData);
+      const result = await updateOrder(updateData);
+      console.log("Order status updated successfully:", result);
+      
+      setUpdateSuccess("Trạng thái đơn hàng đã được cập nhật thành công");
+      handleStatusUpdateClose();
+      fetchData(); // Refresh data
+      
+      setTimeout(() => {
+        setUpdateSuccess(null);
+      }, 5000);
+      
+    } catch (err) {
+      console.error("Error updating order status:", err);
+      setError("Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại sau.");
+    } finally {
+      setStatusUpdateLoading(false);
     }
   };
 
@@ -293,11 +605,41 @@ const OrderDetailPage: React.FC = () => {
     );
   }
 
+  // Prepare initial form values for the edit dialog
+  const initialFormValues: Partial<OrderFormValues> = {
+    companyName: orderDetails.customerId || "",
+    temperature: orderDetails.temperature || 0,
+    weight: parseFloat(orderDetails.weight) || 0,
+    pickUpDate: new Date(orderDetails.pickUpDate),
+    deliveryDate: new Date(orderDetails.deliveryDate),
+    completeTime: orderDetails.completeTime ? new Date(orderDetails.completeTime) : null,
+    note: orderDetails.note || "",
+    containerType: orderDetails.containerType,
+    containerSize: orderDetails.containerSize || ContainerSize["Container 20 FT"],
+    deliveryType: orderDetails.deliveryType,
+    pickUpLocation: orderDetails.pickUpLocation,
+    deliveryLocation: orderDetails.deliveryLocation,
+    conReturnLocation: orderDetails.conReturnLocation,
+    price: orderDetails.price,
+    contactPerson: orderDetails.contactPerson,
+    contactPhone: orderDetails.contactPhone,
+    distance: orderDetails.distance,
+    containerNumber: orderDetails.containerNumber,
+    description: [], // We'll set these later if needed
+    notes: [],
+  };
+
   return (
     <Box p={3}>
       <Button startIcon={<ArrowBackIcon />} onClick={handleBack} sx={{ mb: 2 }}>
         Quay lại danh sách đơn hàng
       </Button>
+
+      {updateSuccess && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {updateSuccess}
+        </Alert>
+      )}
 
       <Box
         display="flex"
@@ -308,10 +650,27 @@ const OrderDetailPage: React.FC = () => {
         <Typography variant="h5">
           Chi tiết đơn hàng - {orderDetails.trackingCode}
         </Typography>
-        <Chip
-          label={getStatusDisplay(orderDetails.status).label}
-          color={getStatusDisplay(orderDetails.status).color as any}
-        />
+        <Box display="flex" gap={2} alignItems="center">
+          <Chip
+            label={getStatusDisplay(orderDetails.status).label}
+            color={getStatusDisplay(orderDetails.status).color as any}
+          />
+          <Button 
+            variant="outlined" 
+            color="secondary"
+            onClick={handleStatusUpdateOpen}
+          >
+            Cập nhật trạng thái
+          </Button>
+          <Button 
+            variant="outlined" 
+            color="primary" 
+            startIcon={<EditIcon />}
+            onClick={handleOpenEditDialog}
+          >
+            Cập nhật thông tin
+          </Button>
+        </Box>
       </Box>
 
       <Grid container spacing={3}>
@@ -384,6 +743,15 @@ const OrderDetailPage: React.FC = () => {
 
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
+                  Kích thước container
+                </Typography>
+                <Typography variant="body1" gutterBottom>
+                  {getContainerSizeName(orderDetails.containerSize || ContainerSize["Container 20 FT"])}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
                   Loại vận chuyển
                 </Typography>
                 <Typography variant="body1" gutterBottom>
@@ -396,7 +764,7 @@ const OrderDetailPage: React.FC = () => {
                   Nhiệt độ
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {orderDetails.temperature}°C
+                  {orderDetails.temperature !== null ? `${orderDetails.temperature}°C` : "N/A"}
                 </Typography>
               </Grid>
 
@@ -769,6 +1137,314 @@ const OrderDetailPage: React.FC = () => {
           orderId={orderId || ""}
         />
       )}
+
+      {/* Status Update Dialog */}
+      <Dialog
+        open={statusUpdateOpen}
+        onClose={handleStatusUpdateClose}
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle>
+          Cập nhật trạng thái đơn hàng
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1, width: 300 }}>
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="status-select-label">Trạng thái</InputLabel>
+            <Select
+              labelId="status-select-label"
+              value={newStatus}
+              onChange={handleStatusChange}
+              label="Trạng thái"
+            >
+              <MenuItem value={OrderStatus.Pending}>
+                {getStatusDisplay(OrderStatus.Pending).label}
+              </MenuItem>
+              <MenuItem value={OrderStatus.Scheduled}>
+                {getStatusDisplay(OrderStatus.Scheduled).label}
+              </MenuItem>
+              <MenuItem value={OrderStatus.Delivering}>
+                {getStatusDisplay(OrderStatus.Delivering).label}
+              </MenuItem>
+              <MenuItem value={OrderStatus.Shipped}>
+                {getStatusDisplay(OrderStatus.Shipped).label}
+              </MenuItem>
+              <MenuItem value={OrderStatus.InProgress}>
+                {getStatusDisplay(OrderStatus.InProgress).label}
+              </MenuItem>
+              <MenuItem value={OrderStatus.Complete}>
+                {getStatusDisplay(OrderStatus.Complete).label}
+              </MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleStatusUpdateClose}>
+            Hủy
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleStatusUpdate}
+            disabled={statusUpdateLoading || newStatus === orderDetails?.status}
+          >
+            {statusUpdateLoading ? "Đang xử lý..." : "Cập nhật"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Order Dialog */}
+      <Dialog
+        open={openEditDialog}
+        onClose={handleCloseEditDialog}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: { borderRadius: 2, maxHeight: '90vh' }
+        }}
+      >
+        <DialogTitle>
+          Cập nhật đơn hàng - {orderDetails?.trackingCode}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Người liên hệ"
+                  name="contactPerson"
+                  value={editFormData.contactPerson}
+                  onChange={handleInputChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Số điện thoại liên hệ"
+                  name="contactPhone"
+                  value={editFormData.contactPhone}
+                  onChange={handleInputChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Số container"
+                  name="containerNumber"
+                  value={editFormData.containerNumber}
+                  onChange={handleInputChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Giá (VNĐ)"
+                  type="number"
+                  name="price"
+                  value={editFormData.price}
+                  onChange={handleInputChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                {orderDetails?.containerType === ContainerType["Container Lạnh"] && (
+                  <TextField
+                    fullWidth
+                    label="Nhiệt độ (°C)"
+                    type="number"
+                    name="temperature"
+                    value={editFormData.temperature || ''}
+                    onChange={handleInputChange}
+                    margin="normal"
+                  />
+                )}
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Người đặt hàng"
+                  name="orderPlacer"
+                  value={editFormData.orderPlacer}
+                  onChange={handleInputChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Ghi chú"
+                  name="note"
+                  multiline
+                  rows={3}
+                  value={editFormData.note}
+                  onChange={handleInputChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={editFormData.isPay === IsPay.Yes}
+                      onChange={handleSwitchChange}
+                      color="primary"
+                    />
+                  }
+                  label="Đã thanh toán"
+                />
+              </Grid>
+
+              {/* File management section */}
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Quản lý tài liệu đơn hàng
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+
+                {/* Existing files list with checkboxes for deletion */}
+                {orderDetails?.orderFiles && orderDetails.orderFiles.length > 0 ? (
+                  <Box mb={3}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Tài liệu hiện tại
+                    </Typography>
+                    <List>
+                      {orderDetails.orderFiles.map((fileObj, index) => {
+                        // Handle both string URLs and OrderFile objects
+                        const fileUrl = typeof fileObj === "string" ? fileObj : fileObj.fileUrl;
+                        const fileName = typeof fileObj === "string" 
+                          ? `Tài liệu ${index + 1}` 
+                          : fileObj.fileName || `Tài liệu ${index + 1}`;
+                          
+                        return (
+                          <ListItem key={index} dense>
+                            <ListItemText 
+                              primary={fileName} 
+                              secondary={filesToDelete.includes(fileUrl) ? "Sẽ bị xóa" : ""}
+                            />
+                            <ListItemSecondaryAction>
+                              <Checkbox
+                                edge="end"
+                                onChange={() => handleFileToggle(fileUrl)}
+                                checked={filesToDelete.includes(fileUrl)}
+                                color="error"
+                              />
+                              <IconButton 
+                                size="small" 
+                                href={fileUrl} 
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <AttachFileIcon fontSize="small" />
+                              </IconButton>
+                            </ListItemSecondaryAction>
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Không có tài liệu hiện tại
+                  </Typography>
+                )}
+
+                {/* Upload new files section */}
+                <Box mt={3}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Thêm tài liệu mới
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    startIcon={<AttachFileIcon />}
+                    sx={{ mb: 2 }}
+                  >
+                    Chọn tệp
+                    <input
+                      type="file"
+                      hidden
+                      multiple
+                      onChange={handleNewFileChange}
+                    />
+                  </Button>
+
+                  {/* Show new files that will be added */}
+                  {newFiles.length > 0 && (
+                    <Box sx={{ mt: 2 }}>
+                      <List>
+                        {newFiles.map((file, index) => (
+                          <Box 
+                            key={index} 
+                            sx={{ 
+                              mb: 3, 
+                              p: 2, 
+                              border: '1px solid rgba(0, 0, 0, 0.12)',
+                              borderRadius: 1
+                            }}
+                          >
+                            <Box sx={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between',
+                              alignItems: 'center', 
+                              mb: 2 
+                            }}>
+                              <Typography variant="body2">{file.name}</Typography>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleRemoveNewFile(index)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                            
+                            <TextField
+                              label="Mô tả file"
+                              value={fileDescriptions[index] || ''}
+                              onChange={(e) => handleFileDescriptionChange(index, e.target.value)}
+                              fullWidth
+                              margin="normal"
+                              size="small"
+                            />
+                            
+                            <TextField
+                              label="Ghi chú file"
+                              value={fileNotes[index] || ''}
+                              onChange={(e) => handleFileNoteChange(index, e.target.value)}
+                              fullWidth
+                              margin="normal"
+                              size="small"
+                            />
+                          </Box>
+                        ))}
+                      </List>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseEditDialog}>
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleUpdateOrder}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Đang cập nhật..." : "Lưu thay đổi"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ...other existing dialogs... */}
     </Box>
   );
 };

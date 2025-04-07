@@ -108,13 +108,13 @@ const DriverProfileDialog: React.FC<DriverProfileDialogProps> = ({
                   {driver.fullName}
                 </Typography>
                 {getStatusChip(driver.status)}
-                <Typography
+                {/* <Typography
                   variant="body2"
                   color="text.secondary"
                   sx={{ mt: 1 }}
                 >
                   ID: {driver.driverId}
-                </Typography>
+                </Typography> */} {/* Hidden open if want */}
               </Box>
             </Grid>
             <Grid item xs={12} md={8}>
