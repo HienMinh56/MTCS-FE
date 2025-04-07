@@ -29,7 +29,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import StraightenIcon from "@mui/icons-material/Straighten";
 import OrderManagement from "../components/Order/OrderTable";
 import IncidentManagement from "../components/Incidents";
-import Drivers from "../components/Driver/Drivers";
+import Drivers from "./Drivers";
 import Tractors from "./Tractors";
 import Trailers from "./Trailers";
 import Customers from "../components/Customers";

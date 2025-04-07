@@ -10,11 +10,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import { useAuth } from "./contexts/AuthContext";
 import LocalizationProvider from "./providers/LocalizationProvider";
-import DriverDetailPage from "./pages/DriverDetailPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import TractorDetailPage from "./pages/TractorDetailPage";
 import TrailerDetailPage from "./pages/TrailerDetailPage";
-import OrderApiTester from "./components/OrderApiTester";
+import DriverProfile from "./pages/DriverProfile";
 
 const HomeRoute = () => {
   const { isAuthenticated, user } = useAuth();
@@ -40,10 +39,6 @@ function App() {
               >
                 <Route path="/staff-menu/*" element={<StaffMenu />} />
                 <Route
-                  path="/drivers/:driverId"
-                  element={<DriverDetailPage />}
-                />
-                <Route
                   path="/staff-menu/orders/:orderId"
                   element={<OrderDetailPage />}
                 />
@@ -55,6 +50,11 @@ function App() {
                   path="/staff-menu/trailers/:trailerId"
                   element={<TrailerDetailPage />}
                 />
+                <Route
+                  path="/staff-menu/drivers/:driverId"
+                  element={<DriverProfile />}
+                />
+                <Route path="/drivers/:driverId" element={<DriverProfile />} />
               </Route>
 
               <Route element={<ProtectedRoute />}>
