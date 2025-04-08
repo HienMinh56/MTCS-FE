@@ -37,7 +37,22 @@ const addRefreshSubscriber = (callback: (token: string) => void) => {
 };
 
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Handle potential encoding issues with string responses
+    if (
+      typeof response.data === "string" &&
+      response.headers["content-type"]?.includes("application/json")
+    ) {
+      try {
+        // Try to parse and re-stringify to ensure proper encoding
+        const parsed = JSON.parse(response.data);
+        response.data = parsed;
+      } catch (e) {
+        console.warn("Response parsing error:", e);
+      }
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
