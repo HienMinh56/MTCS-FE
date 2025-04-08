@@ -24,7 +24,7 @@ interface ReplaceTripModalProps {
 const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModalProps) => {
   const [formData, setFormData] = useState({
     driverId: "",
-    tractorID: "",
+    tractorId: "",  // Changed from tractorID to tractorId to match backend
     trailerId: "",
   });
   const [loading, setLoading] = useState(false);
@@ -43,12 +43,12 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
     setError("");
     
     try {
+      // Make sure empty strings are explicitly converted to null
       const tripReplaceData: tripRelace = {
         tripId,
-        driverId: formData.driverId,
-        tractorID: formData.tractorID,
-        trailerId: formData.trailerId,
-        status: "active", // Default status for replacement trip
+        driverId: formData.driverId.trim() || null,
+        tractorId: formData.tractorId.trim() || null,
+        trailerId: formData.trailerId.trim() || null   
       };
 
       await createTripReplace(tripReplaceData);
@@ -56,9 +56,13 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
       if (onSuccess) {
         onSuccess();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to create replacement trip:", err);
-      setError("Không thể tạo chuyến thay thế. Vui lòng thử lại sau.");
+      // Show a more detailed error message when available
+      setError(
+        err.response?.data?.message || 
+        `Không thể tạo chuyến thay thế. Lỗi: ${err.message || 'Vui lòng thử lại sau.'}`
+      );
     } finally {
       setLoading(false);
     }
@@ -89,9 +93,9 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
           </Grid>
           <Grid item xs={12}>
             <TextField
-              name="tractorID"
+              name="tractorId"  // Changed from tractorID to tractorId
               label="Mã đầu kéo"
-              value={formData.tractorID}
+              value={formData.tractorId}  // Changed from tractorID to tractorId
               onChange={handleChange}
               fullWidth
               required
@@ -101,12 +105,12 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
           <Grid item xs={12}>
             <TextField
               name="trailerId"
-              label="Mã rơ moóc"
+              label="Mã rơ moóc (không bắt buộc)"
               value={formData.trailerId}
               onChange={handleChange}
               fullWidth
-              required
               margin="dense"
+              helperText="Trường này có thể để trống nếu không cần rơ moóc"
             />
           </Grid>
         </Grid>
@@ -119,7 +123,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
           onClick={handleSubmit} 
           variant="contained" 
           color="primary" 
-          disabled={loading || !formData.driverId || !formData.tractorID || !formData.trailerId}
+          disabled={loading || !formData.driverId || !formData.tractorId}  // Changed from tractorID to tractorId
           startIcon={loading && <CircularProgress size={16} color="inherit" />}
         >
           {loading ? "Đang xử lý..." : "Tạo chuyến"}
