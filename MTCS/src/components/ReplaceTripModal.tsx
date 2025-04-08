@@ -1,18 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
-  TextField,
   Grid,
   CircularProgress,
   Typography,
   Alert,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Box,
+  FormHelperText,
+  Autocomplete,
+  TextField,
 } from "@mui/material";
 import { tripRelace } from "../types/trip";
 import { createTripReplace } from "../services/tripApi";
+import { getDriverList } from "../services/DriverApi";
+import { getTractors } from "../services/tractorApi";
+import { getTrailers } from "../services/trailerApi";
 
 interface ReplaceTripModalProps {
   open: boolean;
@@ -21,17 +31,120 @@ interface ReplaceTripModalProps {
   onSuccess?: () => void;
 }
 
+// Driver option interface
+interface DriverOption {
+  id: string;
+  fullName: string;
+  phoneNumber: string;
+}
+
+// Tractor option interface
+interface TractorOption {
+  id: string;
+  licensePlate: string;
+  brand: string;
+}
+
+// Trailer option interface
+interface TrailerOption {
+  id: string;
+  licensePlate: string;
+  brand: string;
+}
+
 const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModalProps) => {
   const [formData, setFormData] = useState({
     driverId: "",
-    tractorId: "",  // Changed from tractorID to tractorId to match backend
+    tractorId: "",
     trailerId: "",
   });
+  
+  // Loading states
   const [loading, setLoading] = useState(false);
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
+  const [loadingTractors, setLoadingTractors] = useState(false);
+  const [loadingTrailers, setLoadingTrailers] = useState(false);
+  
+  // Options for dropdown selects
+  const [drivers, setDrivers] = useState<DriverOption[]>([]);
+  const [tractors, setTractors] = useState<TractorOption[]>([]);
+  const [trailers, setTrailers] = useState<TrailerOption[]>([]);
+  
   const [error, setError] = useState("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  // Fetch data when modal opens
+  useEffect(() => {
+    if (open) {
+      fetchDrivers();
+      fetchTractors();
+      fetchTrailers();
+    }
+  }, [open]);
+
+  // Fetch drivers from API
+  const fetchDrivers = async () => {
+    setLoadingDrivers(true);
+    try {
+      const response = await getDriverList({ status: 0 }); // Active drivers
+      if (response.success && response.data) {
+        const driverOptions = response.data.items.map(driver => ({
+          id: driver.id,
+          fullName: driver.fullName,
+          phoneNumber: driver.phoneNumber || "",
+        }));
+        setDrivers(driverOptions);
+      }
+    } catch (err) {
+      console.error("Error fetching drivers:", err);
+      setError("Không thể tải danh sách tài xế");
+    } finally {
+      setLoadingDrivers(false);
+    }
+  };
+
+  // Fetch tractors from API
+  const fetchTractors = async () => {
+    setLoadingTractors(true);
+    try {
+      const response = await getTractors(1, 100, undefined, 1); // Active tractors
+      if (response && response.items) {
+        const tractorOptions = response.items.map(tractor => ({
+          id: tractor.id,
+          licensePlate: tractor.licensePlate,
+          brand: tractor.brand || "",
+        }));
+        setTractors(tractorOptions);
+      }
+    } catch (err) {
+      console.error("Error fetching tractors:", err);
+      setError("Không thể tải danh sách đầu kéo");
+    } finally {
+      setLoadingTractors(false);
+    }
+  };
+
+  // Fetch trailers from API
+  const fetchTrailers = async () => {
+    setLoadingTrailers(true);
+    try {
+      const response = await getTrailers(1, 100, undefined, 1); // Active trailers
+      if (response && response.items) {
+        const trailerOptions = response.items.map(trailer => ({
+          id: trailer.id,
+          licensePlate: trailer.licensePlate,
+          brand: trailer.brand || "",
+        }));
+        setTrailers(trailerOptions);
+      }
+    } catch (err) {
+      console.error("Error fetching trailers:", err);
+      setError("Không thể tải danh sách moóc");
+    } finally {
+      setLoadingTrailers(false);
+    }
+  };
+
+  const handleChange = (name: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -43,12 +156,12 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
     setError("");
     
     try {
-      // Make sure empty strings are explicitly converted to null
+      // Create trip replacement data
       const tripReplaceData: tripRelace = {
         tripId,
-        driverId: formData.driverId.trim() || null,
-        tractorId: formData.tractorId.trim() || null,
-        trailerId: formData.trailerId.trim() || null   
+        driverId: formData.driverId || null,
+        tractorId: formData.tractorId || null,
+        trailerId: formData.trailerId || null // This can be null
       };
 
       await createTripReplace(tripReplaceData);
@@ -58,7 +171,6 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
       }
     } catch (err: any) {
       console.error("Failed to create replacement trip:", err);
-      // Show a more detailed error message when available
       setError(
         err.response?.data?.message || 
         `Không thể tạo chuyến thay thế. Lỗi: ${err.message || 'Vui lòng thử lại sau.'}`
@@ -68,52 +180,105 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
     }
   };
 
+  const isLoading = loadingDrivers || loadingTractors || loadingTrailers;
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Tạo chuyến đi thay thế</DialogTitle>
       <DialogContent dividers>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <Typography variant="subtitle2" gutterBottom>
-              Mã chuyến đi cần thay thế: {tripId}
-            </Typography>
+        {isLoading ? (
+          <Box display="flex" justifyContent="center" my={3}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>
+                Mã chuyến đi cần thay thế: {tripId}
+              </Typography>
+            </Grid>
+            
+            {/* Driver Dropdown */}
+            <Grid item xs={12}>
+              <Autocomplete
+                options={drivers}
+                getOptionLabel={(option) => `${option.fullName} (${option.phoneNumber})`}
+                loading={loadingDrivers}
+                onChange={(_, newValue) => handleChange("driverId", newValue?.id || "")}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Tài xế"
+                    required
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {loadingDrivers ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+            
+            {/* Tractor Dropdown */}
+            <Grid item xs={12}>
+              <Autocomplete
+                options={tractors}
+                getOptionLabel={(option) => `${option.licensePlate} (${option.brand})`}
+                loading={loadingTractors}
+                onChange={(_, newValue) => handleChange("tractorId", newValue?.id || "")}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Đầu kéo"
+                    required
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {loadingTractors ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+            
+            {/* Trailer Dropdown (Optional) */}
+            <Grid item xs={12}>
+              <Autocomplete
+                options={trailers}
+                getOptionLabel={(option) => `${option.licensePlate} (${option.brand})`}
+                loading={loadingTrailers}
+                onChange={(_, newValue) => handleChange("trailerId", newValue?.id || "")}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Rơ moóc"
+                    helperText="Trường này có thể để trống nếu không cần rơ moóc"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {loadingTrailers ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={12}>
-            <TextField
-              name="driverId"
-              label="Mã tài xế"
-              value={formData.driverId}
-              onChange={handleChange}
-              fullWidth
-              required
-              margin="dense"
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              name="tractorId"  // Changed from tractorID to tractorId
-              label="Mã đầu kéo"
-              value={formData.tractorId}  // Changed from tractorID to tractorId
-              onChange={handleChange}
-              fullWidth
-              required
-              margin="dense"
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              name="trailerId"
-              label="Mã rơ moóc (không bắt buộc)"
-              value={formData.trailerId}
-              onChange={handleChange}
-              fullWidth
-              margin="dense"
-              helperText="Trường này có thể để trống nếu không cần rơ moóc"
-            />
-          </Grid>
-        </Grid>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={loading}>
@@ -123,7 +288,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
           onClick={handleSubmit} 
           variant="contained" 
           color="primary" 
-          disabled={loading || !formData.driverId || !formData.tractorId}  // Changed from tractorID to tractorId
+          disabled={loading || isLoading || !formData.driverId || !formData.tractorId}
           startIcon={loading && <CircularProgress size={16} color="inherit" />}
         >
           {loading ? "Đang xử lý..." : "Tạo chuyến"}

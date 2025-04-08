@@ -3,7 +3,7 @@ export enum OrderStatus {
   Scheduled = "Scheduled",
   Delivering = "Delivering",
   Shipped = "Shipped",
-  Complete = "Complete",
+  Completed = "Completed",
 }
 
 export enum DeliveryType {
@@ -23,7 +23,7 @@ export enum ContainerSize {
 
 export enum IsPay {
   Yes = 1,
-  No = 2
+  No = 0
 }
 
 export interface PaginatedResult<T> {
@@ -58,6 +58,7 @@ export interface Order {
   deliveryType: DeliveryType;
   price: number;
   distance: number | null;
+  isPay: IsPay | null; // Add this field
 }
 
 export interface OrderResponse {
@@ -109,6 +110,7 @@ export interface OrderDetails {
     containerSize: ContainerSize;
     orderFiles: [OrderFile["fileUrl"]] | null;
     completeTime: string | null;
+    isPay: IsPay | null;
 }
 
 export interface OrderDetailsResponse {

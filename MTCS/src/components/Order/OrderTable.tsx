@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -25,6 +25,10 @@ import {
   DialogContent,
   DialogTitle,
   DialogActions,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
@@ -38,7 +42,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import DownloadIcon from "@mui/icons-material/Download";
 import { getOrders, exportExcel } from "../../services/orderApi";
-import { OrderStatus, Order, DeliveryType } from "../../types/order";
+import { OrderStatus, Order, DeliveryType, IsPay } from "../../types/order";
 import OrderCreate from "./OrderCreate";
 import { DatePicker } from "@mui/x-date-pickers";
 import { LocalizationProvider } from "@mui/x-date-pickers";
@@ -74,11 +78,15 @@ function a11yProps(index: number) {
   };
 }
 
+// Define search field types
+type SearchField = 'trackingCode' | 'customer' | 'deliveryType' | 'all';
+
 const OrderManagement: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  // Remove searchField state variable since we'll search across all fields
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalOrders, setTotalOrders] = useState(0);
@@ -87,49 +95,135 @@ const OrderManagement: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const navigate = useNavigate();
   
-  // New state variables for export feature
+  // Export feature states
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [fromDate, setFromDate] = useState<dayjs.Dayjs | null>(null);
   const [toDate, setToDate] = useState<dayjs.Dayjs | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
+  
+  // Payment filter state
+  const [paymentFilter, setPaymentFilter] = useState<IsPay | null>(null);
+  
+  // State for all orders (not filtered) to use for counts
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [loadingAllOrders, setLoadingAllOrders] = useState(false);
+  const [allFetchedOrders, setAllFetchedOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const [isFiltering, setIsFiltering] = useState(false);
 
+  // Fetch all orders once to use for count calculations
+  useEffect(() => {
+    const fetchAllOrders = async () => {
+      setLoadingAllOrders(true);
+      try {
+        // Get all orders with large page size and no filters
+        const result = await getOrders(1, 1000);
+
+        if (Array.isArray(result)) {
+          setAllOrders(result);
+        } else if (result && result.orders && result.orders.items) {
+          setAllOrders(result.orders.items);
+        } else {
+          setAllOrders([]);
+        }
+      } catch (error) {
+        console.error("Error fetching all orders:", error);
+        setAllOrders([]);
+      } finally {
+        setLoadingAllOrders(false);
+      }
+    };
+
+    fetchAllOrders();
+  }, []);
+
+  // Combined useEffect to fetch orders and handle filtering
   useEffect(() => {
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        const status =
-          tabValue === 0
-            ? undefined
-            : tabValue === 1
-            ? OrderStatus.Pending
-            : tabValue === 2
-            ? OrderStatus.Scheduled // Changed from InProgress to Scheduled
-            : OrderStatus.Complete;
+        // Map tab values to correct OrderStatus values
+        let statusFilter: OrderStatus | undefined;
+        
+        switch (tabValue) {
+          case 0: // All orders
+            statusFilter = undefined;
+            break;
+          case 1: // Pending
+            statusFilter = OrderStatus.Pending;
+            break;
+          case 2: // Scheduled
+            statusFilter = OrderStatus.Scheduled;
+            break;
+          case 3: // Delivering
+            statusFilter = OrderStatus.Delivering;
+            break;
+          case 4: // Shipped
+            statusFilter = OrderStatus.Shipped;
+            break;
+          case 5: // Complete
+            statusFilter = OrderStatus.Completed;
+            break;
+          default:
+            statusFilter = undefined;
+        }
 
+        console.log("Fetching orders with status:", statusFilter);
+
+        // Get data from API, but don't send searchTerm since we'll filter locally
         const result = await getOrders(
-          page + 1,
-          rowsPerPage,
-          searchTerm,
-          status
+          1, // Always get page 1 with a large number of records
+          1000, // Get a large batch of orders to handle client-side pagination
+          "", // Don't pass searchTerm to API
+          statusFilter,
+          paymentFilter
         );
 
-        // Handle the API response which is coming as a direct array
+        let fetchedOrders: Order[] = [];
+
         if (Array.isArray(result)) {
-          setOrders(result);
-          setTotalOrders(result.length); // Total is the length of the array
+          fetchedOrders = result;
+          setTotalOrders(result.length);
         } else if (result && result.orders) {
-          // Fallback to original structure if that's provided instead
-          setOrders(result.orders.items || []);
+          fetchedOrders = result.orders.items || [];
           setTotalOrders(result.orders.totalCount || 0);
         } else {
-          // If the response doesn't match either expected structure, set empty data
           console.warn("Unexpected API response structure:", result);
-          setOrders([]);
+          fetchedOrders = [];
           setTotalOrders(0);
+        }
+
+        // Store fetched orders before filtering
+        setAllFetchedOrders(fetchedOrders);
+        
+        // Apply search filtering if there's a search term
+        if (searchTerm.trim() === '') {
+          setOrders(fetchedOrders);
+          setFilteredOrders(fetchedOrders);
+          setIsFiltering(false);
+        } else {
+          // Apply filtering
+          const lowerSearchTerm = searchTerm.toLowerCase();
+          
+          const filtered = fetchedOrders.filter((order) => {
+            return (
+              (order.trackingCode && 
+                order.trackingCode.toLowerCase().includes(lowerSearchTerm)) ||
+              (order.customerId && 
+                order.customerId.toLowerCase().includes(lowerSearchTerm)) ||
+              (getDeliveryTypeDisplay(order.deliveryType).toLowerCase().includes(lowerSearchTerm))
+            );
+          });
+          
+          setOrders(filtered);
+          setFilteredOrders(filtered);
+          setIsFiltering(true);
         }
       } catch (error) {
         console.error("Error fetching orders:", error);
         setOrders([]);
+        setFilteredOrders([]);
+        setAllFetchedOrders([]);
         setTotalOrders(0);
       } finally {
         setLoading(false);
@@ -137,7 +231,19 @@ const OrderManagement: React.FC = () => {
     };
 
     fetchOrders();
-  }, [page, rowsPerPage, tabValue, searchTerm]);
+  }, [tabValue, paymentFilter, searchTerm]); // Remove page and rowsPerPage from dependencies
+
+  // Calculate order counts from the allOrders state
+  const orderCounts = {
+    total: allOrders.length,
+    pending: allOrders.filter(order => order.status === OrderStatus.Pending).length,
+    complete: allOrders.filter(order => order.status === OrderStatus.Completed).length,
+    cancelled: allOrders.filter(order => 
+      order.status === "Cancelled" as any || order.status === "Canceled" as any).length,
+    scheduled: allOrders.filter(order => order.status === OrderStatus.Scheduled).length,
+    delivering: allOrders.filter(order => order.status === OrderStatus.Delivering).length,
+    shipped: allOrders.filter(order => order.status === OrderStatus.Shipped).length
+  };
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -180,7 +286,21 @@ const OrderManagement: React.FC = () => {
     // Close the dialog
     setCreateDialogOpen(false);
 
-    // Refresh the order list to show the newly created order
+    // Refresh all orders to update counts
+    const fetchAllOrders = async () => {
+      try {
+        const result = await getOrders(1, 1000);
+        if (Array.isArray(result)) {
+          setAllOrders(result);
+        } else if (result && result.orders && result.orders.items) {
+          setAllOrders(result.orders.items);
+        }
+      } catch (error) {
+        console.error("Error refreshing all orders:", error);
+      }
+    };
+
+    // Refresh filtered orders for the table
     const fetchOrders = async () => {
       setLoading(true);
       try {
@@ -191,7 +311,7 @@ const OrderManagement: React.FC = () => {
             ? OrderStatus.Pending
             : tabValue === 2
             ? OrderStatus.Scheduled
-            : OrderStatus.Complete;
+            : OrderStatus.Completed;
 
         const result = await getOrders(
           page + 1,
@@ -200,7 +320,6 @@ const OrderManagement: React.FC = () => {
           status
         );
 
-        // Handle the API response
         if (Array.isArray(result)) {
           setOrders(result);
           setTotalOrders(result.length);
@@ -208,7 +327,6 @@ const OrderManagement: React.FC = () => {
           setOrders(result.orders.items || []);
           setTotalOrders(result.orders.totalCount || 0);
         } else {
-          console.warn("Unexpected API response structure:", result);
           setOrders([]);
           setTotalOrders(0);
         }
@@ -221,6 +339,8 @@ const OrderManagement: React.FC = () => {
       }
     };
 
+    // Execute both fetch operations
+    fetchAllOrders();
     fetchOrders();
   };
   
@@ -256,7 +376,7 @@ const OrderManagement: React.FC = () => {
     }
   };
 
-  // Order status options with Vietnamese labels
+  // Order status options with Vietnamese labels - Update to match OrderStatus values exactly
   const orderStatusOptions = [
     { value: "all", label: "Tất cả", color: "default" },
     {
@@ -280,7 +400,7 @@ const OrderManagement: React.FC = () => {
       color: "info",
     },
     {
-      value: OrderStatus.Complete,
+      value: OrderStatus.Completed,
       label: "Hoàn thành",
       color: "success",
     },
@@ -297,9 +417,7 @@ const OrderManagement: React.FC = () => {
         return { label: "Đang giao hàng", color: "info" };
       case OrderStatus.Shipped:
         return { label: "Đã giao hàng", color: "info" };
-      case OrderStatus.InProgress:
-        return { label: "Đang xử lý", color: "info" };
-      case OrderStatus.Complete:
+      case OrderStatus.Completed:
         return { label: "Hoàn thành", color: "success" };
       default:
         return { label: "Unknown", color: "default" };
@@ -310,12 +428,52 @@ const OrderManagement: React.FC = () => {
   const getDeliveryTypeDisplay = (type: DeliveryType) => {
     return type === DeliveryType.Import ? "Nhập khẩu" : "Xuất khẩu";
   };
+  
+  // Helper function to get payment status display
+  const getPaymentStatusDisplay = (isPay: IsPay | null) => {
+    switch (isPay) {
+      case IsPay.Yes:
+        return { label: "Đã thanh toán", color: "success" };
+      case IsPay.No:
+        return { label: "Chưa thanh toán", color: "warning" };
+      default:
+        return { label: "Không xác định", color: "default" };
+    }
+  };
+
+  // Update the orders to display (filtered or all)
+  const displayedOrders = useMemo(() => {
+    return searchTerm.trim() !== '' ? filteredOrders : allFetchedOrders;
+  }, [searchTerm, filteredOrders, allFetchedOrders]);
+
+  // Calculate count of filtered results for display
+  const filteredCount = useMemo(() => {
+    return filteredOrders.length;
+  }, [filteredOrders]);
+
+  // Helper function to filter orders by status - similar to incident component
+  const getFilteredOrdersByStatus = (status: string) => {
+    if (status === "all") {
+      return filteredOrders;
+    }
+    return filteredOrders.filter((order) => order.status === status);
+  };
+
+  // Get current orders for display with client-side pagination
+  const getCurrentOrders = () => {
+    const statusValue = orderStatusOptions[tabValue].value;
+    const filtered = typeof statusValue === "string" && statusValue === "all" 
+      ? filteredOrders 
+      : filteredOrders.filter(order => order.status === statusValue);
+      
+    return filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  };
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={6} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -334,7 +492,7 @@ const OrderManagement: React.FC = () => {
                     Tổng số đơn
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {totalOrders}
+                    {loadingAllOrders ? <CircularProgress size={20} /> : orderCounts.total}
                   </Typography>
                 </Box>
                 <Box
@@ -350,8 +508,8 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        {/* Other summary cards with same styling adjustments */}
-        <Grid item xs={6} sm={6} md={3}>
+        {/* Other summary cards with same sizing adjustments */}
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -370,11 +528,7 @@ const OrderManagement: React.FC = () => {
                     Chờ xử lý
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {
-                      orders.filter(
-                        (order) => order.status === OrderStatus.Pending
-                      ).length
-                    }
+                    {loadingAllOrders ? <CircularProgress size={20} /> : orderCounts.pending}
                   </Typography>
                 </Box>
                 <Box
@@ -390,7 +544,7 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -409,11 +563,7 @@ const OrderManagement: React.FC = () => {
                     Hoàn thành
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {
-                      orders.filter(
-                        (order) => order.status === OrderStatus.Complete
-                      ).length
-                    }
+                    {loadingAllOrders ? <CircularProgress size={20} /> : orderCounts.complete}
                   </Typography>
                 </Box>
                 <Box
@@ -429,7 +579,7 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -448,11 +598,7 @@ const OrderManagement: React.FC = () => {
                     Đã hủy
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {
-                      orders.filter(
-                        (order) => order.status === OrderStatus.Cancelled
-                      ).length
-                    }
+                    {loadingAllOrders ? <CircularProgress size={20} /> : orderCounts.cancelled}
                   </Typography>
                 </Box>
                 <Box
@@ -468,7 +614,7 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -487,11 +633,7 @@ const OrderManagement: React.FC = () => {
                     Đã lên lịch
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {
-                      orders.filter(
-                        (order) => order.status === OrderStatus.Scheduled
-                      ).length
-                    }
+                    {loadingAllOrders ? <CircularProgress size={20} /> : orderCounts.scheduled}
                   </Typography>
                 </Box>
                 <Box
@@ -533,11 +675,21 @@ const OrderManagement: React.FC = () => {
           >
             <Typography variant="h6" component="div" fontWeight={500}>
               Danh sách đơn hàng
+              {isFiltering && (
+                <Typography 
+                  component="span" 
+                  color="text.secondary" 
+                  sx={{ ml: 1, fontSize: '0.875rem' }}
+                >
+                  (Đã lọc: {filteredCount} kết quả)
+                </Typography>
+              )}
             </Typography>
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Box sx={{ display: "flex", gap: 1, width: { xs: "100%", sm: "auto" } }}>
+              {/* Simplified search input that searches across all fields */}
               <TextField
                 size="small"
-                placeholder="Tìm kiếm đơn hàng..."
+                placeholder="Tìm kiếm theo mã đơn, khách hàng, loại VC..."
                 value={searchTerm}
                 onChange={handleSearch}
                 InputProps={{
@@ -546,15 +698,22 @@ const OrderManagement: React.FC = () => {
                       <SearchIcon />
                     </InputAdornment>
                   ),
+                  endAdornment: searchTerm && (
+                    <InputAdornment position="end">
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        onClick={() => setSearchTerm('')}
+                        aria-label="clear search"
+                      >
+                        <CancelIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
                 }}
+                sx={{ flexGrow: { xs: 1, sm: 0 }, minWidth: { sm: 300 } }}
               />
-              <Button
-                variant="outlined"
-                startIcon={<FilterListIcon />}
-                size="small"
-              >
-                Lọc
-              </Button>
+
               <Button
                 variant="outlined"
                 color="success"
@@ -620,13 +779,14 @@ const OrderManagement: React.FC = () => {
                   <TableCell>Giá (VNĐ)</TableCell>
                   <TableCell>Khoảng cách</TableCell>
                   <TableCell>Trạng thái</TableCell>
+                  <TableCell>Thanh toán</TableCell> {/* Add this column */}
                   <TableCell align="center">Hành động</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} align="center">
+                    <TableCell colSpan={9} align="center">
                       <Box
                         sx={{
                           py: 3,
@@ -638,8 +798,8 @@ const OrderManagement: React.FC = () => {
                       </Box>
                     </TableCell>
                   </TableRow>
-                ) : orders.length > 0 ? (
-                  orders.map((order, index) => (
+                ) : getCurrentOrders().length > 0 ? (
+                  getCurrentOrders().map((order, index) => (
                     <TableRow
                       key={order.trackingCode || `order-${index}`}
                       hover
@@ -667,6 +827,13 @@ const OrderManagement: React.FC = () => {
                           size="small"
                           label={getStatusDisplay(order.status).label}
                           color={getStatusDisplay(order.status).color as any}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          label={getPaymentStatusDisplay(order.isPay).label}
+                          color={getPaymentStatusDisplay(order.isPay).color as any}
                         />
                       </TableCell>
                       <TableCell align="center">
@@ -705,9 +872,9 @@ const OrderManagement: React.FC = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} align="center">
+                    <TableCell colSpan={9} align="center">
                       <Typography variant="body2" color="text.secondary" py={3}>
-                        Không có dữ liệu
+                        {searchTerm ? "Không tìm thấy đơn hàng phù hợp" : "Không có dữ liệu"}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -718,7 +885,13 @@ const OrderManagement: React.FC = () => {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={totalOrders}
+            count={
+              orderStatusOptions[tabValue].value === "all"
+                ? filteredOrders.length
+                : filteredOrders.filter(
+                    (order) => order.status === orderStatusOptions[tabValue].value
+                  ).length
+            }
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}

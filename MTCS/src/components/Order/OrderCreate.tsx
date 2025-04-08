@@ -52,13 +52,14 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
       console.log('Descriptions count:', fileDescriptions.length);
       console.log('Notes count:', fileNotes.length);
       
-      // Ensure we're passing the files and related metadata to the API call
+      // Map orderPlacer to OrderPlace as expected by the backend
       const response = await createOrder({
         ...formattedData,
-        orderPlacer: data.orderPlacer || "", // Match with the BE field name (OrderPlace in the backend)
+        OrderPlace: data.orderPlacer || "", // Explicitly map to OrderPlace
+        companyName: data.companyName, // Ensure companyName is passed 
         files: files.length > 0 ? files : null,
-        description: fileDescriptions.length > 0 ? fileDescriptions : [],
-        notes: fileNotes.length > 0 ? fileNotes : [],
+        description: fileDescriptions,
+        notes: fileNotes,
       });
       
       console.log('===== ORDER CREATE RESPONSE =====');
