@@ -85,14 +85,15 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
   const fetchDrivers = async () => {
     setLoadingDrivers(true);
     try {
-      const response = await getDriverList({ status: 0 }); // Active drivers
+      const response = await getDriverList({ status: 1 }); // Active drivers (1), not Inactive (0)
       if (response.success && response.data) {
         const driverOptions = response.data.items.map(driver => ({
-          id: driver.id,
+          id: driver.driverId,
           fullName: driver.fullName,
           phoneNumber: driver.phoneNumber || "",
         }));
         setDrivers(driverOptions);
+        console.log(driverOptions);
       }
     } catch (err) {
       console.error("Error fetching drivers:", err);
@@ -107,9 +108,9 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
     setLoadingTractors(true);
     try {
       const response = await getTractors(1, 100, undefined, 1); // Active tractors
-      if (response && response.items) {
-        const tractorOptions = response.items.map(tractor => ({
-          id: tractor.id,
+      if (response && response.data && response.data.tractors) {
+        const tractorOptions = response.data.tractors.items.map(tractor => ({
+          id: tractor.tractorId,
           licensePlate: tractor.licensePlate,
           brand: tractor.brand || "",
         }));
@@ -128,9 +129,9 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
     setLoadingTrailers(true);
     try {
       const response = await getTrailers(1, 100, undefined, 1); // Active trailers
-      if (response && response.items) {
-        const trailerOptions = response.items.map(trailer => ({
-          id: trailer.id,
+      if (response && response.data && response.data.trailers) {
+        const trailerOptions = response.data.trailers.items.map(trailer => ({
+          id: trailer.trailerId,
           licensePlate: trailer.licensePlate,
           brand: trailer.brand || "",
         }));
