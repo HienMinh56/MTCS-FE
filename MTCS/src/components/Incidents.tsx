@@ -338,6 +338,7 @@ const IncidentManagement = () => {
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
+    setPage(0); // Reset to first page when searching
   };
 
   const handleOpenDialog = (incident: Incident) => {
@@ -377,11 +378,20 @@ const IncidentManagement = () => {
     }
   ];
 
-  const filteredIncidents = incidents.filter((incident) =>
-    incident.reportedBy.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    incident.reportId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    incident.tripId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredIncidents = incidents.filter((incident) => {
+    if (!searchTerm.trim()) return true;
+    
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    
+    return (
+      // Search by Incident ID
+      (incident.reportId && incident.reportId.toLowerCase().includes(lowerSearchTerm)) ||
+      // Search by Trip ID
+      (incident.tripId && incident.tripId.toLowerCase().includes(lowerSearchTerm)) ||
+      // Search by Incident Type
+      (incident.incidentType && incident.incidentType.toLowerCase().includes(lowerSearchTerm))
+    );
+  });
 
   const getFilteredIncidentsByStatus = (status: string) => {
     if (status === "all") {
@@ -537,11 +547,21 @@ const IncidentManagement = () => {
           >
             <Typography variant="h6" component="div" fontWeight={500}>
               Danh sách sự cố
+              {searchTerm.trim() !== '' && (
+                <Typography 
+                  component="span" 
+                  color="text.secondary" 
+                  sx={{ ml: 1, fontSize: '0.875rem' }}
+                >
+                  (Đã lọc: {filteredIncidents.length} kết quả)
+                </Typography>
+              )}
             </Typography>
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Box sx={{ display: "flex", gap: 1, width: { xs: "100%", sm: "auto" } }}>
+              {/* Updated search input to match OrderTable style */}
               <TextField
                 size="small"
-                placeholder="Tìm kiếm sự cố..."
+                placeholder="Tìm kiếm theo mã sự cố, mã chuyến, loại..."
                 value={searchTerm}
                 onChange={handleSearch}
                 InputProps={{
@@ -550,7 +570,20 @@ const IncidentManagement = () => {
                       <SearchIcon />
                     </InputAdornment>
                   ),
+                  endAdornment: searchTerm && (
+                    <InputAdornment position="end">
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        onClick={() => setSearchTerm('')}
+                        aria-label="clear search"
+                      >
+                        <CancelIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
                 }}
+                sx={{ flexGrow: { xs: 1, sm: 0 }, minWidth: { sm: 300 } }}
               />
               <Button
                 variant="outlined"

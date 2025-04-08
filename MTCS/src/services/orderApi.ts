@@ -2,7 +2,6 @@ import {
   OrderDetails,
   OrderStatus,
   OrderResponse,
-  OrderFile,
   ContainerType,
   ContainerSize,
   IsPay,
@@ -14,7 +13,8 @@ export const getOrders = async (
   page: number,
   pageSize: number,
   searchKeyword?: string,
-  status?: OrderStatus
+  status?: OrderStatus,
+  isPay?: IsPay | null
 ) => {
   try {
     const params = new URLSearchParams();
@@ -24,18 +24,25 @@ export const getOrders = async (
 
     if (searchKeyword) {
       params.append("searchKeyword", searchKeyword);
+      // Remove the searchField parameter since we'll search across all fields
     }
 
     if (status !== undefined) {
       params.append("status", status.toString());
     }
 
+    // Add isPay filter if provided
+    if (isPay !== undefined && isPay !== null) {
+      params.append("isPay", isPay.toString());
+    }
+
+    console.log("API Request params:", params.toString());
     const response = await axiosInstance.get<OrderResponse>(
       `/api/order/orders?${params.toString()}`
     );
     return response.data.data;
   } catch (error) {
-    console.error("Error fetching tractors:", error);
+    console.error("Error fetching orders:", error);
     throw error;
   }
 };
@@ -106,11 +113,11 @@ export const createOrder = async (orderData: {
     // Add orderRequest data as individual form fields
     Object.entries(orderData).forEach(([key, value]) => {
       // Skip files, description, and notes arrays as they need special handling
-      if (key !== "files" && key !== "description" && key !== "notes") {
-        // Handle orderPlacer field correctly - rename to match backend (OrderPlace)
+      if (key !== "files" && key !== "descriptions" && key !== "notes") {
+        // Handle orderPlacer field correctly - map to OrderPlace as expected by the backend
         if (key === "orderPlacer") {
           if (value !== null && value !== undefined) {
-            formData.append("orderPlace", value.toString());
+            formData.append("OrderPlace", value.toString());
           }
         } else if (value !== null && value !== undefined) {
           formData.append(key, value.toString());
@@ -177,7 +184,7 @@ export const updateOrder = async (orderData: {
   contactPerson: string;
   containerNumber: string;
   contactPhone: string;
-  orderPlacer: string;  // Make sure orderPlacer is included here
+  orderPlacer: string;
   isPay: IsPay;
   temperature: number | null;
   description: string[] | null;
@@ -193,47 +200,51 @@ export const updateOrder = async (orderData: {
     // Always use FormData for all scenarios to match backend [FromForm] attribute
     const formData = new FormData();
     
-    // Add basic fields
+    // Add basic fields - using the exact case that the backend expects
     formData.append("orderId", orderData.orderId);
     formData.append("status", orderData.status.toString());
-    formData.append("note", orderData.note || "");
-    formData.append("price", orderData.price.toString());
-    formData.append("contactPerson", orderData.contactPerson || "");
-    formData.append("containerNumber", orderData.containerNumber || "");
-    formData.append("contactPhone", orderData.contactPhone || "");
-    formData.append("orderPlacer", orderData.orderPlacer || "");  // Ensure orderPlacer is sent
-    formData.append("isPay", orderData.isPay.toString());
+    formData.append("Note", orderData.note || "");
+    formData.append("Price", orderData.price.toString());
+    formData.append("ContactPerson", orderData.contactPerson || "");
+    formData.append("ContainerNumber", orderData.containerNumber || "");
+    formData.append("ContactPhone", orderData.contactPhone || "");
+    formData.append("OrderPlace", orderData.orderPlacer || ""); // Changed to OrderPlace to match BE
+    formData.append("IsPay", orderData.isPay.toString());
     
     // Only add temperature if it's not null
     if (orderData.temperature !== null) {
-      formData.append("temperature", orderData.temperature.toString());
+      formData.append("Temperature", orderData.temperature.toString());
     }
 
-    // Add description fields
-    if (orderData.description && orderData.description.length > 0) {
-      orderData.description.forEach((desc) => {
-        formData.append("descriptions", desc);
-      });
+    // Only add description fields for new files
+    if (orderData.filesToAdd && orderData.filesToAdd.length > 0 && orderData.description) {
+      // Make sure we have descriptions for each file
+      for (let i = 0; i < orderData.filesToAdd.length; i++) {
+        const desc = i < orderData.description.length ? orderData.description[i] : "";
+        formData.append("Descriptions", desc);
+      }
     }
 
-    // Add notes fields
-    if (orderData.notes && orderData.notes.length > 0) {
-      orderData.notes.forEach((note) => {
-        formData.append("notes", note);
-      });
+    // Only add notes fields for new files
+    if (orderData.filesToAdd && orderData.filesToAdd.length > 0 && orderData.notes) {
+      // Make sure we have notes for each file
+      for (let i = 0; i < orderData.filesToAdd.length; i++) {
+        const note = i < orderData.notes.length ? orderData.notes[i] : "";
+        formData.append("Notes", note);
+      }
     }
 
-    // Add files to remove
+    // Add files to remove - Use correct field name
     if (orderData.filesToRemove && orderData.filesToRemove.length > 0) {
       orderData.filesToRemove.forEach((fileUrl) => {
-        formData.append("fileIdsToRemove", fileUrl);
+        formData.append("FileIdsToRemove", fileUrl);
       });
     }
 
-    // Add new files
+    // Add new files - Use correct field name
     if (orderData.filesToAdd && orderData.filesToAdd.length > 0) {
       orderData.filesToAdd.forEach((file) => {
-        formData.append("addedFiles", file);
+        formData.append("AddedFiles", file);
       });
     }
     

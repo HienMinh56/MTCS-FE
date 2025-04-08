@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   TextField,
   Button,
@@ -14,14 +14,18 @@ import {
   Paper,
   IconButton,
   Divider,
+  CircularProgress,
+  Autocomplete,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import AddIcon from "@mui/icons-material/Add";
+import AddIcon from "@mui/icons-material.Add";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { OrderFormValues, orderSchema } from "./orderSchema";
 import { ContainerType, ContainerSize, DeliveryType } from "../../types/order";
+import { Customer } from "../../types/customer";
+import { getCustomers } from "../../services/customerApi";
 import dayjs from "dayjs";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { styled } from "@mui/material/styles";
@@ -57,6 +61,8 @@ const OrderForm: React.FC<OrderFormProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
   const [fileNotes, setFileNotes] = useState<string[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
   
   const {
     control,
@@ -73,10 +79,10 @@ const OrderForm: React.FC<OrderFormProps> = ({
       weight: initialValues?.weight || 0,
       pickUpDate: initialValues?.pickUpDate || dayjs().add(1, "day").toDate(),
       deliveryDate: initialValues?.deliveryDate || dayjs().add(2, "day").toDate(),
-      completeTime: initialValues?.completeTime || null, // Added completeTime
+      completeTime: initialValues?.completeTime || null, 
       note: initialValues?.note || "",
-      containerType: initialValues?.containerType || ContainerType["Container Khô"], // Updated for new value
-      containerSize: initialValues?.containerSize || ContainerSize["Container 20 FT"], // Added containerSize
+      containerType: initialValues?.containerType || ContainerType["Container Khô"],
+      containerSize: initialValues?.containerSize || ContainerSize["Container 20 FT"],
       deliveryType: initialValues?.deliveryType || DeliveryType.Import,
       pickUpLocation: initialValues?.pickUpLocation || "",
       deliveryLocation: initialValues?.deliveryLocation || "",
@@ -85,22 +91,41 @@ const OrderForm: React.FC<OrderFormProps> = ({
       contactPerson: initialValues?.contactPerson || "",
       contactPhone: initialValues?.contactPhone || "",
       distance: initialValues?.distance || null,
-      orderPlacer: initialValues?.orderPlacer || "", // Added orderPlacer
+      orderPlacer: initialValues?.orderPlacer || "",
       containerNumber: initialValues?.containerNumber || "",
-      description: initialValues?.description || [""],
-      notes: initialValues?.notes || [""],
+      description: [],
+      notes: [],
     },
   });
 
-  // Using useFieldArray for dynamic arrays
-  const { fields: descriptionFields, append: appendDescription, remove: removeDescription } = 
-    useFieldArray({ control, name: "description" });
-  
-  const { fields: notesFields, append: appendNote, remove: removeNote } = 
-    useFieldArray({ control, name: "notes" });
-
   const containerType = watch("containerType");
 
+  // Fetch customers for dropdown
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      setLoadingCustomers(true);
+      try {
+        const result = await getCustomers(1, 100); // Fetch up to 100 customers
+        
+        if (result && result.orders && result.orders.items) {
+          setCustomers(result.orders.items);
+        } else {
+          // Handle the case when we get direct array
+          const customerData = Array.isArray(result) ? result : [];
+          setCustomers(customerData);
+        }
+      } catch (error) {
+        console.error("Error fetching customers:", error);
+        setCustomers([]);
+      } finally {
+        setLoadingCustomers(false);
+      }
+    };
+
+    fetchCustomers();
+  }, []);
+
+  // Rest of the file handlers
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const newFilesArray = Array.from(event.target.files);
@@ -174,6 +199,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
     console.log("Files to submit:", filesToSubmit?.length || 0);
     console.log("Descriptions to submit:", descriptionsToSubmit.length);
     console.log("Notes to submit:", notesToSubmit.length);
+    console.log("orderPlacer value:", data.orderPlacer); // Log orderPlacer value
     
     onSubmit({
       ...data,
@@ -198,14 +224,36 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 name="companyName"
                 control={control}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Tên công ty"
-                    fullWidth
-                    error={!!errors.companyName}
-                    helperText={errors.companyName?.message}
+                  <Autocomplete
+                    options={customers || []}
+                    loading={loadingCustomers}
+                    getOptionLabel={(option) => option.companyName || ''}
+                    isOptionEqualToValue={(option, value) => 
+                      option.customerId === value.customerId || option.companyName === value
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Tên công ty"
+                        error={!!errors.companyName}
+                        helperText={errors.companyName?.message}
+                        required
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {loadingCustomers ? <CircularProgress color="inherit" size={20} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                    value={customers.find(c => c.companyName === field.value) || null}
+                    onChange={(_, newValue) => {
+                      field.onChange(newValue ? newValue.companyName : '');
+                    }}
                     disabled={isSubmitting}
-                    required
                   />
                 )}
               />
@@ -639,78 +687,6 @@ const OrderForm: React.FC<OrderFormProps> = ({
                   />
                 )}
               />
-            </Grid>
-            
-            {/* Dynamic Description Fields */}
-            <Grid item xs={12}>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Mô tả chi tiết
-                </Typography>
-                {descriptionFields.map((field, index) => (
-                  <Box key={field.id} sx={{ display: "flex", mb: 1 }}>
-                    <TextField
-                      {...register(`description.${index}`)}
-                      label={`Mô tả ${index + 1}`}
-                      fullWidth
-                      disabled={isSubmitting}
-                      multiline
-                      rows={2}
-                      sx={{ mr: 1 }}
-                    />
-                    <IconButton
-                      color="error"
-                      onClick={() => removeDescription(index)}
-                      disabled={descriptionFields.length <= 1 || isSubmitting}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                ))}
-                <Button
-                  startIcon={<AddIcon />}
-                  onClick={() => appendDescription("")}
-                  disabled={isSubmitting}
-                >
-                  Thêm mô tả
-                </Button>
-              </Box>
-            </Grid>
-
-            {/* Dynamic Notes Fields */}
-            <Grid item xs={12}>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Ghi chú bổ sung
-                </Typography>
-                {notesFields.map((field, index) => (
-                  <Box key={field.id} sx={{ display: "flex", mb: 1 }}>
-                    <TextField
-                      {...register(`notes.${index}`)}
-                      label={`Ghi chú ${index + 1}`}
-                      fullWidth
-                      disabled={isSubmitting}
-                      multiline
-                      rows={2}
-                      sx={{ mr: 1 }}
-                    />
-                    <IconButton
-                      color="error"
-                      onClick={() => removeNote(index)}
-                      disabled={notesFields.length <= 1 || isSubmitting}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                ))}
-                <Button
-                  startIcon={<AddIcon />}
-                  onClick={() => appendNote("")}
-                  disabled={isSubmitting}
-                >
-                  Thêm ghi chú
-                </Button>
-              </Box>
             </Grid>
 
             {/* File Upload Section - Show only in create mode or edit mode with specific conditions */}

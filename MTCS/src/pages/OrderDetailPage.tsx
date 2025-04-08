@@ -36,6 +36,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DirectionsIcon from '@mui/icons-material/Directions';
 import {
   OrderDetails,
   ContainerType,
@@ -47,6 +48,8 @@ import {
 } from "../types/order";
 import { getOrderDetails, updateOrder } from "../services/orderApi";
 import { getContracts, createContract } from "../services/contractApi";
+import { getTrip } from "../services/tripApi"; // Import getTrip
+import { trip } from "../types/trip"; // Import trip type
 import { ContractFile } from "../types/contract";
 import { format } from "date-fns";
 import AddContractFileModal from "../components/contract/AddContractFileModal";
@@ -57,9 +60,10 @@ const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
-  const [contractFiles, setContractFiles] = useState<ContractFile[] | null>(
-    null
-  );
+  const [contractFiles, setContractFiles] = useState<ContractFile[] | null>(null);
+  const [tripData, setTripData] = useState<trip[] | null>(null); // Update to array type
+  const [tripLoading, setTripLoading] = useState<boolean>(false); // Add loading state for trip
+  const [tripError, setTripError] = useState<string | null>(null); // Add error state for trip
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [openAddContractModal, setOpenAddContractModal] = useState(false);
@@ -117,6 +121,20 @@ const OrderDetailPage: React.FC = () => {
         setError("Lỗi khi tải thông tin đơn hàng");
         setLoading(false);
         return;
+      }
+
+      // Try to fetch trip data for this order
+      try {
+        setTripLoading(true);
+        console.log("Fetching trip data for order:", orderId);
+        const tripResponse = await getTrip(orderId);
+        console.log("Trip data received:", tripResponse);
+        setTripData(tripResponse); // Now storing the whole array
+        setTripLoading(false);
+      } catch (tripError) {
+        console.error("Error fetching trip data:", tripError);
+        setTripError("Không thể tải thông tin chuyến đi");
+        setTripLoading(false);
       }
 
       // Try to fetch contract files using getContracts
@@ -245,8 +263,19 @@ const OrderDetailPage: React.FC = () => {
         return { label: "Đang giao hàng", color: "info" };
       case OrderStatus.Shipped:
         return { label: "Đã giao hàng", color: "info" };
-      case OrderStatus.Complete:
+      case OrderStatus.Completed:
         return { label: "Hoàn thành", color: "success" };
+      default:
+        return { label: "Không xác định", color: "default" };
+    }
+  };
+
+  const getPaymentStatusDisplay = (isPay: IsPay | null) => {
+    switch (isPay) {
+      case IsPay.Yes:
+        return { label: "Đã thanh toán", color: "success" };
+      case IsPay.No:
+        return { label: "Chưa thanh toán", color: "warning" };
       default:
         return { label: "Không xác định", color: "default" };
     }
@@ -374,11 +403,21 @@ const OrderDetailPage: React.FC = () => {
     try {
       // Log values before update for debugging
       console.log("Current order details:", orderDetails);
-      console.log("Updating with values:", {
-        contactPhone: editFormData.contactPhone,
-        contactPerson: editFormData.contactPerson,
-        // other fields...
-      });
+      console.log("Current files to delete:", filesToDelete);
+      console.log("Current new files:", newFiles);
+      
+      // Make sure we have enough descriptions and notes for each new file
+      if (newFiles.length > 0) {
+        // Ensure we have descriptions for each file
+        while (fileDescriptions.length < newFiles.length) {
+          fileDescriptions.push('');
+        }
+        
+        // Ensure we have notes for each file
+        while (fileNotes.length < newFiles.length) {
+          fileNotes.push('');
+        }
+      }
       
       // Prepare update data - make sure to explicitly include every field
       const updateData = {
@@ -394,35 +433,16 @@ const OrderDetailPage: React.FC = () => {
         temperature: orderDetails.containerType === ContainerType["Container Lạnh"] 
           ? editFormData.temperature 
           : null,
-        description: fileDescriptions, // Field name for backend: descriptions
-        notes: fileNotes, // Field name for backend: notes
-        // Field name for backend: fileIdsToRemove
+        // Only include descriptions/notes if we have new files
+        description: newFiles.length > 0 ? fileDescriptions.slice(0, newFiles.length) : [],
+        notes: newFiles.length > 0 ? fileNotes.slice(0, newFiles.length) : [],
+        // Use filesToDelete directly for file removal
         filesToRemove: filesToDelete.length > 0 ? filesToDelete : null,
-        // Field name for backend: addedFiles
+        // Use newFiles directly for file addition
         filesToAdd: newFiles.length > 0 ? newFiles : null,
       };
       
       console.log("Sending update data:", updateData);
-      
-      // Check if we're adding new files
-      if (newFiles.length > 0) {
-        console.log("Adding new files:", newFiles.map(f => f.name));
-        
-        // Ensure we have descriptions and notes for each file
-        if (fileDescriptions.length < newFiles.length) {
-          console.log("Adding missing descriptions");
-          while (fileDescriptions.length < newFiles.length) {
-            fileDescriptions.push('');
-          }
-        }
-        
-        if (fileNotes.length < newFiles.length) {
-          console.log("Adding missing notes");
-          while (fileNotes.length < newFiles.length) {
-            fileNotes.push('');
-          }
-        }
-      }
       
       const result = await updateOrder(updateData);
       console.log("Order updated successfully:", result);
@@ -524,6 +544,7 @@ const OrderDetailPage: React.FC = () => {
         orderPlacer: orderDetails.orderPlacer || "",
         isPay: orderDetails.isPay || IsPay.No,
         temperature: orderDetails.temperature,
+        // Empty arrays for file-related fields as we're not changing files
         description: [],
         notes: [],
         filesToRemove: null,
@@ -547,6 +568,48 @@ const OrderDetailPage: React.FC = () => {
       setError("Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại sau.");
     } finally {
       setStatusUpdateLoading(false);
+    }
+  };
+
+  // Helper function to format trip status
+  const getTripStatusDisplay = (status: string | null) => {
+    if (!status) return { label: "Không xác định", color: "default" };
+    
+    switch (status) {
+      case "completed":
+        return { label: "Hoàn thành", color: "success" };
+      case "delaying":
+        return { label: "Tạm dừng", color: "warning" };
+      case "going_to_port":
+        return { label: "Đang di chuyển đến cảng", color: "info" };
+      case "0":
+        return { label: "Chưa bắt đầu", color: "default" };
+      case "1":
+        return { label: "Đang di chuyển đến điểm lấy hàng", color: "info" };
+      case "2":
+        return { label: "Đã đến điểm lấy hàng", color: "info" };
+      case "3":
+        return { label: "Đang di chuyển đến điểm giao hàng", color: "info" };
+      case "4":
+        return { label: "Đã đến điểm giao hàng", color: "info" };
+      case "5":
+        return { label: "Đang di chuyển đến điểm trả container", color: "info" };
+      case "6":
+        return { label: "Đã đến điểm trả container", color: "success" };
+      case "7":
+        return { label: "Hoàn thành", color: "success" };
+      default:
+        return { label: status, color: "default" };
+    }
+  };
+
+  // Format time helper
+  const formatDateTime = (dateTimeString: string | null) => {
+    if (!dateTimeString) return "N/A";
+    try {
+      return format(new Date(dateTimeString), "dd/MM/yyyy HH:mm");
+    } catch (error) {
+      return "Thời gian không hợp lệ";
     }
   };
 
@@ -684,15 +747,29 @@ const OrderDetailPage: React.FC = () => {
                   sx={{
                     fontWeight: "medium",
                     color:
-                      orderDetails.status === OrderStatus.Complete
+                      orderDetails.status === OrderStatus.Completed
                         ? "success.main"
-                        : orderDetails.status === OrderStatus.InProgress
+                        : orderDetails.status === OrderStatus.Scheduled
                         ? "info.main"
                         : "warning.main",
                   }}
                 >
                   {getStatusDisplay(orderDetails.status).label}
                 </Typography>
+              </Grid>
+
+              {/* Add the payment status display here */}
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Trạng thái thanh toán
+                </Typography>
+                <Box sx={{ mt: 0.5 }}>
+                  <Chip
+                    size="small"
+                    label={getPaymentStatusDisplay(orderDetails.isPay).label}
+                    color={getPaymentStatusDisplay(orderDetails.isPay).color as any}
+                  />
+                </Box>
               </Grid>
 
               <Grid item xs={12} sm={6}>
@@ -750,14 +827,17 @@ const OrderDetailPage: React.FC = () => {
                 </Typography>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Nhiệt độ
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.temperature !== null ? `${orderDetails.temperature}°C` : "N/A"}
-                </Typography>
-              </Grid>
+              {/* Only show temperature for Container Lạnh */}
+              {orderDetails.containerType === ContainerType["Container Lạnh"] && (
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Nhiệt độ
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.temperature !== null ? `${orderDetails.temperature}°C` : "N/A"}
+                  </Typography>
+                </Grid>
+              )}
 
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
@@ -1115,6 +1195,144 @@ const OrderDetailPage: React.FC = () => {
               </Typography>
             )}
           </Paper>
+
+          {/* Trip Information */}
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Typography variant="h6" gutterBottom>
+                Thông tin chuyến đi
+              </Typography>
+              <DirectionsIcon color="primary" />
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+
+            {tripLoading && (
+              <Box display="flex" justifyContent="center" p={2}>
+                <CircularProgress size={24} />
+              </Box>
+            )}
+
+            {tripError && !tripLoading && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                {tripError}
+              </Alert>
+            )}
+
+            {!tripLoading && !tripError && (!tripData || tripData.length === 0) && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Chưa có thông tin chuyến đi cho đơn hàng này
+              </Alert>
+            )}
+
+            {!tripLoading && !tripError && tripData && tripData.length > 0 && (
+              <>
+                {/* Show multiple trips */}
+                {tripData.map((trip, index) => (
+                  <Box 
+                    key={trip.tripId || index}
+                    sx={{
+                      mb: index < tripData.length - 1 ? 3 : 0,
+                      pb: index < tripData.length - 1 ? 3 : 0,
+                      borderBottom: index < tripData.length - 1 ? '1px dashed rgba(0, 0, 0, 0.12)' : 'none'
+                    }}
+                  >
+                    {index > 0 && (
+                      <Typography variant="subtitle1" fontWeight="medium" gutterBottom mt={2}>
+                        Chuyến đi {index + 1}
+                      </Typography>
+                    )}
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                          <Typography variant="subtitle2" color="text.secondary">
+                            Trạng thái chuyến đi
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={getTripStatusDisplay(trip.status).label}
+                            color={getTripStatusDisplay(trip.status).color as any}
+                          />
+                        </Box>
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Mã chuyến đi
+                        </Typography>
+                        <Typography variant="body1" gutterBottom>
+                          {trip.tripId || "N/A"}
+                        </Typography>
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Thời gian bắt đầu
+                        </Typography>
+                        <Typography variant="body1" gutterBottom>
+                          {formatDateTime(trip.startTime)}
+                        </Typography>
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Thời gian kết thúc
+                        </Typography>
+                        <Typography variant="body1" gutterBottom>
+                          {formatDateTime(trip.endTime)}
+                        </Typography>
+                      </Grid>
+
+                      {/* Display driver info if available */}
+                      {trip.driverId && (
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="subtitle2" color="text.secondary">
+                            Mã tài xế
+                          </Typography>
+                          <Typography 
+                            variant="body1" 
+                            gutterBottom
+                            sx={{
+                              color: 'primary.main',
+                              cursor: 'pointer',
+                              textDecoration: 'underline',
+                              '&:hover': {
+                                color: 'primary.dark'
+                              },
+                              display: 'inline-flex',
+                              alignItems: 'center'
+                            }}
+                            onClick={() => navigate(`/drivers/${trip.driverId}`)}
+                          >
+                            {trip.driverId}
+                          </Typography>
+                        </Grid>
+                      )}
+
+                      {/* Navigation button to trip details page if needed */}
+                      {trip.tripId && (
+                        <Grid item xs={12}>
+                          <Box mt={1}>
+                            <Button 
+                              variant="outlined" 
+                              size="small"
+                              startIcon={<DirectionsIcon />}
+                              onClick={() => navigate(`/staff-menu/trips/${trip.tripId}`)}
+                            >
+                              Chi tiết chuyến đi
+                            </Button>
+                          </Box>
+                        </Grid>
+                      )}
+                    </Grid>
+                  </Box>
+                ))}
+              </>
+            )}
+          </Paper>
         </Grid>
       </Grid>
 
@@ -1161,8 +1379,8 @@ const OrderDetailPage: React.FC = () => {
               <MenuItem value={OrderStatus.Shipped}>
                 {getStatusDisplay(OrderStatus.Shipped).label}
               </MenuItem>
-              <MenuItem value={OrderStatus.Complete}>
-                {getStatusDisplay(OrderStatus.Complete).label}
+              <MenuItem value={OrderStatus.Completed}>
+                {getStatusDisplay(OrderStatus.Completed).label}
               </MenuItem>
             </Select>
           </FormControl>

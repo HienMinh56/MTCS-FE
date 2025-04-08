@@ -14,6 +14,7 @@ import OrderDetailPage from "./pages/OrderDetailPage";
 import TractorDetailPage from "./pages/TractorDetailPage";
 import TrailerDetailPage from "./pages/TrailerDetailPage";
 import DriverProfile from "./pages/DriverProfile";
+import TripDetailPage from "./pages/TripDetailPage";
 
 const HomeRoute = () => {
   const { isAuthenticated, user } = useAuth();
@@ -41,6 +42,10 @@ function App() {
                 <Route
                   path="/staff-menu/orders/:orderId"
                   element={<OrderDetailPage />}
+                />
+                <Route
+                  path="/staff-menu/trips/:tripId"
+                  element={<TripDetailPage />}
                 />
                 <Route
                   path="/staff-menu/tractors/:tractorId"

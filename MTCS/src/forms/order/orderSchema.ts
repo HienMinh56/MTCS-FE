@@ -76,8 +76,8 @@ export const orderSchema = z
       .min(1, "Số container là bắt buộc")
       .max(20, "Số container không được vượt quá 20 ký tự")
       .nonempty("Số container là bắt buộc"),
-    description: z.array(z.string()).optional(),
-    notes: z.array(z.string()).optional(),
+    description: z.array(z.string()).optional().default([]), // Updated for file metadata
+    notes: z.array(z.string()).optional().default([]), // Updated for file metadata
   })
   .refine(
     (data) => {
@@ -100,10 +100,10 @@ export const formatOrderFormForApi = (data: OrderFormValues) => {
     deliveryDate: data.deliveryDate.toISOString().split("T")[0],
     completeTime: data.completeTime ? data.completeTime.toISOString().split("T")[0] : null,
     temperature: data.containerType === ContainerType["Container Lạnh"] ? data.temperature : null,
-    description: data.description || [],
-    notes: data.notes || [],
-    // Make sure orderPlacer field is included
-    orderPlacer: data.orderPlacer || "",
+    description: [], // Explicitly set as empty array if not provided
+    notes: [], // Explicitly set as empty array if not provided
+    // Make sure OrderPlace field is correctly mapped from orderPlacer
+    OrderPlace: data.orderPlacer || "", // Explicitly name the field to match BE's expected name
   };
   
   console.log('Field by field validation check:');
@@ -125,7 +125,7 @@ export const formatOrderFormForApi = (data: OrderFormValues) => {
   console.log('contactPhone:', formattedData.contactPhone ? '✓' : '✗');
   console.log('distance:', formattedData.distance !== null ? '✓' : '✗');
   console.log('containerNumber:', formattedData.containerNumber ? '✓' : '✗');
-  console.log('orderPlacer:', formattedData.orderPlacer ? '✓' : '✗');
+  console.log('OrderPlace:', formattedData.OrderPlace ? '✓' : '✗'); // Log new field name
   
   return formattedData;
 };
