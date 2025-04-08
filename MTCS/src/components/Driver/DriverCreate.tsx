@@ -47,11 +47,27 @@ interface DriverCreateProps {
 }
 
 const FILE_DESCRIPTION_OPTIONS = [
-  "CCCD/CMND",
+  "CCCD - Mặt trước",
+  "CCCD - Mặt sau",
   "Giấy phép lái xe",
   "Hợp đồng lao động",
   "Khác",
 ];
+
+const getDocumentParameter = (description: string): string => {
+  switch (description) {
+    case "CCCD - Mặt trước":
+      return "CCCD_Front";
+    case "CCCD - Mặt sau":
+      return "CCCD_Back";
+    case "Giấy phép lái xe":
+      return "Driver_License";
+    case "Hợp đồng lao động":
+      return "Work_Contract";
+    default:
+      return description;
+  }
+};
 
 interface FileUploadWithCustom extends FileUpload {
   customDescription?: string;
@@ -140,16 +156,24 @@ const DriverCreate: React.FC<DriverCreateProps> = ({ onClose, onSuccess }) => {
     setIsSubmitting(true);
 
     try {
+      // Ensure Vietnamese characters are properly encoded
       const formattedData = formatDriverFormForApi(data);
 
-      const formattedFileUploads = fileUploads.map((upload) => ({
-        file: upload.file,
-        description:
-          upload.description === "Khác" && upload.customDescription
-            ? upload.customDescription
-            : upload.description,
-        note: upload.note,
-      }));
+      const formattedFileUploads = fileUploads.map((upload) => {
+        let finalDescription;
+
+        if (upload.description === "Khác" && upload.customDescription) {
+          finalDescription = upload.customDescription;
+        } else {
+          finalDescription = getDocumentParameter(upload.description);
+        }
+
+        return {
+          file: upload.file,
+          description: finalDescription,
+          note: upload.note,
+        };
+      });
 
       const response = await createDriverWithFiles(
         formattedData,
@@ -159,7 +183,10 @@ const DriverCreate: React.FC<DriverCreateProps> = ({ onClose, onSuccess }) => {
       if (response.data.success) {
         setSnackbar({
           open: true,
-          message: response.data.messageVN || "Tạo tài xế thành công!",
+          message:
+            response.data.messageVN ||
+            response.data.message ||
+            "Tạo tài xế thành công!",
           severity: "success",
         });
 
@@ -172,8 +199,10 @@ const DriverCreate: React.FC<DriverCreateProps> = ({ onClose, onSuccess }) => {
           }
         }, 1500);
       } else {
-        // API returned success:false
-        const errorMessage = formatApiError(response.data);
+        const errorMessage =
+          response.data.messageVN ||
+          response.data.message ||
+          formatApiError(response.data);
         throw new Error(errorMessage);
       }
     } catch (error: any) {
@@ -187,7 +216,8 @@ const DriverCreate: React.FC<DriverCreateProps> = ({ onClose, onSuccess }) => {
           if (data?.success) {
             setSnackbar({
               open: true,
-              message: data.messageVN || "Tạo tài xế thành công!",
+              message:
+                data.messageVN || data.message || "Tạo tài xế thành công!",
               severity: "success",
             });
 
@@ -203,10 +233,15 @@ const DriverCreate: React.FC<DriverCreateProps> = ({ onClose, onSuccess }) => {
             setIsSubmitting(false);
             return;
           } else {
-            errorMessage = formatApiError(data);
+            errorMessage =
+              data.messageVN || data.message || formatApiError(data);
           }
         } else if (error.response?.data) {
-          errorMessage = formatApiError(error.response.data);
+          const responseData = error.response.data;
+          errorMessage =
+            responseData.messageVN ||
+            responseData.message ||
+            formatApiError(responseData);
         }
       } else if (error.message) {
         errorMessage = error.message;
@@ -509,7 +544,7 @@ const DriverCreate: React.FC<DriverCreateProps> = ({ onClose, onSuccess }) => {
                               size="small"
                               variant="outlined"
                               color={
-                                category === "CCCD/CMND" ||
+                                category.includes("CCCD") ||
                                 category === "Giấy phép lái xe"
                                   ? "primary"
                                   : "default"

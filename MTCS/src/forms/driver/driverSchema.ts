@@ -1,14 +1,19 @@
 import { z } from "zod";
 import dayjs from "dayjs";
 
-// Zod schema matching BE validation
+// Helper to normalize Vietnamese text to ensure proper encoding
+const normalizeVietnameseText = (text: string): string => {
+  return text.normalize("NFC");
+};
+
 export const driverSchema = z
   .object({
     fullName: z
       .string()
-      .min(1, "Họ tên là bắt buộc")
-      .max(25, "Họ tên không được vượt quá 25 ký tự"),
-    email: z.string().min(1, "Email là bắt buộc").email("Email không hợp lệ"),
+      .min(1, "Vui lòng nhập họ tên")
+      .max(25, "Họ tên không được vượt quá 25 ký tự")
+      .transform(normalizeVietnameseText),
+    email: z.string().min(1, "Vui lòng nhập email").email("Email không hợp lệ"),
     dateOfBirth: z
       .date()
       .nullable()
@@ -19,14 +24,14 @@ export const driverSchema = z
       .string()
       .min(6, "Mật khẩu phải có ít nhất 6 ký tự")
       .max(100, "Mật khẩu không được vượt quá 100 ký tự"),
-    confirmPassword: z.string(),
+    confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
     phoneNumber: z
       .string()
-      .min(1, "Số điện thoại là bắt buộc")
+      .min(1, "Vui lòng nhập số điện thoại")
       .regex(/^0\d{9}$/, "Số điện thoại phải có 10 số và bắt đầu bằng số 0"),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Mật khẩu xác nhận không khớp",
+    message: "Mật khẩu không trùng khớp",
     path: ["confirmPassword"],
   });
 
@@ -34,7 +39,7 @@ export type DriverFormValues = z.infer<typeof driverSchema>;
 
 export const formatDriverFormForApi = (data: DriverFormValues) => {
   const formattedData: Record<string, any> = {
-    fullName: data.fullName,
+    fullName: normalizeVietnameseText(data.fullName),
     email: data.email,
     password: data.password,
     phoneNumber: data.phoneNumber,

@@ -6,7 +6,6 @@ import {
   DriverStatus,
 } from "../types/driver";
 
-// API response format
 export interface ApiResponse<T = any> {
   success: boolean;
   data: T;
@@ -15,14 +14,12 @@ export interface ApiResponse<T = any> {
   errors: any | null;
 }
 
-// Get all drivers with pagination and filters
 export const getDriverList = async (
   params: DriverListParams = {}
 ): Promise<ApiResponse<PaginatedData<Driver>>> => {
   try {
     const queryParams = new URLSearchParams();
 
-    // Add pagination parameters
     if (params.pageNumber !== undefined) {
       queryParams.append("pageNumber", params.pageNumber.toString());
     }
@@ -31,7 +28,6 @@ export const getDriverList = async (
       queryParams.append("pageSize", params.pageSize.toString());
     }
 
-    // Add filter parameters
     if (params.status !== undefined && params.status !== null) {
       queryParams.append("status", params.status.toString());
     }
@@ -40,7 +36,6 @@ export const getDriverList = async (
       queryParams.append("keyword", params.keyword);
     }
 
-    // Build URL with query parameters
     const url = `${import.meta.env.VITE_API_BASE_URL}/api/Driver${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
     }`;
@@ -55,7 +50,6 @@ export const getDriverList = async (
   }
 };
 
-// Get driver by ID
 export const getDriverById = async (driverId: string): Promise<Driver> => {
   try {
     const url = `${
@@ -99,14 +93,12 @@ export const createDriverWithFiles = async (
 ): Promise<{ data: CreateDriverResponse }> => {
   const formData = new FormData();
 
-  // Add driver data
   Object.keys(driverData).forEach((key) => {
     if (driverData[key] !== undefined && driverData[key] !== null) {
       formData.append(key, driverData[key]);
     }
   });
 
-  // Add file uploads
   fileUploads.forEach((fileUpload, index) => {
     formData.append(`fileUploads[${index}].file`, fileUpload.file);
     formData.append(
@@ -119,13 +111,120 @@ export const createDriverWithFiles = async (
     }
   });
 
-  return await axiosInstance.post(
-    `${import.meta.env.VITE_API_BASE_URL}/api/Authen/create-driver`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+  try {
+    const response = await axiosInstance.post(
+      `${import.meta.env.VITE_API_BASE_URL}/api/Authen/create-driver`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response;
+  } catch (error: any) {
+    console.error("Failed to create driver:", error);
+    if (error.response && error.response.data) {
+      return { data: error.response.data };
     }
-  );
+    throw error;
+  }
+};
+
+export interface UpdateDriverResponse {
+  success: boolean;
+  data: Driver | null;
+  message: string;
+  messageVN: string | null;
+  errors: { [key: string]: string[] } | null;
+}
+
+export const updateDriverWithFiles = async (
+  driverId: string,
+  driverData: Record<string, any>,
+  newFiles: FileUpload[] = [],
+  fileIdsToRemove: string[] = []
+): Promise<UpdateDriverResponse> => {
+  const formData = new FormData();
+
+  Object.keys(driverData).forEach((key) => {
+    if (driverData[key] !== undefined && driverData[key] !== null) {
+      formData.append(key, driverData[key]);
+    }
+  });
+
+  newFiles.forEach((fileUpload, index) => {
+    formData.append(`newFiles[${index}].file`, fileUpload.file);
+    formData.append(`newFiles[${index}].description`, fileUpload.description);
+
+    if (fileUpload.note) {
+      formData.append(`newFiles[${index}].note`, fileUpload.note);
+    }
+  });
+
+  fileIdsToRemove.forEach((fileId, index) => {
+    formData.append(`fileIdsToRemove[${index}]`, fileId);
+  });
+
+  const url = `${import.meta.env.VITE_API_BASE_URL}/api/Driver/${driverId}`;
+
+  try {
+    const response = await axiosInstance.put<UpdateDriverResponse>(
+      url,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error(`Failed to update driver ${driverId}:`, error);
+
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+
+    return {
+      success: false,
+      data: null,
+      message: error.message || "Failed to update driver",
+      messageVN: "Không thể cập nhật thông tin tài xế",
+      errors: null,
+    };
+  }
+};
+
+export interface FileDetailsDTO {
+  description: string;
+  note?: string;
+}
+
+export const updateDriverFileDetails = async (
+  fileId: string,
+  updateData: FileDetailsDTO
+): Promise<ApiResponse> => {
+  try {
+    const url = `${
+      import.meta.env.VITE_API_BASE_URL
+    }/api/Driver/file/${fileId}`;
+
+    const response = await axiosInstance.put<ApiResponse>(url, updateData);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Failed to update file ${fileId}:`, error);
+
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+
+    return {
+      success: false,
+      data: null,
+      message: error.message || "Failed to update file details",
+      messageVN: "Không thể cập nhật thông tin tài liệu",
+      errors: null,
+    };
+  }
 };

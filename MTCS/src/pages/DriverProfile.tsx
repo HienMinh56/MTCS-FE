@@ -22,6 +22,7 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ImageIcon from "@mui/icons-material/Image";
+import EditIcon from "@mui/icons-material/Edit";
 import { getDriverById } from "../services/DriverApi";
 import {
   Driver,
@@ -29,6 +30,7 @@ import {
   DriverStatus,
   DriverFile,
 } from "../types/driver";
+import DriverUpdate from "../components/Driver/DriverUpdate";
 
 const DriverProfile: React.FC = () => {
   const { driverId } = useParams<{ driverId: string }>();
@@ -36,31 +38,44 @@ const DriverProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+
+  const fetchDriverProfile = async () => {
+    if (!driverId) {
+      setError("Driver ID is missing");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const driverData = await getDriverById(driverId);
+      setDriver(driverData);
+      setLoading(false);
+    } catch (err) {
+      setError("Failed to load driver profile");
+      setLoading(false);
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
-    const fetchDriverProfile = async () => {
-      if (!driverId) {
-        setError("Driver ID is missing");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const driverData = await getDriverById(driverId);
-        setDriver(driverData);
-        setLoading(false);
-      } catch (err) {
-        setError("Failed to load driver profile");
-        setLoading(false);
-        console.error(err);
-      }
-    };
-
     fetchDriverProfile();
   }, [driverId]);
 
   const handleBack = () => {
     navigate(-1);
+  };
+
+  const handleOpenUpdateDialog = () => {
+    setUpdateDialogOpen(true);
+  };
+
+  const handleCloseUpdateDialog = () => {
+    setUpdateDialogOpen(false);
+  };
+
+  const handleUpdateSuccess = () => {
+    fetchDriverProfile();
   };
 
   const formatDate = (dateString?: string | null) => {
@@ -135,9 +150,19 @@ const DriverProfile: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Button startIcon={<ArrowBackIcon />} onClick={handleBack} sx={{ mb: 3 }}>
-        Quay lại danh sách tài xế
-      </Button>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+        <Button startIcon={<ArrowBackIcon />} onClick={handleBack}>
+          Quay lại danh sách tài xế
+        </Button>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<EditIcon />}
+          onClick={handleOpenUpdateDialog}
+        >
+          Cập nhật thông tin
+        </Button>
+      </Box>
 
       <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
         <Box
@@ -358,6 +383,13 @@ const DriverProfile: React.FC = () => {
           </Box>
         )}
       </Paper>
+
+      <DriverUpdate
+        open={updateDialogOpen}
+        onClose={handleCloseUpdateDialog}
+        driverDetails={driver}
+        onSuccess={handleUpdateSuccess}
+      />
     </Container>
   );
 };
