@@ -18,8 +18,9 @@ import {
   Autocomplete,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import AddIcon from "@mui/icons-material.Add";
+import AddIcon from "@mui/icons-material/Add";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { TimePicker } from "@mui/x-date-pickers/TimePicker"; // Add TimePicker import
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { OrderFormValues, orderSchema } from "./orderSchema";
@@ -61,7 +62,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
   const [fileNotes, setFileNotes] = useState<string[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   
   const {
@@ -79,10 +80,10 @@ const OrderForm: React.FC<OrderFormProps> = ({
       weight: initialValues?.weight || 0,
       pickUpDate: initialValues?.pickUpDate || dayjs().add(1, "day").toDate(),
       deliveryDate: initialValues?.deliveryDate || dayjs().add(2, "day").toDate(),
-      completeTime: initialValues?.completeTime || null, 
+      completionTime: initialValues?.completeTime || null, 
       note: initialValues?.note || "",
       containerType: initialValues?.containerType || ContainerType["Container Khô"],
-      containerSize: initialValues?.containerSize || ContainerSize["Container 20 FT"],
+      containerSize: initialValues?.containerSize || ContainerSize["Container 20 FEET"],
       deliveryType: initialValues?.deliveryType || DeliveryType.Import,
       pickUpLocation: initialValues?.pickUpLocation || "",
       deliveryLocation: initialValues?.deliveryLocation || "",
@@ -105,15 +106,26 @@ const OrderForm: React.FC<OrderFormProps> = ({
     const fetchCustomers = async () => {
       setLoadingCustomers(true);
       try {
-        const result = await getCustomers(1, 100); // Fetch up to 100 customers
+        // Trực tiếp lấy dữ liệu từ API
+        const response = await getCustomers(1, 100);
+        console.log("API response for customers:", response);
         
-        if (result && result.orders && result.orders.items) {
-          setCustomers(result.orders.items);
-        } else {
-          // Handle the case when we get direct array
-          const customerData = Array.isArray(result) ? result : [];
-          setCustomers(customerData);
+        // Xử lý phản hồi API
+        let processedCustomers = [];
+        
+        if (Array.isArray(response)) {
+          // Trường hợp API trả về array trực tiếp
+          processedCustomers = response;
+        } else if (response && Array.isArray(response.data)) {
+          // Trường hợp API trả về dạng { status, message, data }
+          processedCustomers = response.data;
+        } else if (response && response.orders && Array.isArray(response.orders.items)) {
+          // Trường hợp API trả về dạng cũ { orders: { items: [] } }
+          processedCustomers = response.orders.items;
         }
+        
+        console.log("Processed customers:", processedCustomers);
+        setCustomers(processedCustomers);
       } catch (error) {
         console.error("Error fetching customers:", error);
         setCustomers([]);
@@ -124,6 +136,16 @@ const OrderForm: React.FC<OrderFormProps> = ({
 
     fetchCustomers();
   }, []);
+
+  // Handler khi chọn khách hàng từ dropdown
+  const handleCustomerSelect = (event: any, selectedCustomer: any) => {
+    console.log("Selected customer:", selectedCustomer);
+    if (selectedCustomer) {
+      setValue("companyName", selectedCustomer.companyName || "");
+      setValue("contactPerson", selectedCustomer.contactPerson || "");
+      setValue("contactPhone", selectedCustomer.phoneNumber || "");
+    }
+  };
 
   // Rest of the file handlers
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,22 +241,32 @@ const OrderForm: React.FC<OrderFormProps> = ({
           </Typography>
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={2}>
+            {/* Chỉ giữ dropdown Autocomplete để chọn công ty và loại bỏ trường nhập tên công ty bên phải */}
             <Grid item xs={12} md={6}>
               <Controller
                 name="companyName"
                 control={control}
                 render={({ field }) => (
                   <Autocomplete
-                    options={customers || []}
+                    options={customers}
+                    getOptionLabel={(option) => option.companyName || ""}
                     loading={loadingCustomers}
-                    getOptionLabel={(option) => option.companyName || ''}
-                    isOptionEqualToValue={(option, value) => 
-                      option.customerId === value.customerId || option.companyName === value
-                    }
+                    onChange={(_, newValue) => {
+                      if (newValue) {
+                        // Cập nhật giá trị companyName và các trường liên quan
+                        field.onChange(newValue.companyName);
+                        setValue("contactPerson", newValue.contactPerson || "");
+                        setValue("contactPhone", newValue.phoneNumber || "");
+                      } else {
+                        field.onChange("");
+                      }
+                    }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
                         label="Tên công ty"
+                        variant="outlined"
+                        fullWidth
                         error={!!errors.companyName}
                         helperText={errors.companyName?.message}
                         required
@@ -249,10 +281,6 @@ const OrderForm: React.FC<OrderFormProps> = ({
                         }}
                       />
                     )}
-                    value={customers.find(c => c.companyName === field.value) || null}
-                    onChange={(_, newValue) => {
-                      field.onChange(newValue ? newValue.companyName : '');
-                    }}
                     disabled={isSubmitting}
                   />
                 )}
@@ -292,7 +320,6 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 )}
               />
             </Grid>
-            {/* Add OrderPlacer field */}
             <Grid item xs={12} md={6}>
               <Controller
                 name="orderPlacer"
@@ -377,11 +404,11 @@ const OrderForm: React.FC<OrderFormProps> = ({
                       label="Kích thước container"
                       disabled={isSubmitting}
                     >
-                      <MenuItem value={ContainerSize["Container 20 FT"]}>
-                        Container 20 FT
+                      <MenuItem value={ContainerSize["Container 20 FEET"]}>
+                        Container 20 FEET
                       </MenuItem>
-                      <MenuItem value={ContainerSize["Container 40 FT"]}>
-                        Container 40 FT
+                      <MenuItem value={ContainerSize["Container 40 FEET"]}>
+                        Container 40 FEET
                       </MenuItem>
                     </Select>
                     {errors.containerSize && (
@@ -642,19 +669,23 @@ const OrderForm: React.FC<OrderFormProps> = ({
               <Controller
                 name="completeTime"
                 control={control}
-                render={({ field: { value, onChange, ...restField } }) => (
-                  <DatePicker
-                    label="Thời gian hoàn thành (tùy chọn)"
-                    value={value ? dayjs(value) : null}
-                    onChange={(date) => onChange(date ? date.toDate() : null)}
+                render={({ field }) => (
+                  <TimePicker
+                    label="Thời Gian Hoàn Thành (giờ:phút)"
+                    value={field.value ? dayjs(field.value, "HH:mm") : null}
+                    onChange={(newValue) => {
+                      field.onChange(newValue ? dayjs(newValue).format("HH:mm") : null);
+                    }}
                     slotProps={{
                       textField: {
+                        variant: "outlined",
                         fullWidth: true,
                         error: !!errors.completeTime,
                         helperText: errors.completeTime?.message,
-                        disabled: isSubmitting,
                       },
                     }}
+                    ampm={false} // Use 24-hour format
+                    views={['hours', 'minutes']} // Show only hours and minutes
                   />
                 )}
               />

@@ -5,56 +5,82 @@ export interface PaginatedResult<T> {
   pageSize: number;
 }
 
-export interface CustomerDetail {
-  customerId: string;
-  companyName: string;
-  email: string;
-  phoneNumber: string;
-  taxNumber: string;
-  address: string;
-  createdDate: string | null;
-  createdBy: string | null;
-  modifiedDate: string | null;
-  modifiedBy: string | null;
-  deletedDate: string | null;
-  deletedBy: string | null;
-  contracts: string[] | null;
-  orders: string[] | null;
-}
-
 export interface Customer {
   customerId: string;
   companyName: string;
   email: string;
   phoneNumber: string;
+  taxNumber?: string;
+  address?: string;
+  contactPerson?: string;
+  createdDate?: string;
+  createdBy?: string;
+  modifiedDate?: string;
+  modifiedBy?: string;
+  deletedDate?: string | null;
+  deletedBy?: string | null;
+  contracts?: any[];
+  orders?: any[];
+}
+
+export interface CustomerDetail extends Customer {}
+
+export interface Order {
+  orderId: string;
+  trackingCode: string;
+  customerId: string;
+  temperature: number | null;
+  weight: number | null;
+  pickUpDate: string | null;
+  deliveryDate: string | null;
+  status: string;
+  note: string | null;
   createdDate: string | null;
-  totalOrders: number;
+  createdBy: string | null;
+  modifiedDate: string | null;
+  modifiedBy: string | null;
+  containerType: number | null;
+  pickUpLocation: string | null;
+  deliveryLocation: string | null;
+  conReturnLocation: string | null;
+  deliveryType: number | null;
+  price: number;
+  containerNumber: string | null;
+  contactPerson: string | null;
+  contactPhone: string | null;
+  orderPlacer: string | null;
+  distance: number | null;
+  containerSize: number | null;
+  isPay: number | null;
+  completionTime: string | null;
+  customer: any | null;
+  orderFiles: any[];
+  trips: any[];
+}
+
+export interface Contract {
+  contractId: string;
+  customerId: string;
+  startDate: string | null;
+  endDate: string | null;
+  status: number;
+  createdDate: string | null;
+  createdBy: string | null;
+  summary: string | null;
+  signedTime: string | null;
+  signedBy: string | null;
+  contractFiles: any[];
+  customer: any | null;
 }
 
 export interface CustomerResponse {
-  success: boolean;
-  data: {
-    orders: {
-      currentPage: number;
-      totalPages: number;
-      pageSize: number;
-      totalCount: number;
-      hasPrevious: boolean;
-      hasNext: boolean;
-      items: Customer[];
-    };
-    allCount: number;
-    activeCount: number;
-    maintenanceDueCount: number;
-    registrationExpiryDueCount: number;
-  };
+  status: number;
   message: string;
-  errors: string[] | null;
+  data: CustomerDetail[];
 }
 
 export interface CustomerDetailsResponse {
-  success: boolean;
-  data: CustomerDetail;
+  status: number;
   message: string;
-  errors: string[] | null;
+  data: CustomerDetail[];
 }

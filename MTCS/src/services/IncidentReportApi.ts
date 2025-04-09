@@ -52,6 +52,7 @@ export interface Trip {
 export interface IncidentReports {
   reportId: string;
   tripId: string;
+  orderId: string;
   reportedBy: string;
   incidentType: string;
   description: string;

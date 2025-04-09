@@ -51,12 +51,14 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
       console.log('Files count:', files.length);
       console.log('Descriptions count:', fileDescriptions.length);
       console.log('Notes count:', fileNotes.length);
+      console.log('Complete Time:', data.completeTime); // Log the time format
       
       // Map orderPlacer to OrderPlace as expected by the backend
       const response = await createOrder({
         ...formattedData,
         OrderPlace: data.orderPlacer || "", // Explicitly map to OrderPlace
         companyName: data.companyName, // Ensure companyName is passed 
+        CompletionTime: data.completeTime, // Pass time directly as HH:MM string
         files: files.length > 0 ? files : null,
         description: fileDescriptions,
         notes: fileNotes,

@@ -88,6 +88,8 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
 }) => {
   const [openReplaceTripModal, setOpenReplaceTripModal] = useState(false);
   const [createTripSuccess, setCreateTripSuccess] = useState(false);
+  const [tripReplaced, setTripReplaced] = useState(false);
+  const navigate = useNavigate();
   
   if (!incident) return null;
   
@@ -98,173 +100,276 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
   
   const handleReplaceTripSuccess = () => {
     setCreateTripSuccess(true);
+    setTripReplaced(true); // Set flag to indicate trip has been replaced
     // Reset success message after 3 seconds
     setTimeout(() => setCreateTripSuccess(false), 3000);
   };
   
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Chi tiết sự cố #{incident.reportId}</DialogTitle>
+      <DialogTitle sx={{ pb: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">Chi tiết sự cố #{incident.reportId}</Typography>
+          <Chip 
+            size="small" 
+            label={
+              incident.status === "Handling" ? "Đang xử lý" : "Đã xử lý"
+            } 
+            color={
+              incident.status === "Handling" ? "info" : "success"
+            } 
+            sx={{ ml: 2 }}
+          />
+        </Box>
+      </DialogTitle>
       <DialogContent dividers>
         {createTripSuccess && (
           <Alert severity="success" sx={{ mb: 2 }}>
             Đã tạo chuyến thay thế thành công!
           </Alert>
         )}
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2">Mã sự cố</Typography>
-            <Typography variant="body1" gutterBottom>{incident.reportId}</Typography>
-            
-            <Typography variant="subtitle2">Mã chuyến</Typography>
-            <Typography variant="body1" gutterBottom>{incident.tripId}</Typography>
-            
-            <Typography variant="subtitle2">Người báo cáo</Typography>
-            <Typography variant="body1" gutterBottom>{incident.reportedBy}</Typography>
-            
-            <Typography variant="subtitle2">Loại sự cố</Typography>
-            <Typography variant="body1" gutterBottom>{incident.incidentType}</Typography>
-            
-            <Typography variant="subtitle2">Thời gian xảy ra</Typography>
-            <Typography variant="body1" gutterBottom>{new Date(incident.incidentTime).toLocaleString()}</Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2">Vị trí</Typography>
-            <Typography variant="body1" gutterBottom>{incident.location}</Typography>
-            
-            <Typography variant="subtitle2">Trạng thái</Typography>
-            <Typography variant="body1" gutterBottom>
-              <Chip 
-                size="small" 
-                label={
-                  incident.status === "Handling" ? "Đang xử lý" :
-                  "Đã xử lý" // Changed to always show "Đã xử lý" for non-handling statuses
-                } 
-                color={
-                  incident.status === "Handling" ? "info" :
-                  "success" // Changed to always show success color for non-handling statuses
-                } 
-              />
+        
+        {/* Main content structure */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* Section: Basic Information */}
+          <Paper variant="outlined" sx={{ p: 2, borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.12)' }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, borderBottom: '2px solid #e0e0e0', pb: 1 }}>
+              Thông tin cơ bản
             </Typography>
             
-            <Typography variant="subtitle2">Ngày tạo</Typography>
-            <Typography variant="body1" gutterBottom>{new Date(incident.createdDate).toLocaleString()}</Typography>
-            
-            {incident.handledBy && (
-              <>
-                <Typography variant="subtitle2">Người xử lý</Typography>
-                <Typography variant="body1" gutterBottom>{incident.handledBy}</Typography>
-              </>
-            )}
-            
-            {incident.handledTime && (
-              <>
-                <Typography variant="subtitle2">Thời gian xử lý</Typography>
-                <Typography variant="body1" gutterBottom>{new Date(incident.handledTime).toLocaleString()}</Typography>
-              </>
-            )}
-
-            <Typography variant="subtitle2">Loại</Typography>
-            <Typography variant="body1" gutterBottom>
-              {incident.type === 1 ? "Có thể sửa" : 
-               incident.type === 2 ? "Không thể sửa" : 
-               incident.type}
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Mã sự cố</Typography>
+                    <Typography variant="body1">{incident.reportId}</Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Mã chuyến</Typography>
+                    <Typography variant="body1">{incident.tripId}</Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Mã đơn</Typography>
+                    <Box mt={0.5}>
+                      <Typography 
+                        variant="body1" 
+                        component="span"
+                        sx={{ 
+                          cursor: 'pointer', 
+                          color: 'primary.main',
+                          '&:hover': { 
+                            textDecoration: 'underline' 
+                          } 
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/staff-menu/orders/${incident.trip.orderId}`);
+                        }}
+                      >
+                        {incident.trip.orderId}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Người báo cáo</Typography>
+                    <Typography variant="body1">{incident.reportedBy}</Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Loại sự cố</Typography>
+                    <Typography variant="body1">{incident.incidentType}</Typography>
+                  </Box>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Thời gian xảy ra</Typography>
+                    <Typography variant="body1">{new Date(incident.incidentTime).toLocaleString()}</Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Vị trí</Typography>
+                    <Typography variant="body1">{incident.location}</Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Ngày tạo</Typography>
+                    <Typography variant="body1">{new Date(incident.createdDate).toLocaleString()}</Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Loại</Typography>
+                    <Typography variant="body1">
+                      {incident.type === 1 ? "Có thể sửa" : 
+                       incident.type === 2 ? "Không thể sửa" : 
+                       incident.type}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+            </Grid>
+          </Paper>
+          
+          {/* Section: Status Information */}
+          <Paper variant="outlined" sx={{ p: 2, borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.12)' }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, borderBottom: '2px solid #e0e0e0', pb: 1 }}>
+              Thông tin xử lý
             </Typography>
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant="subtitle2">Mô tả</Typography>
+            
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Trạng thái</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip 
+                        size="small" 
+                        label={incident.status === "Handling" ? "Đang xử lý" : "Đã xử lý"} 
+                        color={incident.status === "Handling" ? "info" : "success"} 
+                      />
+                    </Box>
+                  </Box>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {incident.handledBy && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">Người xử lý</Typography>
+                      <Typography variant="body1">{incident.handledBy}</Typography>
+                    </Box>
+                  )}
+                  
+                  {incident.handledTime && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">Thời gian xử lý</Typography>
+                      <Typography variant="body1">{new Date(incident.handledTime).toLocaleString()}</Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+          </Paper>
+          
+          {/* Section: Description */}
+          <Paper variant="outlined" sx={{ p: 2, borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.12)' }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, borderBottom: '2px solid #e0e0e0', pb: 1 }}>
+              Mô tả
+            </Typography>
             <Typography variant="body1" paragraph>{incident.description}</Typography>
             
             {incident.resolutionDetails && (
               <>
-                <Typography variant="subtitle2">Chi tiết xử lý</Typography>
+                <Typography variant="subtitle2" sx={{ mt: 2 }}>Chi tiết xử lý</Typography>
                 <Typography variant="body1" paragraph>{incident.resolutionDetails}</Typography>
               </>
             )}
-          </Grid>
+          </Paper>
           
-          {incidentFiles.length > 0 && (
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Ảnh sự cố</Typography>
-              <ImageList cols={3} rowHeight={160} gap={8}>
-                {incidentFiles.map((file, index) => (
-                  <ImageListItem key={file.fileId}>
-                    <img src={file.fileUrl} 
-                         alt={`Ảnh sự cố ${index + 1}`} 
-                         loading="lazy" />
-                  </ImageListItem>
-                ))}
-              </ImageList>
-            </Grid>
-          )}
-          
-          {invoiceFiles.length > 0 ? (
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Ảnh hóa đơn</Typography>
-              <ImageList cols={3} rowHeight={160} gap={8}>
-                {invoiceFiles.map((file, index) => (
-                  <ImageListItem key={file.fileId}>
-                    <img src={file.fileUrl} 
-                         alt={`Ảnh hóa đơn ${index + 1}`} 
-                         loading="lazy" />
-                  </ImageListItem>
-                ))}
-              </ImageList>
-            </Grid>
-          ) : (
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Ảnh hóa đơn</Typography>
-              <Typography variant="body2" color="text.secondary">Không có ảnh</Typography>
-            </Grid>
-          )}
-          
-          {transferFiles.length > 0 ? (
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Ảnh chuyển nhượng</Typography>
-              <ImageList cols={3} rowHeight={160} gap={8}>
-                {transferFiles.map((file, index) => (
-                  <ImageListItem key={file.fileId}>
-                    <img src={file.fileUrl} 
-                         alt={`Ảnh chuyển nhượng ${index + 1}`} 
-                         loading="lazy" />
-                  </ImageListItem>
-                ))}
-              </ImageList>
-            </Grid>
-          ) : (
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Ảnh chuyển nhượng</Typography>
-              <Typography variant="body2" color="text.secondary">Không có ảnh</Typography>
-            </Grid>
-          )}
-
-          {/* Driver Information */}
-          {/* {incident.trip && incident.trip.driver && (
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Thông tin tài xế</Typography>
-              <Box sx={{ pl: 2 }}>
-                <Typography variant="body2">
-                  <strong>Tên:</strong> {incident.trip.driver.fullName}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Email:</strong> {incident.trip.driver.email}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Điện thoại:</strong> {incident.trip.driver.phoneNumber}
-                </Typography>
+          {/* Section: Images */}
+          <Paper variant="outlined" sx={{ p: 2, borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.12)' }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, borderBottom: '2px solid #e0e0e0', pb: 1 }}>
+              Hình ảnh
+            </Typography>
+            
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Incident Images */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Ảnh sự cố</Typography>
+                {incidentFiles.length > 0 ? (
+                  <ImageList cols={3} rowHeight={160} gap={8}>
+                    {incidentFiles.map((file, index) => (
+                      <ImageListItem key={file.fileId} sx={{ border: '2px solid #e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
+                        <img 
+                          src={file.fileUrl} 
+                          alt={`Ảnh sự cố ${index + 1}`} 
+                          loading="lazy"
+                          style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
+                        />
+                      </ImageListItem>
+                    ))}
+                  </ImageList>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">Không có ảnh</Typography>
+                )}
               </Box>
-            </Grid>
-          )} */}
-        </Grid>
+              
+              {/* Invoice Images */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Ảnh hóa đơn</Typography>
+                {invoiceFiles.length > 0 ? (
+                  <ImageList cols={3} rowHeight={160} gap={8}>
+                    {invoiceFiles.map((file, index) => (
+                      <ImageListItem key={file.fileId} sx={{ border: '2px solid #e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
+                        <img 
+                          src={file.fileUrl} 
+                          alt={`Ảnh hóa đơn ${index + 1}`} 
+                          loading="lazy"
+                          style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
+                        />
+                      </ImageListItem>
+                    ))}
+                  </ImageList>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">Không có ảnh</Typography>
+                )}
+              </Box>
+              
+              {/* Transfer Images */}
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Ảnh chuyển nhượng</Typography>
+                {transferFiles.length > 0 ? (
+                  <ImageList cols={3} rowHeight={160} gap={8}>
+                    {transferFiles.map((file, index) => (
+                      <ImageListItem key={file.fileId} sx={{ border: '2px solid #e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
+                        <img 
+                          src={file.fileUrl} 
+                          alt={`Ảnh chuyển nhượng ${index + 1}`} 
+                          loading="lazy"
+                          style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
+                        />
+                      </ImageListItem>
+                    ))}
+                  </ImageList>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">Không có ảnh</Typography>
+                )}
+              </Box>
+            </Box>
+          </Paper>
+          
+          {/* You can add driver information section here if needed */}
+        </Box>
       </DialogContent>
       <DialogActions>
-        <Button 
-          variant="contained" 
-          color="primary"
-          onClick={() => setOpenReplaceTripModal(true)}
-        >
-          Tạo chuyến thay thế
-        </Button>
+        {/* Show button only if incident is not completed OR if incident cannot be repaired */}
+        {(incident.status === "Handling" && incident.type === 2) && (
+          <Button 
+            variant="contained" 
+            color="primary"
+            onClick={() => setOpenReplaceTripModal(true)}
+            disabled={tripReplaced} // Disable button if trip has been replaced
+            sx={{
+              ...(tripReplaced && {
+                backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                color: 'rgba(0, 0, 0, 0.26)',
+                boxShadow: 'none',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                  boxShadow: 'none',
+                }
+              })
+            }}
+          >
+            {tripReplaced ? "Đã tạo chuyến thay thế" : "Tạo chuyến thay thế"}
+          </Button>
+        )}
         <Button onClick={onClose}>Đóng</Button>
       </DialogActions>
 
@@ -388,6 +493,8 @@ const IncidentManagement = () => {
       (incident.reportId && incident.reportId.toLowerCase().includes(lowerSearchTerm)) ||
       // Search by Trip ID
       (incident.tripId && incident.tripId.toLowerCase().includes(lowerSearchTerm)) ||
+      // Search by Order ID
+      (incident.orderId && incident.orderId.toLowerCase().includes(lowerSearchTerm)) ||
       // Search by Incident Type
       (incident.incidentType && incident.incidentType.toLowerCase().includes(lowerSearchTerm))
     );
@@ -585,13 +692,6 @@ const IncidentManagement = () => {
                 }}
                 sx={{ flexGrow: { xs: 1, sm: 0 }, minWidth: { sm: 300 } }}
               />
-              <Button
-                variant="outlined"
-                startIcon={<FilterListIcon />}
-                size="small"
-              >
-                Lọc
-              </Button>
             </Box>
           </Box>
 

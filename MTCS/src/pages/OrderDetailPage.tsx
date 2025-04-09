@@ -55,6 +55,7 @@ import { format } from "date-fns";
 import AddContractFileModal from "../components/contract/AddContractFileModal";
 import OrderForm from "../forms/order/OrderForm";
 import { OrderFormValues } from "../forms/order/orderSchema";
+import { formatTime } from "../utils/dateUtils";
 
 const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -233,10 +234,10 @@ const OrderDetailPage: React.FC = () => {
 
   const getContainerSizeName = (size: ContainerSize) => {
     switch (size) {
-      case ContainerSize["Container 20 FT"]:
-        return "Container 20 FT";
-      case ContainerSize["Container 40 FT"]:
-        return "Container 40 FT";
+      case ContainerSize["Container 20 FEET"]:
+        return "Container 20 FEET";
+      case ContainerSize["Container 40 FEET"]:
+        return "Container 40 FEET";
       default:
         return "Không xác định";
     }
@@ -676,7 +677,7 @@ const OrderDetailPage: React.FC = () => {
     completeTime: orderDetails.completeTime ? new Date(orderDetails.completeTime) : null,
     note: orderDetails.note || "",
     containerType: orderDetails.containerType,
-    containerSize: orderDetails.containerSize || ContainerSize["Container 20 FT"],
+    containerSize: orderDetails.containerSize || ContainerSize["Container 20 FEET"],
     deliveryType: orderDetails.deliveryType,
     pickUpLocation: orderDetails.pickUpLocation,
     deliveryLocation: orderDetails.deliveryLocation,
@@ -716,14 +717,16 @@ const OrderDetailPage: React.FC = () => {
             label={getStatusDisplay(orderDetails.status).label}
             color={getStatusDisplay(orderDetails.status).color as any}
           />
-          <Button 
-            variant="outlined" 
-            color="primary" 
-            startIcon={<EditIcon />}
-            onClick={handleOpenEditDialog}
-          >
-            Cập nhật thông tin
-          </Button>
+          {orderDetails.status === OrderStatus.Pending && (
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              startIcon={<EditIcon />}
+              onClick={handleOpenEditDialog}
+            >
+              Cập nhật thông tin
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -814,7 +817,7 @@ const OrderDetailPage: React.FC = () => {
                   Kích thước container
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {getContainerSizeName(orderDetails.containerSize || ContainerSize["Container 20 FT"])}
+                  {getContainerSizeName(orderDetails.containerSize || ContainerSize["Container 20 FEEET"])}
                 </Typography>
               </Grid>
 
@@ -844,7 +847,7 @@ const OrderDetailPage: React.FC = () => {
                   Trọng lượng
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {orderDetails.weight} kg
+                  {orderDetails.weight} tấn
                 </Typography>
               </Grid>
 
@@ -872,6 +875,15 @@ const OrderDetailPage: React.FC = () => {
                 </Typography>
                 <Typography variant="body1" gutterBottom>
                   {formatDate(orderDetails.createdDate)}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Ước lượng thời gian giao
+                </Typography>
+                <Typography variant="body1" gutterBottom>
+                  {orderDetails.completionTime || "N/A"}
                 </Typography>
               </Grid>
 
@@ -1089,111 +1101,98 @@ const OrderDetailPage: React.FC = () => {
               )}
             </Box>
 
-            {/* Contract Files section with Add button */}
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mt={3}
-            >
+            {/* Contract Files section without Add button */}
+            <Box>
               <Typography variant="subtitle1" gutterBottom>
                 Tài liệu hợp đồng
               </Typography>
-              <Button
-                startIcon={<AddIcon />}
-                size="small"
-                variant="outlined"
-                onClick={handleOpenAddContractModal}
-              >
-                Thêm mới
-              </Button>
-            </Box>
-            {contractFiles && contractFiles.length > 0 ? (
-              <Grid container spacing={2}>
-                {contractFiles.map((file, index) => {
-                  // Check if the file type is document-like (for download) or image (for display)
-                  const isDocument =
-                    file.fileType === "PDF Document" ||
-                    file.fileType === "Word Document" ||
-                    file.fileType === "Excel Spreadsheet" ||
-                    file.fileType === "PowerPoint Presentation" ||
-                    file.fileType === "Text Document" ||
-                    file.fileType === "Archive";
+              {contractFiles && contractFiles.length > 0 ? (
+                <Grid container spacing={2}>
+                  {contractFiles.map((file, index) => {
+                    // Check if the file type is document-like (for download) or image (for display)
+                    const isDocument =
+                      file.fileType === "PDF Document" ||
+                      file.fileType === "Word Document" ||
+                      file.fileType === "Excel Spreadsheet" ||
+                      file.fileType === "PowerPoint Presentation" ||
+                      file.fileType === "Text Document" ||
+                      file.fileType === "Archive";
 
-                  // Check if it's an image type
-                  const isImage =
-                    file.fileType === "Image" ||
-                    (file.fileType &&
-                      file.fileType.toLowerCase().includes("image/"));
+                    // Check if it's an image type
+                    const isImage =
+                      file.fileType === "Image" ||
+                      (file.fileType &&
+                        file.fileType.toLowerCase().includes("image/"));
 
-                  return (
-                    <Grid
-                      item
-                      xs={12}
-                      sm={6}
-                      key={file.fileId || `contract-file-${index}`}
-                    >
-                      <Card>
-                        <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
-                          {isImage ? (
-                            <>
-                              <Box
-                                component="img"
-                                src={file.fileUrl}
-                                alt={
-                                  file.fileName || `Contract image ${index + 1}`
-                                }
-                                sx={{
-                                  width: "100%",
-                                  height: 100,
-                                  objectFit: "cover",
-                                  cursor: "pointer",
-                                  borderRadius: 1,
-                                }}
-                                onClick={() =>
-                                  window.open(file.fileUrl, "_blank")
-                                }
-                              />
+                    return (
+                      <Grid
+                        item
+                        xs={12}
+                        sm={6}
+                        key={file.fileId || `contract-file-${index}`}
+                      >
+                        <Card>
+                          <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
+                            {isImage ? (
+                              <>
+                                <Box
+                                  component="img"
+                                  src={file.fileUrl}
+                                  alt={
+                                    file.fileName || `Contract image ${index + 1}`
+                                  }
+                                  sx={{
+                                    width: "100%",
+                                    height: 100,
+                                    objectFit: "cover",
+                                    cursor: "pointer",
+                                    borderRadius: 1,
+                                  }}
+                                  onClick={() =>
+                                    window.open(file.fileUrl, "_blank")
+                                  }
+                                />
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                >
+                                  {file.fileName || `Hình ảnh ${index + 1}`}
+                                </Typography>
+                              </>
+                            ) : (
                               <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
+                                variant="body2"
                                 noWrap
+                                sx={{ display: "flex", alignItems: "center" }}
                               >
-                                {file.fileName || `Hình ảnh ${index + 1}`}
+                                <Box component="span" mr={0.5}>
+                                  {isDocument ? "📄" : "📎"}
+                                </Box>
+                                <a
+                                  href={file.fileUrl}
+                                  download={file.fileName || `file-${index + 1}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {file.fileName ||
+                                    `Tài liệu hợp đồng ${index + 1}`}
+                                </a>
                               </Typography>
-                            </>
-                          ) : (
-                            <Typography
-                              variant="body2"
-                              noWrap
-                              sx={{ display: "flex", alignItems: "center" }}
-                            >
-                              <Box component="span" mr={0.5}>
-                                {isDocument ? "📄" : "📎"}
-                              </Box>
-                              <a
-                                href={file.fileUrl}
-                                download={file.fileName || `file-${index + 1}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                {file.fileName ||
-                                  `Tài liệu hợp đồng ${index + 1}`}
-                              </a>
-                            </Typography>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Không có tài liệu hợp đồng
-              </Typography>
-            )}
+                            )}
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Không có tài liệu hợp đồng
+                </Typography>
+              )}
+            </Box>
           </Paper>
 
           {/* Trip Information */}

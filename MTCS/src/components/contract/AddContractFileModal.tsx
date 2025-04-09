@@ -18,8 +18,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { createContract } from '../../services/contractApi';
-import { getCustomers } from '../../services/customerApi';
-import { Customer } from '../../types/customer';
+import { getCustomerById } from '../../services/customerApi';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { format } from 'date-fns';
 import axios from 'axios';
@@ -30,7 +29,7 @@ interface AddContractFileModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  customerId?: string; // Make customerId optional since we'll add an input field
+  customerId: string;
   orderId: string;
 }
 
@@ -38,32 +37,20 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
   open,
   onClose,
   onSuccess,
-  customerId: initialCustomerId,
+  customerId,
   orderId
 }) => {
-  // Basic contract fields
   const [summary, setSummary] = useState('');
   const [signedBy, setSignedBy] = useState('');
   const [signedDate, setSignedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
-  const [signedTime, setSignedTime] = useState<string>(format(new Date(), 'HH:mm')); // Changed back to time format
+  const [signedTime, setSignedTime] = useState<string>(format(new Date(), 'HH:mm'));
   const [startDate, setStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState<string>(format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'));
-  const [description, setDescription] = useState('');
-  const [note, setNote] = useState('');
   const [status, setStatus] = useState<ContractStatus>(ContractStatus.Active);
-  const [customerId, setCustomerId] = useState<string>(initialCustomerId || '');
-  
-  // Customer dropdown data
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loadingCustomers, setLoadingCustomers] = useState(false);
-  
-  // Files and file metadata
   const [files, setFiles] = useState<File[]>([]);
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
   const [fileNotes, setFileNotes] = useState<string[]>([]);
   const [fileStatuses, setFileStatuses] = useState<OrderStatus[]>([]);
-  
-  // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [snackbar, setSnackbar] = useState({
@@ -71,78 +58,42 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
     message: "",
     severity: "success" as "success" | "error",
   });
+  const [customerDetails, setCustomerDetails] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    customerId: customerId,
+    startDate: '',
+    endDate: '',
+    signedBy: '',
+    status: 1,
+    summary: '',
+    contractFiles: [] as File[]
+  });
 
-  // Fetch customers when the modal opens
   useEffect(() => {
-    if (open) {
-      fetchCustomers();
-    }
-  }, [open]);
-
-  const fetchCustomers = async () => {
-    try {
-      setLoadingCustomers(true);
-      // Use the existing getCustomers function with a larger pageSize to get more customers
-      const result = await getCustomers(1, 100);
-      
-      console.log("Customer result:", result);
-      
-      if (result && result.orders && Array.isArray(result.orders.items)) {
-        const customersList = result.orders.items;
-        
-        console.log("Processed customers list:", customersList);
-        
-        // Make sure the customer objects have the expected properties
-        const validCustomers = customersList.filter(c => 
-          c && typeof c === 'object' && c.customerId && c.companyName
-        );
-        
-        setCustomers(validCustomers);
-        
-        // If we have customers but no initial customerId, set the first customer as default for signedBy
-        if (validCustomers.length > 0) {
-          // Set the first company name as the default signedBy
-          if (!signedBy) {
-            setSignedBy(validCustomers[0].companyName);
-          }
-          
-          // If there's an initialCustomerId, find and set the corresponding company name
-          if (initialCustomerId) {
-            const selectedCustomer = validCustomers.find(c => c.customerId === initialCustomerId);
-            if (selectedCustomer) {
-              setSignedBy(selectedCustomer.companyName);
-            }
-          }
+    if (open && customerId) {
+      const fetchCustomerDetails = async () => {
+        try {
+          const customerData = await getCustomerById(customerId);
+          setCustomerDetails(customerData);
+        } catch (error) {
+          console.error("Error fetching customer details:", error);
         }
-      } else {
-        console.warn("Unexpected API response structure:", result);
-        setCustomers([]);
-      }
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-      setSnackbar({
-        open: true,
-        message: "Không thể tải danh sách khách hàng",
-        severity: "error",
-      });
-      setCustomers([]);
-    } finally {
-      setLoadingCustomers(false);
+      };
+      fetchCustomerDetails();
     }
-  };
-  
-  // Find customer ID from company name
-  const getCustomerIdFromName = (companyName: string): string => {
-    const customer = customers.find(c => c.companyName === companyName);
-    return customer ? customer.customerId : '';
-  };
-  
+  }, [open, customerId]);
+
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      customerId: customerId
+    }));
+  }, [customerId]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
       setFiles(prevFiles => [...prevFiles, ...newFiles]);
-      
-      // For each new file, add default values for all required fields
       setFileDescriptions(prev => [...prev, ...newFiles.map(() => '')]);
       setFileNotes(prev => [...prev, ...newFiles.map(() => '')]);
       setFileStatuses(prev => [...prev, ...newFiles.map(() => OrderStatus.Valid)]);
@@ -155,7 +106,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
     setFileNotes(prev => prev.filter((_, i) => i !== index));
     setFileStatuses(prev => prev.filter((_, i) => i !== index));
   };
-  
+
   const handleFileDescriptionChange = (index: number, value: string) => {
     const newDescriptions = [...fileDescriptions];
     newDescriptions[index] = value;
@@ -173,7 +124,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
     newStatuses[index] = value;
     setFileStatuses(newStatuses);
   };
-  
+
   const validateForm = () => {
     if (!summary.trim()) {
       setError('Vui lòng nhập tiêu đề hợp đồng');
@@ -205,11 +156,6 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       return false;
     }
 
-    if (!customerId) {
-      setError('Vui lòng chọn khách hàng');
-      return false;
-    }
-
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(signedDate)) {
       setError('Định dạng ngày ký không hợp lệ');
@@ -232,7 +178,6 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       return false;
     }
 
-    // Validate that startDate is after or equal to signedDate
     const signedDateObj = new Date(signedDate);
     const startDateObj = new Date(startDate);
     if (startDateObj < signedDateObj) {
@@ -240,7 +185,6 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       return false;
     }
 
-    // Validate that end date is after startDate
     const endDateObj = new Date(endDate);
     if (endDateObj <= startDateObj) {
       setError('Ngày kết thúc phải sau ngày bắt đầu');
@@ -251,31 +195,20 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       setError('Vui lòng thêm ít nhất một tệp đính kèm');
       return false;
     }
-    
-    // Check if every file has the required metadata
+
     const missingDescriptions = fileDescriptions.some(desc => !desc.trim());
     const missingNotes = fileNotes.some(note => !note.trim());
-    
+
     if (missingDescriptions) {
       setError('Vui lòng nhập mô tả cho tất cả các tệp đính kèm');
       return false;
     }
-    
+
     if (missingNotes) {
       setError('Vui lòng nhập ghi chú cho tất cả các tệp đính kèm');
       return false;
     }
-    
-    // Get the customerId from the selected company
-    if (!initialCustomerId) {
-      const selectedCustomerId = getCustomerIdFromName(signedBy);
-      if (!selectedCustomerId) {
-        setError('Không thể xác định khách hàng từ người ký đã chọn');
-        return false;
-      }
-      setCustomerId(selectedCustomerId);
-    }
-    
+
     return true;
   };
 
@@ -283,81 +216,57 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
     try {
       setLoading(true);
       setError('');
-      
+
       if (!validateForm()) {
         setLoading(false);
         return;
       }
-      
-      // Use customerId from initialCustomerId if provided, otherwise get it from signedBy
-      const finalCustomerId = initialCustomerId || getCustomerIdFromName(signedBy);
-      
-      // Combine date and time for signedTime
-      const combinedDateTime = `${signedDate}T${signedTime}:00`;
-      
-      const formData = new FormData();
-      formData.append('summary', summary);
-      formData.append('signedBy', signedBy);
-      formData.append('signedDate', signedDate);
-      formData.append('signedTime', combinedDateTime); // Send as ISO string with both date and time
-      formData.append('startDate', startDate);
-      formData.append('endDate', endDate);
-      formData.append('status', status.toString());
-      formData.append('customerId', finalCustomerId); // Now using the state value
-      formData.append('orderId', orderId);
-      
-      // Add general description and note if needed
-      formData.append('description', description);
-      formData.append('note', note);
 
-      // Add all files with corresponding metadata
+      const combinedDateTime = `${signedDate}T${signedTime}:00`;
+
+      const contractData = {
+        ...formData,
+        customerId: customerId,
+      };
+
+      const formDataToSend = new FormData();
+      formDataToSend.append('summary', summary);
+      formDataToSend.append('signedBy', signedBy);
+      formDataToSend.append('signedDate', signedDate);
+      formDataToSend.append('signedTime', combinedDateTime);
+      formDataToSend.append('startDate', startDate);
+      formDataToSend.append('endDate', endDate);
+      formDataToSend.append('status', status.toString());
+      formDataToSend.append('customerId', customerId);
+      formDataToSend.append('orderId', orderId);
+
       files.forEach((file, index) => {
-        formData.append('files', file);
-        formData.append('descriptions', fileDescriptions[index]);
-        formData.append('notes', fileNotes[index]);
-        formData.append('fileStatuses', fileStatuses[index].toString());
+        formDataToSend.append('files', file);
+        formDataToSend.append('descriptions', fileDescriptions[index]);
+        formDataToSend.append('notes', fileNotes[index]);
+        formDataToSend.append('fileStatuses', fileStatuses[index].toString());
       });
 
-      // Also send the selected company name
-      const companyName = getSelectedCompanyName();
-      formData.append('companyName', companyName);
-
-      console.log('===== CONTRACT CREATE REQUEST DATA =====');
-      console.log('FormData keys:', [...formData.keys()]);
-      console.log('SignedDate:', signedDate);
-      console.log('SignedTime (combined):', combinedDateTime);
-      console.log('StartDate:', startDate);
-      console.log('EndDate:', endDate);
-      console.log('CustomerId:', customerId);
-      console.log('Company Name:', companyName);
-      console.log('Files:', files);
-      console.log('File Descriptions:', fileDescriptions);
-      console.log('File Notes:', fileNotes);
-      console.log('File Statuses:', fileStatuses);
-
-      const response = await createContract(formData);
-      console.log('===== CONTRACT CREATE RESPONSE =====');
+      const response = await createContract(formDataToSend);
       console.log('Response:', response);
-      
+
       setSnackbar({
         open: true,
         message: "Tạo hợp đồng thành công!",
         severity: "success",
       });
-      
+
       setTimeout(() => {
         setLoading(false);
         onSuccess();
         handleClose();
       }, 1500);
-      
+
     } catch (err: any) {
-      console.error('===== CONTRACT CREATE ERROR =====');
       console.error('Error details:', err);
-      
+
       let errorMessage = "Không thể tạo hợp đồng. Vui lòng thử lại.";
 
-      // Handle Axios error
       if (axios.isAxiosError(err)) {
         if (err.response?.data) {
           errorMessage = formatApiError(err.response.data);
@@ -365,7 +274,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setError(errorMessage);
       setSnackbar({
         open: true,
@@ -381,23 +290,19 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
   };
 
   const handleClose = () => {
-    // Reset form when closing
     setSummary('');
     setSignedBy('');
     setSignedDate(format(new Date(), 'yyyy-MM-dd'));
-    setSignedTime(format(new Date(), 'HH:mm')); // Reset to current time
+    setSignedTime(format(new Date(), 'HH:mm'));
     setStartDate(format(new Date(), 'yyyy-MM-dd'));
     setEndDate(format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'));
-    setDescription('');
-    setNote('');
     setStatus(ContractStatus.Active);
-    setCustomerId(initialCustomerId || '');
     setFiles([]);
     setFileDescriptions([]);
     setFileNotes([]);
     setFileStatuses([]);
     setError('');
-    
+
     onClose();
   };
 
@@ -424,34 +329,15 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
             </Grid>
 
             <Grid item xs={12}>
-              <FormControl fullWidth required>
-                <InputLabel>Người ký</InputLabel>
-                <Select
-                  value={signedBy}
-                  onChange={(e) => setSignedBy(e.target.value as string)}
-                  label="Người ký"
-                  disabled={loadingCustomers}
-                  startAdornment={
-                    loadingCustomers ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-                        <CircularProgress size={20} />
-                      </Box>
-                    ) : null
-                  }
-                >
-                  {customers.length === 0 && !loadingCustomers ? (
-                    <MenuItem value="" disabled>
-                      Không có dữ liệu khách hàng
-                    </MenuItem>
-                  ) : (
-                    customers.map((customer) => (
-                      <MenuItem key={customer.customerId} value={customer.companyName || ''}>
-                        {customer.companyName || 'Unknown'}
-                      </MenuItem>
-                    ))
-                  )}
-                </Select>
-              </FormControl>
+              <TextField
+                label="Người ký"
+                fullWidth
+                value={signedBy}
+                onChange={(e) => setSignedBy(e.target.value)}
+                required
+                margin="normal"
+                placeholder="Nhập tên người ký"
+              />
             </Grid>
 
             <Grid item xs={12} sm={6}>
@@ -522,28 +408,6 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
                   <MenuItem value={ContractStatus.Inactive}>Không hoạt động</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                label="Mô tả"
-                fullWidth
-                multiline
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                label="Ghi chú"
-                fullWidth
-                multiline
-                rows={2}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
             </Grid>
 
             <Grid item xs={12}>
