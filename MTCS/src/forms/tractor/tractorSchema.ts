@@ -32,9 +32,12 @@ export const tractorSchema = z
       .number()
       .min(0.1, "Trọng tải tối đa phải lớn hơn 0")
       .max(100, "Trọng tải tối đa không được vượt quá 100"),
-    lastMaintenanceDate: z.date().refine((date) => date <= new Date(), {
-      message: "Ngày bảo dưỡng cuối không được trong tương lai",
-    }),
+    lastMaintenanceDate: z
+      .date()
+      .nullable()
+      .refine((date) => !date || date <= new Date(), {
+        message: "Ngày bảo dưỡng cuối không được trong tương lai",
+      }),
     nextMaintenanceDate: z.date(),
     registrationDate: z.date().refine((date) => date <= new Date(), {
       message: "Ngày đăng ký không được trong tương lai",
@@ -55,9 +58,15 @@ export const tractorSchema = z
 export type TractorFormValues = z.infer<typeof tractorSchema>;
 
 export const formatTractorFormForApi = (data: TractorFormValues) => {
+  // Create a new object without lastMaintenanceDate first
+  const { lastMaintenanceDate, ...restData } = data;
+
+  // Then conditionally add lastMaintenanceDate only if it exists
   return {
-    ...data,
-    lastMaintenanceDate: data.lastMaintenanceDate.toISOString(),
+    ...restData,
+    lastMaintenanceDate: lastMaintenanceDate
+      ? lastMaintenanceDate.toISOString()
+      : null,
     nextMaintenanceDate: data.nextMaintenanceDate.toISOString(),
     registrationDate: new Date(data.registrationDate)
       .toISOString()

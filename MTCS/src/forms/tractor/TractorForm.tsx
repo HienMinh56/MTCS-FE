@@ -36,7 +36,7 @@ const TractorForm: React.FC<TractorFormProps> = ({
     brand: "",
     manufactureYear: new Date().getFullYear(),
     maxLoadWeight: 0,
-    lastMaintenanceDate: today.toDate(),
+    lastMaintenanceDate: null,
     nextMaintenanceDate: today.add(3, "month").toDate(),
     registrationDate: today.toDate(),
     registrationExpirationDate: today.add(1, "year").toDate(),
@@ -161,7 +161,7 @@ const TractorForm: React.FC<TractorFormProps> = ({
             render={({ field }) => (
               <DatePicker
                 label="Ngày Bảo Dưỡng Cuối"
-                value={dayjs(field.value)}
+                value={field.value ? dayjs(field.value) : null}
                 onChange={(date) => field.onChange(date?.toDate() || null)}
                 format={DATE_FORMAT}
                 slotProps={{

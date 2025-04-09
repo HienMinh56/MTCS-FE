@@ -44,13 +44,11 @@ const DriverTable: React.FC<DriverTableProps> = ({
 }) => {
   const navigate = useNavigate();
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [paginationData, setPaginationData] =
-    useState<PaginatedData<Driver> | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(8);
 
-  // References to track component state
   const prevRefreshTriggerRef = useRef(refreshTrigger);
   const isInitialMountRef = useRef(true);
   const isPageChangeRef = useRef(false);
@@ -75,9 +73,9 @@ const DriverTable: React.FC<DriverTableProps> = ({
 
       if (response.success && response.data) {
         setDrivers(response.data.items || []);
-        setPaginationData(response.data);
+        setTotalCount(response.data.totalCount || 0);
 
-        // Calculate summary statistics
+        // Calculate summary statistics for all drivers
         if (onUpdateSummary && response.data.items) {
           const active = response.data.items.filter(
             (d) => d.status === DriverStatus.Active
@@ -94,12 +92,12 @@ const DriverTable: React.FC<DriverTableProps> = ({
       } else {
         console.error("Invalid API response:", response);
         setDrivers([]);
-        setPaginationData(null);
+        setTotalCount(0);
       }
     } catch (error) {
       console.error("Error loading drivers:", error);
       setDrivers([]);
-      setPaginationData(null);
+      setTotalCount(0);
     } finally {
       setLoading(false);
       isPageChangeRef.current = false;
@@ -149,7 +147,8 @@ const DriverTable: React.FC<DriverTableProps> = ({
 
   // Pagination controls
   const handleNextPage = () => {
-    if (paginationData && page < paginationData.totalPages) {
+    const lastPage = Math.ceil(totalCount / pageSize);
+    if (page < lastPage) {
       isPageChangeRef.current = true;
       shouldFetchDataRef.current = true;
       setPage((prev) => prev + 1);
@@ -184,11 +183,9 @@ const DriverTable: React.FC<DriverTableProps> = ({
     }
   };
 
-  const from = paginationData ? (page - 1) * pageSize + 1 : 0;
-  const to = paginationData
-    ? Math.min(page * pageSize, paginationData.totalCount)
-    : 0;
-  const hasNextPage = paginationData ? page < paginationData.totalPages : false;
+  const from = (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, totalCount);
+  const hasNextPage = page < Math.ceil(totalCount / pageSize);
   const hasPrevPage = page > 1;
 
   return (
@@ -260,8 +257,8 @@ const DriverTable: React.FC<DriverTableProps> = ({
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            {paginationData && paginationData.totalCount > 0
-              ? `${from}-${to} trên ${paginationData.totalCount}`
+            {totalCount > 0
+              ? `${from}-${to} trên ${totalCount}`
               : "Không có dữ liệu"}
           </Typography>
           <Box>

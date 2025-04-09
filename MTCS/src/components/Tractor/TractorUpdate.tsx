@@ -87,7 +87,7 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
     brand: "",
     manufactureYear: new Date().getFullYear(),
     maxLoadWeight: 0,
-    lastMaintenanceDate: new Date().toISOString().split("T")[0],
+    lastMaintenanceDate: "",
     nextMaintenanceDate: new Date().toISOString().split("T")[0],
     registrationDate: new Date().toISOString().split("T")[0],
     registrationExpirationDate: new Date().toISOString().split("T")[0],
@@ -136,8 +136,7 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
         manufactureYear: tractorDetails.manufactureYear,
         maxLoadWeight: tractorDetails.maxLoadWeight,
         lastMaintenanceDate:
-          tractorDetails.lastMaintenanceDate?.split("T")[0] ||
-          new Date().toISOString().split("T")[0],
+          tractorDetails.lastMaintenanceDate?.split("T")[0] || "",
         nextMaintenanceDate:
           tractorDetails.nextMaintenanceDate?.split("T")[0] ||
           new Date().toISOString().split("T")[0],
@@ -352,17 +351,21 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
       newErrors.maxLoadWeight = "Tải trọng tối đa phải lớn hơn 0";
     }
 
-    const lastMaintenance = new Date(formData.lastMaintenanceDate);
-    const nextMaintenance = new Date(formData.nextMaintenanceDate);
+    // Only validate lastMaintenanceDate if it's provided
+    if (formData.lastMaintenanceDate) {
+      const lastMaintenance = new Date(formData.lastMaintenanceDate);
+      const nextMaintenance = new Date(formData.nextMaintenanceDate);
+
+      if (nextMaintenance <= lastMaintenance) {
+        newErrors.nextMaintenanceDate =
+          "Ngày bảo dưỡng tiếp theo phải sau ngày bảo dưỡng gần nhất";
+      }
+    }
+
     const registration = new Date(formData.registrationDate);
     const registrationExpiration = new Date(
       formData.registrationExpirationDate
     );
-
-    if (nextMaintenance <= lastMaintenance) {
-      newErrors.nextMaintenanceDate =
-        "Ngày bảo dưỡng tiếp theo phải sau ngày bảo dưỡng gần nhất";
-    }
 
     if (registrationExpiration <= registration) {
       newErrors.registrationExpirationDate =
@@ -623,11 +626,13 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
                     value={formData.lastMaintenanceDate}
                     onChange={handleDateChange}
                     error={!!errors.lastMaintenanceDate}
-                    helperText={errors.lastMaintenanceDate}
+                    helperText={
+                      errors.lastMaintenanceDate ||
+                      "Để trống nếu chưa bảo dưỡng"
+                    }
                     disabled={loading}
                     variant="outlined"
                     size="small"
-                    required
                     InputLabelProps={{ shrink: true }}
                   />
                 </Grid>

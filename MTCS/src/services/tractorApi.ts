@@ -134,7 +134,7 @@ export const createTractorWithFiles = async (
     brand: string;
     manufactureYear: number;
     maxLoadWeight: number;
-    lastMaintenanceDate: string;
+    lastMaintenanceDate: string | null;
     nextMaintenanceDate: string;
     registrationDate: string;
     registrationExpirationDate: string;
@@ -148,9 +148,26 @@ export const createTractorWithFiles = async (
 ) => {
   const formData = new FormData();
 
-  Object.entries(tractorData).forEach(([key, value]) => {
-    formData.append(key, value.toString());
-  });
+  // Handle each field individually rather than using Object.entries
+  formData.append("licensePlate", tractorData.licensePlate);
+  formData.append("brand", tractorData.brand);
+  formData.append("manufactureYear", tractorData.manufactureYear.toString());
+  formData.append("maxLoadWeight", tractorData.maxLoadWeight.toString());
+  formData.append("nextMaintenanceDate", tractorData.nextMaintenanceDate);
+  formData.append("registrationDate", tractorData.registrationDate);
+  formData.append(
+    "registrationExpirationDate",
+    tractorData.registrationExpirationDate
+  );
+  formData.append("containerType", tractorData.containerType.toString());
+
+  // Only add lastMaintenanceDate if it's not null and not a default date
+  if (
+    tractorData.lastMaintenanceDate &&
+    !tractorData.lastMaintenanceDate.includes("0001-01-01")
+  ) {
+    formData.append("lastMaintenanceDate", tractorData.lastMaintenanceDate);
+  }
 
   fileUploads.forEach((upload, index) => {
     formData.append(`fileUploads[${index}].file`, upload.file);
@@ -210,7 +227,7 @@ export const updateTractorWithFiles = async (
     brand: string;
     manufactureYear: number;
     maxLoadWeight: number;
-    lastMaintenanceDate: string;
+    lastMaintenanceDate: string | null;
     nextMaintenanceDate: string;
     registrationDate: string;
     registrationExpirationDate: string;
@@ -225,9 +242,26 @@ export const updateTractorWithFiles = async (
 ) => {
   const formData = new FormData();
 
-  Object.entries(tractorData).forEach(([key, value]) => {
-    formData.append(key, value.toString());
-  });
+  // Handle each field individually rather than using Object.entries
+  formData.append("licensePlate", tractorData.licensePlate);
+  formData.append("brand", tractorData.brand);
+  formData.append("manufactureYear", tractorData.manufactureYear.toString());
+  formData.append("maxLoadWeight", tractorData.maxLoadWeight.toString());
+  formData.append("nextMaintenanceDate", tractorData.nextMaintenanceDate);
+  formData.append("registrationDate", tractorData.registrationDate);
+  formData.append(
+    "registrationExpirationDate",
+    tractorData.registrationExpirationDate
+  );
+  formData.append("containerType", tractorData.containerType.toString());
+
+  // Only add lastMaintenanceDate if it's not null and not a default date
+  if (
+    tractorData.lastMaintenanceDate &&
+    !tractorData.lastMaintenanceDate.includes("0001-01-01")
+  ) {
+    formData.append("lastMaintenanceDate", tractorData.lastMaintenanceDate);
+  }
 
   newFiles.forEach((upload, index) => {
     formData.append(`newFiles[${index}].file`, upload.file);
