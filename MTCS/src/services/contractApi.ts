@@ -72,3 +72,51 @@ export const createContract = async (formData: FormData) => {
   });
   return response.data;
 };
+
+export const updateContract = async (contractData : {
+  ContractId: string;
+  StartDate: string;
+  EndDate: string;
+  Status: number;
+  FileIdsToRemove: string[] | null;
+  Descriptions: string;
+  Notes: string;
+  AddedFiles: File[] | null;
+}) => {
+  try {
+    // Create FormData for the API call
+    const formData = new FormData();
+    formData.append('ContractId', contractData.ContractId);
+    formData.append('StartDate', contractData.StartDate);
+    formData.append('EndDate', contractData.EndDate);
+    formData.append('Status', contractData.Status.toString());
+    formData.append('Descriptions', contractData.Descriptions);
+    formData.append('Notes', contractData.Notes);
+    
+    // Add files to remove
+    if (contractData.FileIdsToRemove) {
+      contractData.FileIdsToRemove.forEach(fileId => {
+        formData.append('FileIdsToRemove', fileId);
+      });
+    }
+    
+    // Add new files without separate descriptions and notes
+    if (contractData.AddedFiles) {
+      contractData.AddedFiles.forEach(file => {
+        formData.append('AddedFiles', file);
+      });
+    }
+
+    const response = await axiosInstance.put("/api/contract", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      }
+    });
+
+    return response.data;
+  }
+  catch (error) {
+    console.error("Update contract fail with Error", error);
+    throw error;
+  }
+}

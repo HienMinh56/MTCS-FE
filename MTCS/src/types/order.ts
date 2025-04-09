@@ -17,8 +17,8 @@ export enum ContainerType {
 }
 
 export enum ContainerSize {
-  "Container 20 FT" = 20,
-  "Container 40 FT" = 40,
+  "Container 20 FEET" = 20,
+  "Container 40 FEET" = 40,
 }
 
 export enum IsPay {
@@ -109,7 +109,7 @@ export interface OrderDetails {
     distance: number | null;
     containerSize: ContainerSize;
     orderFiles: [OrderFile["fileUrl"]] | null;
-    completeTime: string | null;
+    completionTime: string | null;
     isPay: IsPay | null;
 }
 

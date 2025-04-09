@@ -208,7 +208,7 @@ export const updateOrder = async (orderData: {
     formData.append("ContactPerson", orderData.contactPerson || "");
     formData.append("ContainerNumber", orderData.containerNumber || "");
     formData.append("ContactPhone", orderData.contactPhone || "");
-    formData.append("OrderPlace", orderData.orderPlacer || ""); // Changed to OrderPlace to match BE
+    formData.append("OrderPlacer", orderData.orderPlacer || ""); // Changed from OrderPlace to OrderPlacer to match backend
     formData.append("IsPay", orderData.isPay.toString());
     
     // Only add temperature if it's not null

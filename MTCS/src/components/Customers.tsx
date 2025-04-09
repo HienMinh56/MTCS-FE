@@ -18,6 +18,12 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -27,8 +33,10 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import PeopleIcon from "@mui/icons-material/People";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import AddIcon from "@mui/icons-material/Add";
+import CancelIcon from "@mui/icons-material/Cancel";
 import { useNavigate } from "react-router-dom";
-import { getCustomers } from "../services/customerApi";
+import { getCustomers, createCustomer } from "../services/customerApi";
 import { Customer } from "../types/customer";
 
 const Customers = () => {
@@ -39,7 +47,33 @@ const Customers = () => {
   const [loading, setLoading] = useState(false);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error'
+  });
+
   const navigate = useNavigate();
+
+  // Form state
+  const [formData, setFormData] = useState({
+    companyName: '',
+    email: '',
+    phoneNumber: '',
+    taxNumber: '',
+    address: ''
+  });
+
+  // Form validation errors
+  const [errors, setErrors] = useState({
+    companyName: '',
+    email: '',
+    phoneNumber: '',
+    taxNumber: '',
+    address: ''
+  });
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -51,22 +85,40 @@ const Customers = () => {
           searchTerm
         );
 
-        // The API response doesn't match our expected structure
-        // Let's handle it properly by logging and providing fallbacks
         console.log("Customer API response:", result);
 
-        if (result && result.orders && result.orders.items) {
+        if (result && result.status === 1 && Array.isArray(result.data)) {
+          // Process customers with direct response from API
+          const processedCustomers = result.data.map(customer => ({
+            customerId: customer.customerId,
+            companyName: customer.companyName,
+            email: customer.email,
+            phoneNumber: customer.phoneNumber,
+            createdDate: customer.createdDate,
+            // Calculate totalOrders from the orders array
+            totalOrders: Array.isArray(customer.orders) ? customer.orders.length : 0
+          }));
+          
+          setCustomers(processedCustomers);
+          setTotalCustomers(processedCustomers.length);
+          
+          // Calculate total orders across all customers
+          const orderSum = processedCustomers.reduce(
+            (sum, customer) => sum + customer.totalOrders, 
+            0
+          );
+          setTotalOrders(orderSum);
+        } else if (result && result.orders && result.orders.items) {
+          // Handle the previous response format if needed
           setCustomers(result.orders.items);
           setTotalCustomers(result.orders.totalCount || 0);
-          
-          // Calculate total orders from all customers
+
           const orderSum = result.orders.items.reduce(
             (sum, customer) => sum + (customer.totalOrders || 0), 
             0
           );
           setTotalOrders(orderSum);
         } else {
-          // If we receive the raw customer data with orders array
           const mockCustomers = transformCustomerData(result);
           if (mockCustomers && mockCustomers.length > 0) {
             setCustomers(mockCustomers);
@@ -92,29 +144,21 @@ const Customers = () => {
     fetchCustomers();
   }, [page, rowsPerPage, searchTerm]);
 
-  // Transform the raw customer data response if needed
   const transformCustomerData = (data: any): Customer[] => {
-    // If the data is an array of customers with embedded orders
-    if (Array.isArray(data) && data.length > 0 && data[0].customerId) {
+    if (Array.isArray(data)) {
       return data.map(customer => ({
         customerId: customer.customerId,
         companyName: customer.companyName,
         email: customer.email,
         phoneNumber: customer.phoneNumber,
         createdDate: customer.createdDate,
-        totalOrders: customer.orders ? customer.orders.length : 0
+        // Count the number of orders from the orders array
+        totalOrders: Array.isArray(customer.orders) ? customer.orders.length : 0
       }));
     }
-    
-    // If the data is already in the expected format
-    if (Array.isArray(data) && data.length > 0 && data[0].companyName) {
-      return data;
-    }
-    
     return [];
   };
 
-  // Count total orders for all customers
   const countTotalOrders = (customers: Customer[]): number => {
     return customers.reduce((sum, customer) => sum + (customer.totalOrders || 0), 0);
   };
@@ -135,24 +179,178 @@ const Customers = () => {
     setPage(0); // Reset to first page when searching
   };
 
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  const filteredCustomers = customers.filter((customer) => {
+    if (!searchTerm.trim()) return true;
+    
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    
+    return (
+      // Search by Company Name
+      (customer.companyName && customer.companyName.toLowerCase().includes(lowerSearchTerm)) ||
+      // Search by Email
+      (customer.email && customer.email.toLowerCase().includes(lowerSearchTerm)) ||
+      // Search by Phone Number
+      (customer.phoneNumber && customer.phoneNumber.toLowerCase().includes(lowerSearchTerm))
+    );
+  });
+
   const handleEdit = (customerId: string) => {
     navigate(`/staff-menu/customers/${customerId}`);
   };
 
   const handleDelete = (customerId: string) => {
     console.log(`Delete customer with ID: ${customerId}`);
-    // Implement delete functionality
   };
 
   const handleViewCustomerDetail = (customerId: string) => {
     navigate(`/staff-menu/customers/${customerId}`);
   };
 
-  // Calculate new customers (created within the last 7 days)
+  const handleOpenCreateDialog = () => {
+    setFormData({
+      companyName: '',
+      email: '',
+      phoneNumber: '',
+      taxNumber: '',
+      address: ''
+    });
+    setErrors({
+      companyName: '',
+      email: '',
+      phoneNumber: '',
+      taxNumber: '',
+      address: ''
+    });
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+
+    if (errors[name as keyof typeof errors]) {
+      setErrors({
+        ...errors,
+        [name]: ''
+      });
+    }
+  };
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { ...errors };
+
+    if (!formData.companyName.trim()) {
+      newErrors.companyName = 'Tên công ty là bắt buộc';
+      isValid = false;
+    } else if (formData.companyName.trim().length < 2) {
+      newErrors.companyName = 'Tên công ty phải có ít nhất 2 ký tự';
+      isValid = false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email là bắt buộc';
+      isValid = false;
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = 'Email không hợp lệ';
+      isValid = false;
+    }
+
+    const phoneRegex = /^[0-9]+$/;
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = 'Số điện thoại là bắt buộc';
+      isValid = false;
+    } else if (!phoneRegex.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = 'Số điện thoại chỉ được chứa số';
+      isValid = false;
+    } else if (formData.phoneNumber.length < 10 || formData.phoneNumber.length > 15) {
+      newErrors.phoneNumber = 'Số điện thoại phải từ 10 đến 15 số';
+      isValid = false;
+    }
+
+    if (!formData.taxNumber.trim()) {
+      newErrors.taxNumber = 'Mã số thuế là bắt buộc';
+      isValid = false;
+    } else if (!phoneRegex.test(formData.taxNumber)) {
+      newErrors.taxNumber = 'Mã số thuế chỉ được chứa số';
+      isValid = false;
+    } else if (formData.taxNumber.length < 10) {
+      newErrors.taxNumber = 'Mã số thuế phải có ít nhất 10 số';
+      isValid = false;
+    }
+
+    if (!formData.address.trim()) {
+      newErrors.address = 'Địa chỉ là bắt buộc';
+      isValid = false;
+    } else if (formData.address.trim().length < 5) {
+      newErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handleCreateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await createCustomer(formData);
+      handleCloseDialog();
+      setSnackbar({
+        open: true,
+        message: 'Tạo khách hàng thành công!',
+        severity: 'success'
+      });
+
+      const result = await getCustomers(page + 1, rowsPerPage, searchTerm);
+      if (result && result.orders && result.orders.items) {
+        setCustomers(result.orders.items);
+        setTotalCustomers(result.orders.totalCount || 0);
+
+        const orderSum = result.orders.items.reduce(
+          (sum, customer) => sum + (customer.totalOrders || 0), 
+          0
+        );
+        setTotalOrders(orderSum);
+      }
+    } catch (error) {
+      console.error("Error creating customer:", error);
+      setSnackbar({
+        open: true,
+        message: 'Lỗi khi tạo khách hàng. Vui lòng thử lại sau.',
+        severity: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({...snackbar, open: false});
+  };
+
   const getNewCustomersCount = () => {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
+
     return customers.filter(customer => {
       const createdDate = new Date(customer.createdDate || '');
       return createdDate >= oneWeekAgo;
@@ -163,7 +361,6 @@ const Customers = () => {
     <Box
       sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}
     >
-      {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid item xs={6} md={3}>
           <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
@@ -273,7 +470,6 @@ const Customers = () => {
         <Grid item xs={6} md={3}></Grid>
       </Grid>
 
-      {/* Customers Table Section */}
       <Paper
         elevation={1}
         sx={{
@@ -297,11 +493,29 @@ const Customers = () => {
           >
             <Typography variant="h6" component="div" fontWeight={500}>
               Danh sách khách hàng
+              {searchTerm.trim() !== '' && (
+                <Typography 
+                  component="span" 
+                  color="text.secondary" 
+                  sx={{ ml: 1, fontSize: '0.875rem' }}
+                >
+                  (Đã lọc: {filteredCustomers.length} kết quả)
+                </Typography>
+              )}
             </Typography>
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Box sx={{ display: "flex", gap: 1, width: { xs: "100%", sm: "auto" } }}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                onClick={handleOpenCreateDialog}
+                size="small"
+              >
+                Thêm khách hàng
+              </Button>
               <TextField
                 size="small"
-                placeholder="Tìm kiếm khách hàng..."
+                placeholder="Tìm kiếm theo Công ty, Email, Số điện thoại..."
                 value={searchTerm}
                 onChange={handleSearch}
                 InputProps={{
@@ -310,15 +524,21 @@ const Customers = () => {
                       <SearchIcon />
                     </InputAdornment>
                   ),
+                  endAdornment: searchTerm && (
+                    <InputAdornment position="end">
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        onClick={clearSearch}
+                        aria-label="clear search"
+                      >
+                        <CancelIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
                 }}
+                sx={{ flexGrow: { xs: 1, sm: 0 }, minWidth: { sm: 300 } }}
               />
-              <Button
-                variant="outlined"
-                startIcon={<FilterListIcon />}
-                size="small"
-              >
-                Lọc
-              </Button>
             </Box>
           </Box>
         </Box>
@@ -356,62 +576,42 @@ const Customers = () => {
                       </Box>
                     </TableCell>
                   </TableRow>
-                ) : customers.length > 0 ? (
-                  customers.map((customer) => (
-                    <TableRow
-                      key={customer.customerId}
-                      hover
-                      onClick={() => handleViewCustomerDetail(customer.customerId)}
-                      sx={{ cursor: "pointer" }}
-                    >
-                      <TableCell>{customer.companyName}</TableCell>
-                      <TableCell>{customer.email}</TableCell>
-                      <TableCell>{customer.phoneNumber}</TableCell>
-                      <TableCell>
-                        {customer.createdDate 
-                          ? new Date(customer.createdDate).toLocaleDateString('vi-VN') 
-                          : 'N/A'}
-                      </TableCell>
-                      <TableCell>{customer.totalOrders}</TableCell>
-                      <TableCell align="center">
-                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewCustomerDetail(customer.customerId);
-                            }}
-                            title="Xem chi tiết"
-                          >
-                            <VisibilityIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="secondary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(customer.customerId);
-                            }}
-                            title="Chỉnh sửa"
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(customer.customerId);
-                            }}
-                            title="Xóa"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                ) : filteredCustomers.length > 0 ? (
+                  filteredCustomers
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((customer) => (
+                      <TableRow
+                        key={customer.customerId}
+                        hover
+                        onClick={() => handleViewCustomerDetail(customer.customerId)}
+                        sx={{ cursor: "pointer" }}
+                      >
+                        <TableCell>{customer.companyName}</TableCell>
+                        <TableCell>{customer.email}</TableCell>
+                        <TableCell>{customer.phoneNumber}</TableCell>
+                        <TableCell>
+                          {customer.createdDate 
+                            ? new Date(customer.createdDate).toLocaleDateString('vi-VN') 
+                            : 'N/A'}
+                        </TableCell>
+                        <TableCell>{customer.totalOrders || 0}</TableCell>
+                        <TableCell align="center">
+                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewCustomerDetail(customer.customerId);
+                              }}
+                              title="Xem chi tiết"
+                            >
+                              <VisibilityIcon />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} align="center">
@@ -427,7 +627,7 @@ const Customers = () => {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={totalCustomers}
+            count={filteredCustomers.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -440,6 +640,116 @@ const Customers = () => {
           />
         </Box>
       </Paper>
+
+      <Dialog 
+        open={openDialog} 
+        onClose={handleCloseDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Thêm khách hàng mới</DialogTitle>
+        <form onSubmit={handleCreateCustomer}>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  name="companyName"
+                  label="Tên công ty"
+                  fullWidth
+                  required
+                  value={formData.companyName}
+                  onChange={handleInputChange}
+                  error={!!errors.companyName}
+                  helperText={errors.companyName}
+                  margin="dense"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="email"
+                  label="Email"
+                  type="email"
+                  fullWidth
+                  required
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  error={!!errors.email}
+                  helperText={errors.email}
+                  margin="dense"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="phoneNumber"
+                  label="Số điện thoại"
+                  fullWidth
+                  required
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                  error={!!errors.phoneNumber}
+                  helperText={errors.phoneNumber}
+                  margin="dense"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="taxNumber"
+                  label="Mã số thuế"
+                  fullWidth
+                  required
+                  value={formData.taxNumber}
+                  onChange={handleInputChange}
+                  error={!!errors.taxNumber}
+                  helperText={errors.taxNumber}
+                  margin="dense"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="address"
+                  label="Địa chỉ"
+                  fullWidth
+                  required
+                  multiline
+                  rows={2}
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  error={!!errors.address}
+                  helperText={errors.address}
+                  margin="dense"
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button 
+              onClick={handleCloseDialog} 
+              variant="outlined"
+            >
+              Hủy
+            </Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={isSubmitting}
+              startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
+            >
+              {isSubmitting ? 'Đang lưu...' : 'Lưu'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
