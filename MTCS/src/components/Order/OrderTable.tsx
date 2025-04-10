@@ -426,7 +426,7 @@ const OrderManagement: React.FC = () => {
 
   // Delivery type display
   const getDeliveryTypeDisplay = (type: DeliveryType) => {
-    return type === DeliveryType.Import ? "Nhập khẩu" : "Xuất khẩu";
+    return type === DeliveryType.Import ? "Nhập" : "Xuất";
   };
   
   // Helper function to get payment status display
