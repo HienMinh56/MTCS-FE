@@ -238,16 +238,13 @@ export const refreshTokens = async (): Promise<TokenData> => {
 
   try {
     // Send only the refresh token string in the request body as expected by the API
-    const refreshResponse = await axios.post<ApiResponse<TokenData>>(
-      `${
-        import.meta.env.VITE_API_BASE_URL || "https://localhost:7046"
-      }${AUTH_BASE_PATH}/refresh-token`,
+    const refreshResponse = await axiosInstance.post<ApiResponse<TokenData>>(
+      `${AUTH_BASE_PATH}/refresh-token`,
       JSON.stringify(refreshToken),
       {
         headers: {
           "Content-Type": "application/json",
         },
-        withCredentials: true,
       }
     );
 

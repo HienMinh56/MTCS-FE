@@ -235,7 +235,7 @@ const DriverTable: React.FC<DriverTableProps> = ({
                 <TableCell>Họ tên</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Số điện thoại</TableCell>
-                <TableCell>Tổng số KM</TableCell>
+                <TableCell align="center">Tổng giờ tuần này</TableCell>
                 <TableCell>Trạng thái</TableCell>
               </TableRow>
             </TableHead>
@@ -261,8 +261,12 @@ const DriverTable: React.FC<DriverTableProps> = ({
                     <TableCell>{driver.fullName || "N/A"}</TableCell>
                     <TableCell>{driver.email || "N/A"}</TableCell>
                     <TableCell>{driver.phoneNumber || "N/A"}</TableCell>
-                    <TableCell>
-                      {driver.totalKm?.toLocaleString() || "N/A"} KM
+                    <TableCell align="center">
+                      {driver.currentWeekHours !== null &&
+                      driver.currentWeekHours !== undefined
+                        ? driver.currentWeekHours.toLocaleString()
+                        : "0"}{" "}
+                      giờ
                     </TableCell>
                     <TableCell>{renderStatusChip(driver.status)}</TableCell>
                   </TableRow>

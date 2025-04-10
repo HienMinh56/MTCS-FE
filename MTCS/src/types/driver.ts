@@ -21,6 +21,8 @@ export interface Driver {
   modifiedDate?: string | null;
   totalWorkingTime?: number;
   currentWeekWorkingTime?: number;
+  currentWeekHours?: number;
+  dailyWorkingTime?: number;
   totalOrder?: number;
   createdBy?: string | null;
   modifiedBy?: string | null;

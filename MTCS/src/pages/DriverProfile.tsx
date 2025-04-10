@@ -641,6 +641,44 @@ const DriverProfile: React.FC = () => {
                       color="primary.main"
                       gutterBottom
                     >
+                      <WorkIcon
+                        fontSize="small"
+                        sx={{ verticalAlign: "middle", mr: 0.5 }}
+                      />
+                      Giờ làm việc hôm nay
+                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <Typography
+                        variant="h5"
+                        fontWeight={600}
+                        color={
+                          (driver.dailyWorkingTime || 0) > 8
+                            ? "warning.dark"
+                            : "text.primary"
+                        }
+                      >
+                        {driver.dailyWorkingTime || 0}
+                      </Typography>
+                      <Typography variant="body2" sx={{ ml: 1 }}>
+                        giờ
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      border: "1px solid",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={600}
+                      color="primary.main"
+                      gutterBottom
+                    >
                       <LocalShippingIcon
                         fontSize="small"
                         sx={{ verticalAlign: "middle", mr: 0.5 }}
