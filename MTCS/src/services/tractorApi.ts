@@ -97,7 +97,12 @@ export const getTractors = async (
     const response = await axiosInstance.get<TractorResponse>(
       `/api/Tractor?${params.toString()}`
     );
-
+    
+tractorCache.set(cacheKey, {
+      data: response.data,
+      timestamp: now,
+    });
+    
     // Return the full response for maximum compatibility
     return response.data;
   } catch (error) {
