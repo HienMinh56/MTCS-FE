@@ -143,11 +143,12 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
         registrationExpirationDate:
           trailerDetails.registrationExpirationDate?.split("T")[0] ||
           new Date().toISOString().split("T")[0],
-        // Convert containerSize if needed to match the available options
+        // Fix the containerSize mapping - properly map from backend enum (1=20ft, 2=40ft) to UI values
         containerSize:
-          trailerDetails.containerSize === 20 ||
-          trailerDetails.containerSize === 40
-            ? trailerDetails.containerSize
+          trailerDetails.containerSize === 1
+            ? 20
+            : trailerDetails.containerSize === 2
+            ? 40
             : 20,
       });
 
