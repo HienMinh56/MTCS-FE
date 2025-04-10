@@ -55,9 +55,12 @@ export const getTrailers = async (
     const response = await axiosInstance.get<TrailerResponse>(
       `/api/Trailer?${params.toString()}`
     );
+
+    // Return the full response for maximum compatibility
     return response.data;
   } catch (error) {
-    throw error;
+    console.error("Error fetching trailers:", error);
+    return { success: false, data: { trailers: { items: [] } }, message: "Error fetching trailers" };
   }
 };
 

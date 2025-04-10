@@ -72,4 +72,25 @@ export const getTripDetail = async (tripId: string) => {
     console.error("Error fetching trip:", error);
     throw error;
   }
-}
+};
+
+export const manualCreateTrip = async (tripData: {
+  orderId: string;
+  driverId: string;
+  tractorId: string;
+  TrailerId: string;
+}) => {
+  try {
+    const response = await axiosInstance.post("/api/trips", tripData, {
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    });
+
+    return response.data;
+  }
+  catch (error) {
+    console.error("Create trip fail with error", error);
+    throw error;
+  }
+};

@@ -48,23 +48,29 @@ import {
 } from "../types/order";
 import { getOrderDetails, updateOrder } from "../services/orderApi";
 import { getContracts, createContract } from "../services/contractApi";
-import { getTrip } from "../services/tripApi"; // Import getTrip
-import { trip } from "../types/trip"; // Import trip type
+import { getTrip, manualCreateTrip } from "../services/tripApi";
+import { trip } from "../types/trip";
 import { ContractFile } from "../types/contract";
 import { format } from "date-fns";
 import AddContractFileModal from "../components/contract/AddContractFileModal";
 import OrderForm from "../forms/order/OrderForm";
 import { OrderFormValues } from "../forms/order/orderSchema";
 import { formatTime } from "../utils/dateUtils";
+import { getDriverList } from "../services/DriverApi";
+import { getTractors } from "../services/tractorApi";
+import { getTrailers } from "../services/trailerApi";
+import { Driver } from "../types/driver";
+import { Tractor } from "../types/tractor";
+import { Trailer } from "../types/trailer";
 
 const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [contractFiles, setContractFiles] = useState<ContractFile[] | null>(null);
-  const [tripData, setTripData] = useState<trip[] | null>(null); // Update to array type
-  const [tripLoading, setTripLoading] = useState<boolean>(false); // Add loading state for trip
-  const [tripError, setTripError] = useState<string | null>(null); // Add error state for trip
+  const [tripData, setTripData] = useState<trip[] | null>(null);
+  const [tripLoading, setTripLoading] = useState<boolean>(false);
+  const [tripError, setTripError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [openAddContractModal, setOpenAddContractModal] = useState(false);
@@ -93,6 +99,25 @@ const OrderDetailPage: React.FC = () => {
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
   const [fileNotes, setFileNotes] = useState<string[]>([]);
 
+  const [openCreateTripDialog, setOpenCreateTripDialog] = useState(false);
+  const [createTripData, setCreateTripData] = useState({
+    orderId: "",
+    driverId: "",
+    tractorId: "",
+    TrailerId: "",
+  });
+  const [createTripLoading, setCreateTripLoading] = useState(false);
+  const [createTripError, setCreateTripError] = useState<string | null>(null);
+  const [createTripSuccess, setCreateTripSuccess] = useState<string | null>(null);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [tractors, setTractors] = useState<Tractor[]>([]);
+  const [trailers, setTrailers] = useState<Trailer[]>([]);
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
+  const [loadingTractors, setLoadingTractors] = useState(false);
+  const [loadingTrailers, setLoadingTrailers] = useState(false);
+  const [tractorMaxLoadWeight, setTractorMaxLoadWeight] = useState<number | null>(null);
+  const [trailerMaxLoadWeight, setTrailerMaxLoadWeight] = useState<number | null>(null);
+
   const fetchData = async () => {
     try {
       if (!orderId) {
@@ -105,7 +130,6 @@ const OrderDetailPage: React.FC = () => {
       setLoading(true);
       console.log("Fetching order details for ID:", orderId);
 
-      // Fetch order details
       let orderData;
       try {
         orderData = await getOrderDetails(orderId);
@@ -124,13 +148,12 @@ const OrderDetailPage: React.FC = () => {
         return;
       }
 
-      // Try to fetch trip data for this order
       try {
         setTripLoading(true);
         console.log("Fetching trip data for order:", orderId);
         const tripResponse = await getTrip(orderId);
         console.log("Trip data received:", tripResponse);
-        setTripData(tripResponse); // Now storing the whole array
+        setTripData(tripResponse);
         setTripLoading(false);
       } catch (tripError) {
         console.error("Error fetching trip data:", tripError);
@@ -138,7 +161,6 @@ const OrderDetailPage: React.FC = () => {
         setTripLoading(false);
       }
 
-      // Try to fetch contract files using getContracts
       try {
         if (orderData && orderData.customerId) {
           console.log(
@@ -146,7 +168,6 @@ const OrderDetailPage: React.FC = () => {
             orderData.customerId
           );
 
-          // Get all contracts for this customer
           const contractsData = await getContracts(
             1,
             100,
@@ -156,17 +177,15 @@ const OrderDetailPage: React.FC = () => {
 
           let extractedFiles: ContractFile[] = [];
 
-          // Process all contracts for this customer to find related files
           if (Array.isArray(contractsData) && contractsData.length > 0) {
             console.log(
               `Found ${contractsData.length} contracts for customer ID: ${orderData.customerId}`
             );
 
-            // For each contract with matching customerId AND status=1, extract contract files
             for (const contract of contractsData) {
               if (
                 contract.customerId === orderData.customerId &&
-                contract.status === 1 && // Only show files from active contracts
+                contract.status === 1 &&
                 contract.contractFiles?.length > 0
               ) {
                 extractedFiles = [
@@ -296,7 +315,6 @@ const OrderDetailPage: React.FC = () => {
 
   const handleOpenEditDialog = () => {
     if (orderDetails) {
-      // Populate the edit form with current values
       setEditFormData({
         note: orderDetails.note || "",
         price: orderDetails.price || 0,
@@ -312,7 +330,6 @@ const OrderDetailPage: React.FC = () => {
         notes: [],
       });
       
-      // Reset file selections
       setNewFiles([]);
       setFilesToDelete([]);
       setFileDescriptions([]);
@@ -362,7 +379,6 @@ const OrderDetailPage: React.FC = () => {
       const filesArray = Array.from(e.target.files);
       setNewFiles([...newFiles, ...filesArray]);
       
-      // Add empty descriptions and notes for each new file
       const newDescriptions = Array(filesArray.length).fill('');
       const newNotes = Array(filesArray.length).fill('');
       
@@ -402,25 +418,20 @@ const OrderDetailPage: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      // Log values before update for debugging
       console.log("Current order details:", orderDetails);
       console.log("Current files to delete:", filesToDelete);
       console.log("Current new files:", newFiles);
       
-      // Make sure we have enough descriptions and notes for each new file
       if (newFiles.length > 0) {
-        // Ensure we have descriptions for each file
         while (fileDescriptions.length < newFiles.length) {
           fileDescriptions.push('');
         }
         
-        // Ensure we have notes for each file
         while (fileNotes.length < newFiles.length) {
           fileNotes.push('');
         }
       }
       
-      // Prepare update data - make sure to explicitly include every field
       const updateData = {
         orderId: orderId,
         status: orderDetails.status,
@@ -434,12 +445,9 @@ const OrderDetailPage: React.FC = () => {
         temperature: orderDetails.containerType === ContainerType["Container Lạnh"] 
           ? editFormData.temperature 
           : null,
-        // Only include descriptions/notes if we have new files
         description: newFiles.length > 0 ? fileDescriptions.slice(0, newFiles.length) : [],
         notes: newFiles.length > 0 ? fileNotes.slice(0, newFiles.length) : [],
-        // Use filesToDelete directly for file removal
         filesToRemove: filesToDelete.length > 0 ? filesToDelete : null,
-        // Use newFiles directly for file addition
         filesToAdd: newFiles.length > 0 ? newFiles : null,
       };
       
@@ -450,7 +458,7 @@ const OrderDetailPage: React.FC = () => {
       
       setUpdateSuccess("Đơn hàng đã được cập nhật thành công");
       handleCloseEditDialog();
-      fetchData(); // Refresh data
+      fetchData();
       
       setTimeout(() => {
         setUpdateSuccess(null);
@@ -459,7 +467,6 @@ const OrderDetailPage: React.FC = () => {
     } catch (err) {
       console.error("Error updating order:", err);
       
-      // Add more detailed error handling
       let errorMessage = "Không thể cập nhật đơn hàng. Vui lòng thử lại sau.";
       
       if (err.response) {
@@ -476,10 +483,8 @@ const OrderDetailPage: React.FC = () => {
   };
 
   const handleContractAdded = async () => {
-    // Existing code for contract handling
     if (orderDetails && orderDetails.customerId) {
       try {
-        // Get all contracts for this customer
         const contractsData = await getContracts(
           1,
           100,
@@ -489,11 +494,10 @@ const OrderDetailPage: React.FC = () => {
         let extractedFiles: ContractFile[] = [];
 
         if (Array.isArray(contractsData) && contractsData.length > 0) {
-          // For each contract with matching customerId AND status=1, extract contract files
           for (const contract of contractsData) {
             if (
               contract.customerId === orderDetails.customerId &&
-              contract.status === 1 && // Only show files from active contracts
+              contract.status === 1 &&
               contract.contractFiles?.length > 0
             ) {
               extractedFiles = [...extractedFiles, ...contract.contractFiles];
@@ -532,11 +536,9 @@ const OrderDetailPage: React.FC = () => {
     
     setStatusUpdateLoading(true);
     try {
-      // Prepare update data with just the status change
       const updateData = {
         orderId: orderId,
         status: newStatus as OrderStatus,
-        // Keep all existing values from orderDetails to ensure nothing gets reset
         note: orderDetails.note || "",
         price: orderDetails.price,
         contactPerson: orderDetails.contactPerson || "",
@@ -545,7 +547,6 @@ const OrderDetailPage: React.FC = () => {
         orderPlacer: orderDetails.orderPlacer || "",
         isPay: orderDetails.isPay || IsPay.No,
         temperature: orderDetails.temperature,
-        // Empty arrays for file-related fields as we're not changing files
         description: [],
         notes: [],
         filesToRemove: null,
@@ -558,7 +559,7 @@ const OrderDetailPage: React.FC = () => {
       
       setUpdateSuccess("Trạng thái đơn hàng đã được cập nhật thành công");
       handleStatusUpdateClose();
-      fetchData(); // Refresh data
+      fetchData();
       
       setTimeout(() => {
         setUpdateSuccess(null);
@@ -572,7 +573,6 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
-  // Helper function to format trip status
   const getTripStatusDisplay = (status: string | null) => {
     if (!status) return { label: "Không xác định", color: "default" };
     
@@ -604,13 +604,188 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
-  // Format time helper
   const formatDateTime = (dateTimeString: string | null) => {
     if (!dateTimeString) return "N/A";
     try {
       return format(new Date(dateTimeString), "dd/MM/yyyy HH:mm");
     } catch (error) {
       return "Thời gian không hợp lệ";
+    }
+  };
+
+  const handleOpenCreateTripDialog = async () => {
+    if (orderId) {
+      setCreateTripData({
+        orderId: orderId,
+        driverId: "",
+        tractorId: "",
+        TrailerId: "",
+      });
+      setCreateTripError(null);
+      setOpenCreateTripDialog(true);
+      
+      try {
+        await loadDrivers();
+        
+        try {
+          await loadTractors();
+        } catch (tractorError) {
+          console.error("Tractor loading failed independently:", tractorError);
+        }
+        
+        try {
+          await loadTrailers();
+        } catch (trailerError) {
+          console.error("Trailer loading failed independently:", trailerError);
+        }
+      } catch (error) {
+        console.error("Error loading form data:", error);
+        setCreateTripError("Không thể tải đủ dữ liệu cho biểu mẫu. Một số tùy chọn có thể không khả dụng.");
+      }
+    }
+  };
+  
+  const loadDrivers = async () => {
+    try {
+      setLoadingDrivers(true);
+      const response = await getDriverList({
+        pageNumber: 1,
+        pageSize: 100,
+        status: 1
+      });
+      
+      if (response.success && response.data && response.data.items) {
+        setDrivers(response.data.items);
+      } else {
+        throw new Error("Failed to load drivers");
+      }
+    } catch (error) {
+      console.error("Error loading drivers:", error);
+      throw error;
+    } finally {
+      setLoadingDrivers(false);
+    }
+  };
+  
+  const loadTractors = async () => {
+    try {
+      setLoadingTractors(true);
+      const response = await getTractors(1, 100, undefined, 'Active');
+      
+      if (response) {
+        console.log("Tractor response:", response);
+        // Navigate through the nested structure to get to the items array
+        if (response.data && response.data.tractors && response.data.tractors.items) {
+          setTractors(response.data.tractors.items);
+        } else if (Array.isArray(response)) {
+          setTractors(response);
+        } else if (response.tractors && Array.isArray(response.tractors)) {
+          setTractors(response.tractors);
+        } else if (response.tractors && response.tractors.items) {
+          setTractors(response.tractors.items);
+        } else {
+          console.error("Unexpected tractor response format:", response);
+          throw new Error("Unexpected response format from tractor API");
+        }
+      } else {
+        throw new Error("No response from tractor API");
+      }
+    } catch (error) {
+      console.error("Error loading tractors:", error);
+      setCreateTripError("Không thể tải dữ liệu đầu kéo. Vui lòng thử lại.");
+    } finally {
+      setLoadingTractors(false);
+    }
+  };
+  
+  const loadTrailers = async () => {
+    try {
+      setLoadingTrailers(true);
+      const response = await getTrailers(1, 100, undefined, 'Active');
+      
+      if (response) {
+        console.log("Trailer response:", response);
+        // Navigate through the nested structure to get to the items array
+        if (response.data && response.data.trailers && response.data.trailers.items) {
+          setTrailers(response.data.trailers.items);
+        } else if (Array.isArray(response)) {
+          setTrailers(response);
+        } else if (response.trailers && Array.isArray(response.trailers)) {
+          setTrailers(response.trailers);
+        } else if (response.trailers && response.trailers.items) {
+          setTrailers(response.trailers.items);
+        } else {
+          console.error("Unexpected trailer response format:", response);
+          throw new Error("Unexpected response format from trailer API");
+        }
+      } else {
+        throw new Error("No response from trailer API");
+      }
+    } catch (error) {
+      console.error("Error loading trailers:", error);
+      setCreateTripError("Không thể tải dữ liệu rơ moóc. Vui lòng thử lại.");
+    } finally {
+      setLoadingTrailers(false);
+    }
+  };
+
+  const handleCloseCreateTripDialog = () => {
+    setOpenCreateTripDialog(false);
+  };
+
+  const handleCreateTripChange = (event: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+    const name = event.target.name as string;
+    const value = event.target.value as string;
+    
+    setCreateTripData({
+      ...createTripData,
+      [name]: value,
+    });
+
+    if (name === "tractorId") {
+      const selectedTractor = tractors.find(tractor => tractor.tractorId === value);
+      setTractorMaxLoadWeight(selectedTractor?.maxLoadWeight || null);
+    }
+    
+    if (name === "TrailerId") {
+      const selectedTrailer = trailers.find(trailer => trailer.trailerId === value);
+      setTrailerMaxLoadWeight(selectedTrailer?.maxLoadWeight || null);
+    }
+  };
+
+  const handleCreateTrip = async () => {
+    setCreateTripLoading(true);
+    setCreateTripError(null);
+
+    try {
+      if (!createTripData.orderId || !createTripData.driverId || 
+          !createTripData.tractorId || !createTripData.TrailerId) {
+        throw new Error("Vui lòng điền đầy đủ thông tin");
+      }
+
+      console.log("Creating trip with data:", createTripData);
+      await manualCreateTrip(createTripData);
+      
+      setCreateTripSuccess("Tạo chuyến đi thành công");
+      setTimeout(() => {
+        setCreateTripSuccess(null);
+      }, 5000);
+      
+      handleCloseCreateTripDialog();
+      fetchData();
+    } catch (err: any) {
+      console.error("Error creating trip:", err);
+      
+      let errorMessage = "Không thể tạo chuyến đi. Vui lòng thử lại sau.";
+      if (err.response && err.response.data) {
+        errorMessage = err.response.data;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setCreateTripError(errorMessage);
+    } finally {
+      setCreateTripLoading(false);
     }
   };
 
@@ -667,7 +842,6 @@ const OrderDetailPage: React.FC = () => {
     );
   }
 
-  // Prepare initial form values for the edit dialog
   const initialFormValues: Partial<OrderFormValues> = {
     companyName: orderDetails.customerId || "",
     temperature: orderDetails.temperature || 0,
@@ -687,7 +861,7 @@ const OrderDetailPage: React.FC = () => {
     contactPhone: orderDetails.contactPhone,
     distance: orderDetails.distance,
     containerNumber: orderDetails.containerNumber,
-    description: [], // We'll set these later if needed
+    description: [],
     notes: [],
   };
 
@@ -731,7 +905,6 @@ const OrderDetailPage: React.FC = () => {
       </Box>
 
       <Grid container spacing={3}>
-        {/* Order Info */}
         <Grid item xs={12} md={7}>
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -761,7 +934,6 @@ const OrderDetailPage: React.FC = () => {
                 </Typography>
               </Grid>
 
-              {/* Add the payment status display here */}
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Trạng thái thanh toán
@@ -830,7 +1002,6 @@ const OrderDetailPage: React.FC = () => {
                 </Typography>
               </Grid>
 
-              {/* Only show temperature for Container Lạnh */}
               {orderDetails.containerType === ContainerType["Container Lạnh"] && (
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
@@ -955,7 +1126,6 @@ const OrderDetailPage: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* Contact and Files */}
         <Grid item xs={12} md={5}>
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -1005,7 +1175,6 @@ const OrderDetailPage: React.FC = () => {
             </Box>
             <Divider sx={{ mb: 2 }} />
 
-            {/* Order Files section - Keep this intact */}
             <Box mb={3}>
               <Typography variant="subtitle1" gutterBottom>
                 Tài liệu đơn hàng
@@ -1013,7 +1182,6 @@ const OrderDetailPage: React.FC = () => {
               {orderDetails.orderFiles && orderDetails.orderFiles.length > 0 ? (
                 <Grid container spacing={2}>
                   {orderDetails.orderFiles.map((fileObj, index) => {
-                    // Handle both string URLs and OrderFile objects
                     const fileUrl =
                       typeof fileObj === "string" ? fileObj : fileObj.fileUrl;
                     const fileName =
@@ -1023,13 +1191,11 @@ const OrderDetailPage: React.FC = () => {
                     const fileType =
                       typeof fileObj === "string" ? null : fileObj.fileType;
 
-                    // Check for image types - for string URLs we'll have to guess from the extension
                     const isImage = fileType
                       ? fileType === "Image" ||
                         fileType.toLowerCase().includes("image/")
                       : /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(fileUrl);
 
-                    // Check for document types
                     const isDocument = fileType
                       ? fileType === "PDF Document" ||
                         fileType === "Word Document" ||
@@ -1101,7 +1267,6 @@ const OrderDetailPage: React.FC = () => {
               )}
             </Box>
 
-            {/* Contract Files section without Add button */}
             <Box>
               <Typography variant="subtitle1" gutterBottom>
                 Tài liệu hợp đồng
@@ -1109,7 +1274,6 @@ const OrderDetailPage: React.FC = () => {
               {contractFiles && contractFiles.length > 0 ? (
                 <Grid container spacing={2}>
                   {contractFiles.map((file, index) => {
-                    // Check if the file type is document-like (for download) or image (for display)
                     const isDocument =
                       file.fileType === "PDF Document" ||
                       file.fileType === "Word Document" ||
@@ -1118,7 +1282,6 @@ const OrderDetailPage: React.FC = () => {
                       file.fileType === "Text Document" ||
                       file.fileType === "Archive";
 
-                    // Check if it's an image type
                     const isImage =
                       file.fileType === "Image" ||
                       (file.fileType &&
@@ -1195,7 +1358,6 @@ const OrderDetailPage: React.FC = () => {
             </Box>
           </Paper>
 
-          {/* Trip Information */}
           <Paper elevation={2} sx={{ p: 3 }}>
             <Box
               display="flex"
@@ -1208,6 +1370,12 @@ const OrderDetailPage: React.FC = () => {
               <DirectionsIcon color="primary" />
             </Box>
             <Divider sx={{ mb: 2 }} />
+
+            {createTripSuccess && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {createTripSuccess}
+              </Alert>
+            )}
 
             {tripLoading && (
               <Box display="flex" justifyContent="center" p={2}>
@@ -1222,120 +1390,127 @@ const OrderDetailPage: React.FC = () => {
             )}
 
             {!tripLoading && !tripError && (!tripData || tripData.length === 0) && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                Chưa có thông tin chuyến đi cho đơn hàng này
-              </Alert>
+              <>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Chưa có thông tin chuyến đi cho đơn hàng này
+                </Alert>
+                
+                <Box display="flex" justifyContent="center" mt={2}>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={handleOpenCreateTripDialog}
+                  >
+                    Tạo chuyến đi
+                  </Button>
+                </Box>
+              </>
             )}
 
             {!tripLoading && !tripError && tripData && tripData.length > 0 && (
-              <>
-                {/* Show multiple trips */}
-                {tripData.map((trip, index) => (
-                  <Box 
-                    key={trip.tripId || index}
-                    sx={{
-                      mb: index < tripData.length - 1 ? 3 : 0,
-                      pb: index < tripData.length - 1 ? 3 : 0,
-                      borderBottom: index < tripData.length - 1 ? '1px dashed rgba(0, 0, 0, 0.12)' : 'none'
-                    }}
-                  >
-                    {index > 0 && (
-                      <Typography variant="subtitle1" fontWeight="medium" gutterBottom mt={2}>
-                        Chuyến đi {index + 1}
+              tripData.map((trip, index) => (
+                <Box 
+                  key={trip.tripId || index}
+                  sx={{
+                    mb: index < tripData.length - 1 ? 3 : 0,
+                    pb: index < tripData.length - 1 ? 3 : 0,
+                    borderBottom: index < tripData.length - 1 ? '1px dashed rgba(0, 0, 0, 0.12)' : 'none'
+                  }}
+                >
+                  {index > 0 && (
+                    <Typography variant="subtitle1" fontWeight="medium" gutterBottom mt={2}>
+                      Chuyến đi {index + 1}
+                    </Typography>
+                  )}
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Trạng thái chuyến đi
+                        </Typography>
+                        <Chip
+                          size="small"
+                          label={getTripStatusDisplay(trip.status).label}
+                          color={getTripStatusDisplay(trip.status).color as any}
+                        />
+                      </Box>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Mã chuyến đi
                       </Typography>
+                      <Typography variant="body1" gutterBottom>
+                        {trip.tripId || "N/A"}
+                      </Typography>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Thời gian bắt đầu
+                      </Typography>
+                      <Typography variant="body1" gutterBottom>
+                        {formatDateTime(trip.startTime)}
+                      </Typography>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Thời gian kết thúc
+                      </Typography>
+                      <Typography variant="body1" gutterBottom>
+                        {formatDateTime(trip.endTime)}
+                      </Typography>
+                    </Grid>
+
+                    {trip.driverId && (
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Mã tài xế
+                        </Typography>
+                        <Typography 
+                          variant="body1" 
+                          gutterBottom
+                          sx={{
+                            color: 'primary.main',
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            '&:hover': {
+                              color: 'primary.dark'
+                            },
+                            display: 'inline-flex',
+                            alignItems: 'center'
+                          }}
+                          onClick={() => navigate(`/drivers/${trip.driverId}`)}
+                        >
+                          {trip.driverId}
+                        </Typography>
+                      </Grid>
                     )}
-                    <Grid container spacing={2}>
+
+                    {trip.tripId && (
                       <Grid item xs={12}>
-                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                          <Typography variant="subtitle2" color="text.secondary">
-                            Trạng thái chuyến đi
-                          </Typography>
-                          <Chip
+                        <Box mt={1}>
+                          <Button 
+                            variant="outlined" 
                             size="small"
-                            label={getTripStatusDisplay(trip.status).label}
-                            color={getTripStatusDisplay(trip.status).color as any}
-                          />
+                            startIcon={<DirectionsIcon />}
+                            onClick={() => navigate(`/staff-menu/trips/${trip.tripId}`)}
+                          >
+                            Chi tiết chuyến đi
+                          </Button>
                         </Box>
                       </Grid>
-
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Mã chuyến đi
-                        </Typography>
-                        <Typography variant="body1" gutterBottom>
-                          {trip.tripId || "N/A"}
-                        </Typography>
-                      </Grid>
-
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Thời gian bắt đầu
-                        </Typography>
-                        <Typography variant="body1" gutterBottom>
-                          {formatDateTime(trip.startTime)}
-                        </Typography>
-                      </Grid>
-
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Thời gian kết thúc
-                        </Typography>
-                        <Typography variant="body1" gutterBottom>
-                          {formatDateTime(trip.endTime)}
-                        </Typography>
-                      </Grid>
-
-                      {/* Display driver info if available */}
-                      {trip.driverId && (
-                        <Grid item xs={12} sm={6}>
-                          <Typography variant="subtitle2" color="text.secondary">
-                            Mã tài xế
-                          </Typography>
-                          <Typography 
-                            variant="body1" 
-                            gutterBottom
-                            sx={{
-                              color: 'primary.main',
-                              cursor: 'pointer',
-                              textDecoration: 'underline',
-                              '&:hover': {
-                                color: 'primary.dark'
-                              },
-                              display: 'inline-flex',
-                              alignItems: 'center'
-                            }}
-                            onClick={() => navigate(`/drivers/${trip.driverId}`)}
-                          >
-                            {trip.driverId}
-                          </Typography>
-                        </Grid>
-                      )}
-
-                      {/* Navigation button to trip details page if needed */}
-                      {trip.tripId && (
-                        <Grid item xs={12}>
-                          <Box mt={1}>
-                            <Button 
-                              variant="outlined" 
-                              size="small"
-                              startIcon={<DirectionsIcon />}
-                              onClick={() => navigate(`/staff-menu/trips/${trip.tripId}`)}
-                            >
-                              Chi tiết chuyến đi
-                            </Button>
-                          </Box>
-                        </Grid>
-                      )}
-                    </Grid>
-                  </Box>
-                ))}
-              </>
+                    )}
+                  </Grid>
+                </Box>
+              ))
             )}
           </Paper>
         </Grid>
       </Grid>
 
-      {/* Add Contract File Modal */}
       {orderDetails && (
         <AddContractFileModal
           open={openAddContractModal}
@@ -1346,7 +1521,6 @@ const OrderDetailPage: React.FC = () => {
         />
       )}
 
-      {/* Status Update Dialog */}
       <Dialog
         open={statusUpdateOpen}
         onClose={handleStatusUpdateClose}
@@ -1398,7 +1572,6 @@ const OrderDetailPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Edit Order Dialog */}
       <Dialog
         open={openEditDialog}
         onClose={handleCloseEditDialog}
@@ -1503,14 +1676,12 @@ const OrderDetailPage: React.FC = () => {
                 />
               </Grid>
 
-              {/* File management section */}
               <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>
                   Quản lý tài liệu đơn hàng
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
 
-                {/* Existing files list with checkboxes for deletion */}
                 {orderDetails?.orderFiles && orderDetails.orderFiles.length > 0 ? (
                   <Box mb={3}>
                     <Typography variant="subtitle2" gutterBottom>
@@ -1518,7 +1689,6 @@ const OrderDetailPage: React.FC = () => {
                     </Typography>
                     <List>
                       {orderDetails.orderFiles.map((fileObj, index) => {
-                        // Handle both string URLs and OrderFile objects
                         const fileUrl = typeof fileObj === "string" ? fileObj : fileObj.fileUrl;
                         const fileName = typeof fileObj === "string" 
                           ? `Tài liệu ${index + 1}` 
@@ -1557,7 +1727,6 @@ const OrderDetailPage: React.FC = () => {
                   </Typography>
                 )}
 
-                {/* Upload new files section */}
                 <Box mt={3}>
                   <Typography variant="subtitle2" gutterBottom>
                     Thêm tài liệu mới
@@ -1577,7 +1746,6 @@ const OrderDetailPage: React.FC = () => {
                     />
                   </Button>
 
-                  {/* Show new files that will be added */}
                   {newFiles.length > 0 && (
                     <Box sx={{ mt: 2 }}>
                       <List>
@@ -1649,7 +1817,180 @@ const OrderDetailPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* ...other existing dialogs... */}
+      <Dialog
+        open={openCreateTripDialog}
+        onClose={handleCloseCreateTripDialog}
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle>
+          Tạo chuyến đi mới
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1, width: 500 }}>
+          {createTripError && (
+            <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
+              {createTripError}
+            </Alert>
+          )}
+          
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Mã đơn hàng"
+            name="orderId"
+            value={createTripData.orderId}
+            disabled
+          />
+          
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="driver-select-label">Tài xế</InputLabel>
+            <Select
+              labelId="driver-select-label"
+              id="driver-select"
+              name="driverId"
+              value={createTripData.driverId}
+              onChange={handleCreateTripChange}
+              label="Tài xế"
+              disabled={loadingDrivers}
+            >
+              {loadingDrivers ? (
+                <MenuItem value="">
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <CircularProgress size={20} sx={{ mr: 1 }} /> Đang tải...
+                  </Box>
+                </MenuItem>
+              ) : drivers.length === 0 ? (
+                <MenuItem value="" disabled>
+                  Không tìm thấy tài xế
+                </MenuItem>
+              ) : (
+                drivers.map((driver) => (
+                  <MenuItem key={driver.driverId} value={driver.driverId}>
+                    {driver.fullName} - {driver.phoneNumber || 'Không có SĐT'}
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={8}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel id="tractor-select-label">Đầu kéo</InputLabel>
+                <Select
+                  labelId="tractor-select-label"
+                  id="tractor-select"
+                  name="tractorId"
+                  value={createTripData.tractorId}
+                  onChange={handleCreateTripChange}
+                  label="Đầu kéo"
+                  disabled={loadingTractors}
+                >
+                  {loadingTractors ? (
+                    <MenuItem value="">
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <CircularProgress size={20} sx={{ mr: 1 }} /> Đang tải...
+                      </Box>
+                    </MenuItem>
+                  ) : tractors.length === 0 ? (
+                    <MenuItem value="" disabled>
+                      Không tìm thấy đầu kéo
+                    </MenuItem>
+                  ) : (
+                    tractors.map((tractor) => (
+                      <MenuItem key={tractor.tractorId} value={tractor.tractorId}>
+                        {tractor.licensePlate} - {tractor.brand || 'Không rõ hãng'}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Trọng tải tối đa"
+                variant="outlined"
+                size="small"
+                fullWidth
+                value={tractorMaxLoadWeight !== null ? `${tractorMaxLoadWeight} kg` : ''}
+                InputProps={{ readOnly: true }}
+                sx={{
+                  mt: 2,
+                  '& .MuiInputBase-input': {
+                    color: 'text.secondary',
+                    bgcolor: 'action.hover',
+                  }
+                }}
+              />
+            </Grid>
+          </Grid>
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={8}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel id="trailer-select-label">Rơ moóc</InputLabel>
+                <Select
+                  labelId="trailer-select-label"
+                  id="trailer-select"
+                  name="TrailerId"
+                  value={createTripData.TrailerId}
+                  onChange={handleCreateTripChange}
+                  label="Rơ moóc"
+                  disabled={loadingTrailers}
+                >
+                  {loadingTrailers ? (
+                    <MenuItem value="">
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <CircularProgress size={20} sx={{ mr: 1 }} /> Đang tải...
+                      </Box>
+                    </MenuItem>
+                  ) : trailers.length === 0 ? (
+                    <MenuItem value="" disabled>
+                      Không tìm thấy rơ moóc
+                    </MenuItem>
+                  ) : (
+                    trailers.map((trailer) => (
+                      <MenuItem key={trailer.trailerId} value={trailer.trailerId}>
+                        {trailer.licensePlate} - {trailer.brand || 'Không rõ hãng'}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Trọng tải tối đa"
+                variant="outlined"
+                size="small"
+                fullWidth
+                value={trailerMaxLoadWeight !== null ? `${trailerMaxLoadWeight} kg` : ''}
+                InputProps={{ readOnly: true }}
+                sx={{
+                  mt: 2,
+                  '& .MuiInputBase-input': {
+                    color: 'text.secondary',
+                    bgcolor: 'action.hover',
+                  }
+                }}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseCreateTripDialog}>
+            Hủy
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleCreateTrip}
+            disabled={createTripLoading || !createTripData.driverId || !createTripData.tractorId || !createTripData.TrailerId}
+          >
+            {createTripLoading ? "Đang tạo..." : "Tạo chuyến đi"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

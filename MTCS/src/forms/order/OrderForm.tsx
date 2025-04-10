@@ -357,9 +357,29 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     label="Số container"
                     fullWidth
                     error={!!errors.containerNumber}
-                    helperText={errors.containerNumber?.message}
+                    helperText={errors.containerNumber?.message || 'Ví dụ: SEGU5593802 (3 kí tự đầu công ty, U, 5 số, 1 số kiểm tra)'}
                     disabled={isSubmitting}
                     required
+                    inputProps={{
+                      maxLength: 10,
+                      style: { textTransform: 'uppercase' }
+                    }}
+                    onChange={(e) => {
+                      // Convert input to uppercase and format
+                      const value = e.target.value.toUpperCase();
+                      // Remove non-alphanumeric characters
+                      const formatted = value.replace(/[^A-Z0-9]/g, '');
+                      field.onChange(formatted);
+                    }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <Typography variant="caption" color="textSecondary">
+                            XXX-U-YYYYY-Z
+                          </Typography>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                 )}
               />

@@ -57,8 +57,9 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
       const response = await createOrder({
         ...formattedData,
         OrderPlace: data.orderPlacer || "", // Explicitly map to OrderPlace
-        companyName: data.companyName, // Ensure companyName is passed 
+        companyName: data.companyName, // Ensure companyName is passed
         CompletionTime: data.completeTime, // Pass time directly as HH:MM string
+        containerNumber: data.containerNumber.toUpperCase().trim(), // Ensure proper formatting
         files: files.length > 0 ? files : null,
         description: fileDescriptions,
         notes: fileNotes,

@@ -2,6 +2,13 @@ import { z } from 'zod';
 import { ContainerType, ContainerSize, DeliveryType } from '../../types/order';
 import dayjs from 'dayjs';
 
+// Container number validation pattern:
+// - First 3 characters: company code (letters)
+// - 4th character: U (fixed)
+// - Next 5 characters: container number (digits)
+// - Last 1 character: check digit (digit)
+const containerNumberPattern = /^[A-Z]{3}U\d{5}\d{1}$/;
+
 export const orderSchema = z.object({
   companyName: z.string().min(1, 'Tên công ty là bắt buộc'),
   temperature: z.number()
@@ -42,7 +49,8 @@ export const orderSchema = z.object({
   distance: z.number().nullable(),
   containerNumber: z.string()
     .min(1, 'Số container là bắt buộc')
-    .max(20, 'Số container không được vượt quá 20 ký tự'),
+    .max(20, 'Số container không được vượt quá 20 ký tự')
+    .regex(containerNumberPattern, 'Số container phải có định dạng XXX-U-YYYYY-Z, trong đó XXX là mã công ty, U là ký hiệu cố định, YYYYY là mã số container, Z là số kiểm tra'),
   orderPlacer: z.string()
     .min(1, 'Người đặt hàng là bắt buộc')
     .max(50, 'Người đặt hàng không được vượt quá 50 ký tự'),

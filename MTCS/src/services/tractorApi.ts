@@ -97,16 +97,17 @@ export const getTractors = async (
     const response = await axiosInstance.get<TractorResponse>(
       `/api/Tractor?${params.toString()}`
     );
-
-    // Cache the result
-    tractorCache.set(cacheKey, {
+    
+tractorCache.set(cacheKey, {
       data: response.data,
       timestamp: now,
     });
-
+    
+    // Return the full response for maximum compatibility
     return response.data;
   } catch (error) {
-    throw error;
+    console.error("Error fetching tractors:", error);
+    return { success: false, data: { tractors: { items: [] } }, message: "Error fetching tractors" };
   }
 };
 
