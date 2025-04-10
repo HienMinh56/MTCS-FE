@@ -1,7 +1,7 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
-const baseURL = import.meta.env.VITE_API_DEPLOY_URL;
+const baseURL = import.meta.env.VITE_API_BASEBASE_URL;
 
 const axiosInstance = axios.create({
   baseURL,
