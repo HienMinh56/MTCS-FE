@@ -36,7 +36,7 @@ export const getDriverList = async (
       queryParams.append("keyword", params.keyword);
     }
 
-    const url = `${import.meta.env.VITE_API_BASE_URL}/api/Driver${
+    const url = `/api/Driver${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
     }`;
 
@@ -52,9 +52,7 @@ export const getDriverList = async (
 
 export const getDriverById = async (driverId: string): Promise<Driver> => {
   try {
-    const url = `${
-      import.meta.env.VITE_API_BASE_URL
-    }/api/Driver/profile?driverId=${encodeURIComponent(driverId)}`;
+    const url = `/api/Driver/profile?driverId=${encodeURIComponent(driverId)}`;
     const response = await axiosInstance.get<ApiResponse<Driver>>(url);
 
     if (!response.data.success || !response.data.data) {
@@ -113,7 +111,7 @@ export const createDriverWithFiles = async (
 
   try {
     const response = await axiosInstance.post(
-      `${import.meta.env.VITE_API_BASE_URL}/api/Authen/create-driver`,
+      `/api/Authen/create-driver`,
       formData,
       {
         headers: {
@@ -166,7 +164,7 @@ export const updateDriverWithFiles = async (
     formData.append(`fileIdsToRemove[${index}]`, fileId);
   });
 
-  const url = `${import.meta.env.VITE_API_BASE_URL}/api/Driver/${driverId}`;
+  const url = `/api/Driver/${driverId}`;
 
   try {
     const response = await axiosInstance.put<UpdateDriverResponse>(
@@ -206,9 +204,7 @@ export const updateDriverFileDetails = async (
   updateData: FileDetailsDTO
 ): Promise<ApiResponse> => {
   try {
-    const url = `${
-      import.meta.env.VITE_API_BASE_URL
-    }/api/Driver/file/${fileId}`;
+    const url = `/api/Driver/file/${fileId}`;
 
     const response = await axiosInstance.put<ApiResponse>(url, updateData);
     return response.data;
@@ -233,9 +229,7 @@ export const activateDriver = async (
   driverId: string
 ): Promise<ApiResponse<boolean>> => {
   try {
-    const url = `${
-      import.meta.env.VITE_API_BASE_URL
-    }/api/Driver/activate-driver/${driverId}`;
+    const url = `/api/Driver/activate-driver/${driverId}`;
     const response = await axiosInstance.put<ApiResponse<boolean>>(url);
     return response.data;
   } catch (error: any) {
@@ -259,9 +253,7 @@ export const deactivateDriver = async (
   driverId: string
 ): Promise<ApiResponse<boolean>> => {
   try {
-    const url = `${
-      import.meta.env.VITE_API_BASE_URL
-    }/api/Driver/deactivate-driver/${driverId}`;
+    const url = `/api/Driver/deactivate-driver/${driverId}`;
     const response = await axiosInstance.put<ApiResponse<boolean>>(url);
     return response.data;
   } catch (error: any) {
