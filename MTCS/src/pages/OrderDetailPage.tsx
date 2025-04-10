@@ -670,26 +670,48 @@ const OrderDetailPage: React.FC = () => {
   const loadTractors = async () => {
     try {
       setLoadingTractors(true);
-      const response = await getTractors(1, 100, undefined, 'Active');
       
-      if (response) {
-        console.log("Tractor response:", response);
-        // Navigate through the nested structure to get to the items array
+      // Thực hiện hai lần gọi API riêng biệt
+      const activeResponse = await getTractors(1, 100, undefined, "Active");
+      const onDutyResponse = await getTractors(1, 100, undefined, "OnDuty");
+      
+      console.log("Active tractors response:", activeResponse);
+      console.log("OnDuty tractors response:", onDutyResponse);
+      
+      // Hàm trích xuất danh sách tractors từ response
+      const extractTractors = (response: any): any[] => {
+        if (!response) return [];
+        
         if (response.data && response.data.tractors && response.data.tractors.items) {
-          setTractors(response.data.tractors.items);
+          return response.data.tractors.items;
         } else if (Array.isArray(response)) {
-          setTractors(response);
+          return response;
         } else if (response.tractors && Array.isArray(response.tractors)) {
-          setTractors(response.tractors);
+          return response.tractors;
         } else if (response.tractors && response.tractors.items) {
-          setTractors(response.tractors.items);
-        } else {
-          console.error("Unexpected tractor response format:", response);
-          throw new Error("Unexpected response format from tractor API");
+          return response.tractors.items;
         }
-      } else {
-        throw new Error("No response from tractor API");
-      }
+        
+        return [];
+      };
+      
+      // Lấy danh sách tractors từ cả hai response
+      const activeTractors = extractTractors(activeResponse);
+      const onDutyTractors = extractTractors(onDutyResponse);
+      
+      // Kết hợp danh sách và loại bỏ trùng lặp dựa trên tractorId
+      const combinedTractors = [
+        ...activeTractors,
+        ...onDutyTractors.filter(onDutyTractor => 
+          !activeTractors.some(activeTractor => 
+            activeTractor.tractorId === onDutyTractor.tractorId
+          )
+        )
+      ];
+      
+      console.log("Combined tractors count:", combinedTractors.length);
+      setTractors(combinedTractors);
+      
     } catch (error) {
       console.error("Error loading tractors:", error);
       setCreateTripError("Không thể tải dữ liệu đầu kéo. Vui lòng thử lại.");
@@ -701,26 +723,44 @@ const OrderDetailPage: React.FC = () => {
   const loadTrailers = async () => {
     try {
       setLoadingTrailers(true);
-      const response = await getTrailers(1, 100, undefined, 'Active');
       
-      if (response) {
-        console.log("Trailer response:", response);
-        // Navigate through the nested structure to get to the items array
+      // Thực hiện hai lần gọi API riêng biệt
+      const activeResponse = await getTrailers(1, 100, undefined, "Active");
+      const onDutyResponse = await getTrailers(1, 100, undefined, "OnDuty");
+      
+      // Hàm trích xuất danh sách trailers từ response
+      const extractTrailers = (response: any): any[] => {
+        if (!response) return [];
+        
         if (response.data && response.data.trailers && response.data.trailers.items) {
-          setTrailers(response.data.trailers.items);
+          return response.data.trailers.items;
         } else if (Array.isArray(response)) {
-          setTrailers(response);
+          return response;
         } else if (response.trailers && Array.isArray(response.trailers)) {
-          setTrailers(response.trailers);
+          return response.trailers;
         } else if (response.trailers && response.trailers.items) {
-          setTrailers(response.trailers.items);
-        } else {
-          console.error("Unexpected trailer response format:", response);
-          throw new Error("Unexpected response format from trailer API");
+          return response.trailers.items;
         }
-      } else {
-        throw new Error("No response from trailer API");
-      }
+        
+        return [];
+      };
+      
+      // Lấy danh sách trailers từ cả hai response
+      const activeTrailers = extractTrailers(activeResponse);
+      const onDutyTrailers = extractTrailers(onDutyResponse);
+      
+      // Kết hợp danh sách và loại bỏ trùng lặp
+      const combinedTrailers = [
+        ...activeTrailers,
+        ...onDutyTrailers.filter(onDutyTrailer => 
+          !activeTrailers.some(activeTrailer => 
+            activeTrailer.trailerId === onDutyTrailer.trailerId
+          )
+        )
+      ];
+      
+      setTrailers(combinedTrailers);
+      
     } catch (error) {
       console.error("Error loading trailers:", error);
       setCreateTripError("Không thể tải dữ liệu rơ moóc. Vui lòng thử lại.");
@@ -1395,16 +1435,25 @@ const OrderDetailPage: React.FC = () => {
                   Chưa có thông tin chuyến đi cho đơn hàng này
                 </Alert>
                 
-                <Box display="flex" justifyContent="center" mt={2}>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={handleOpenCreateTripDialog}
-                  >
-                    Tạo chuyến đi
-                  </Button>
-                </Box>
+                {orderDetails.orderFiles && 
+                 orderDetails.orderFiles.length > 0 && 
+                 contractFiles && 
+                 contractFiles.length > 0 ? (
+                  <Box display="flex" justifyContent="center" mt={2}>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      startIcon={<AddIcon />}
+                      onClick={handleOpenCreateTripDialog}
+                    >
+                      Tạo chuyến đi
+                    </Button>
+                  </Box>
+                ) : (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    Cần có tài liệu đơn hàng và tài liệu hợp đồng để tạo chuyến đi
+                  </Alert>
+                )}
               </>
             )}
 
@@ -1913,7 +1962,7 @@ const OrderDetailPage: React.FC = () => {
                 variant="outlined"
                 size="small"
                 fullWidth
-                value={tractorMaxLoadWeight !== null ? `${tractorMaxLoadWeight} kg` : ''}
+                value={tractorMaxLoadWeight !== null ? `${tractorMaxLoadWeight} tấn` : ''}
                 InputProps={{ readOnly: true }}
                 sx={{
                   mt: 2,
@@ -1965,7 +2014,7 @@ const OrderDetailPage: React.FC = () => {
                 variant="outlined"
                 size="small"
                 fullWidth
-                value={trailerMaxLoadWeight !== null ? `${trailerMaxLoadWeight} kg` : ''}
+                value={trailerMaxLoadWeight !== null ? `${trailerMaxLoadWeight} tấn` : ''}
                 InputProps={{ readOnly: true }}
                 sx={{
                   mt: 2,

@@ -361,115 +361,6 @@ const Customers = () => {
     <Box
       sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}
     >
-      <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={6} md={3}>
-          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
-            <CardContent sx={{ py: 1.5, px: 2 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Box>
-                  <Typography
-                    color="text.secondary"
-                    variant="body2"
-                    gutterBottom
-                  >
-                    Tổng số khách hàng
-                  </Typography>
-                  <Typography variant="h5" component="div">
-                    {totalCustomers}
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    backgroundColor: "rgba(25, 118, 210, 0.08)",
-                    p: 1,
-                    borderRadius: "50%",
-                  }}
-                >
-                  <PeopleIcon color="primary" />
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
-            <CardContent sx={{ py: 1.5, px: 2 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Box>
-                  <Typography
-                    color="text.secondary"
-                    variant="body2"
-                    gutterBottom
-                  >
-                    Khách hàng mới
-                  </Typography>
-                  <Typography variant="h5" component="div">
-                    {getNewCustomersCount()}
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    backgroundColor: "rgba(76, 175, 80, 0.08)",
-                    p: 1,
-                    borderRadius: "50%",
-                  }}
-                >
-                  <PersonAddIcon color="success" />
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
-            <CardContent sx={{ py: 1.5, px: 2 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Box>
-                  <Typography
-                    color="text.secondary"
-                    variant="body2"
-                    gutterBottom
-                  >
-                    Tổng đơn hàng
-                  </Typography>
-                  <Typography variant="h5" component="div">
-                    {totalOrders}
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    backgroundColor: "rgba(255, 152, 0, 0.08)",
-                    p: 1,
-                    borderRadius: "50%",
-                  }}
-                >
-                  <LocalShippingIcon color="warning" />
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} md={3}></Grid>
-      </Grid>
-
       <Paper
         elevation={1}
         sx={{
@@ -491,18 +382,15 @@ const Customers = () => {
               gap: 1,
             }}
           >
-            <Typography variant="h6" component="div" fontWeight={500}>
-              Danh sách khách hàng
-              {searchTerm.trim() !== '' && (
-                <Typography 
-                  component="span" 
-                  color="text.secondary" 
-                  sx={{ ml: 1, fontSize: '0.875rem' }}
-                >
-                  (Đã lọc: {filteredCustomers.length} kết quả)
-                </Typography>
-              )}
-            </Typography>
+            <Box>
+              <Typography variant="h6" component="div" fontWeight={500}>
+                Danh sách khách hàng
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Tổng số: {totalCustomers} khách hàng
+                {searchTerm.trim() !== '' && ` (Đã lọc: ${filteredCustomers.length} kết quả)`}
+              </Typography>
+            </Box>
             <Box sx={{ display: "flex", gap: 1, width: { xs: "100%", sm: "auto" } }}>
               <Button
                 variant="contained"
