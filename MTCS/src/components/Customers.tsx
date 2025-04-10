@@ -311,35 +311,86 @@ const Customers = () => {
     }
 
     setIsSubmitting(true);
+    let success = false; // Flag to track if operation was successful
+    
     try {
-      await createCustomer(formData);
-      handleCloseDialog();
+      // Make the API request and store the response
+      const response = await createCustomer(formData);
+      console.log("Customer created successfully:", response);
+      
+      // Check if the response indicates an error
+      if (response && typeof response === 'object' && response.status === 400) {
+        // This is an error response from the server with status 400
+        const errorMessage = response.message || "Lỗi dữ liệu không hợp lệ";
+        throw new Error(errorMessage);
+      }
+      
+      // If we get here, it was successful
+      success = true;
+      
+      // Show success message
       setSnackbar({
         open: true,
         message: 'Tạo khách hàng thành công!',
         severity: 'success'
       });
 
+      // Reload the customer list
+      refreshCustomerList();
+      
+    } catch (error: any) {
+      success = false; // Ensure the success flag is false
+      console.error("Error creating customer:", error);
+      
+      // Get the error message
+      const errorMessage = error.message || "Lỗi khi tạo khách hàng. Vui lòng thử lại sau.";
+      
+      // Highlight fields based on error message
+      if (errorMessage.includes('Số điện thoại')) {
+        setErrors(prev => ({
+          ...prev,
+          phoneNumber: 'Số điện thoại đã được sử dụng bởi khách hàng khác'
+        }));
+      } else if (errorMessage.includes('Mã số thuế')) {
+        setErrors(prev => ({
+          ...prev,
+          taxNumber: 'Mã số thuế đã được sử dụng bởi khách hàng khác'
+        }));
+      }
+      
+      // Show error message
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
+    } finally {
+      // Only close the dialog if the operation was successful
+      if (success) {
+        handleCloseDialog();
+      }
+      setIsSubmitting(false);
+    }
+  };
+
+  // Helper function to reload customer list
+  const refreshCustomerList = async () => {
+    try {
       const result = await getCustomers(page + 1, rowsPerPage, searchTerm);
       if (result && result.orders && result.orders.items) {
         setCustomers(result.orders.items);
         setTotalCustomers(result.orders.totalCount || 0);
-
-        const orderSum = result.orders.items.reduce(
-          (sum, customer) => sum + (customer.totalOrders || 0), 
-          0
-        );
-        setTotalOrders(orderSum);
+        setTotalOrders(result.orders.items.reduce(
+          (sum, customer) => sum + (customer.totalOrders || 0), 0
+        ));
+      } else if (Array.isArray(result)) {
+        const processedCustomers = transformCustomerData(result);
+        setCustomers(processedCustomers);
+        setTotalCustomers(processedCustomers.length);
+        setTotalOrders(countTotalOrders(processedCustomers));
       }
     } catch (error) {
-      console.error("Error creating customer:", error);
-      setSnackbar({
-        open: true,
-        message: 'Lỗi khi tạo khách hàng. Vui lòng thử lại sau.',
-        severity: 'error'
-      });
-    } finally {
-      setIsSubmitting(false);
+      console.error("Error refreshing customer list:", error);
     }
   };
 

@@ -18,6 +18,7 @@ interface OrderCreateProps {
 const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false); // Add state to track successful submission
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -25,6 +26,11 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
   });
 
   const onSubmit = async (data: OrderFormValues & { files?: File[], fileDescriptions?: string[], fileNotes?: string[] }) => {
+    // Prevent submission if already successful or submitting
+    if (isSuccess || isSubmitting) {
+      return;
+    }
+    
     setIsSubmitting(true);
 
     try {
@@ -68,6 +74,9 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
       console.log('===== ORDER CREATE RESPONSE =====');
       console.log('Response:', response);
 
+      // Set success state to true to prevent additional submissions
+      setIsSuccess(true);
+      
       // Handle success
       setSnackbar({
         open: true,
@@ -141,6 +150,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
               onSubmit={onSubmit}
               onCancel={handleCancel}
               isSubmitting={isSubmitting}
+              isDisabled={isSuccess} // Pass the success state to disable the form
             />
           </CardContent>
         </Card>

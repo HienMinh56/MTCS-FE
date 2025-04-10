@@ -188,7 +188,7 @@ const TripDetailPage: React.FC = () => {
 
   // Navigate back
   const handleBack = () => {
-    navigate("/staff-menu/trips"); // Adjust this path if needed
+    navigate('/staff-menu/orders'); // Adjust this path if needed
   };
 
   // Navigate to driver details
