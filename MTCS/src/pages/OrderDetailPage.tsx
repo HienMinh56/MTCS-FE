@@ -265,9 +265,9 @@ const OrderDetailPage: React.FC = () => {
   const getDeliveryTypeName = (type: DeliveryType) => {
     switch (type) {
       case DeliveryType.Import:
-        return "Nhập khẩu";
+        return "Nhập";
       case DeliveryType.Export:
-        return "Xuất khẩu";
+        return "Xuất";
       default:
         return "Không xác định";
     }
