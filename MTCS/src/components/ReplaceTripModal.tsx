@@ -43,6 +43,7 @@ interface TractorOption {
   id: string;
   licensePlate: string;
   brand: string;
+  maxLoadWeight?: number;
 }
 
 // Trailer option interface
@@ -50,6 +51,7 @@ interface TrailerOption {
   id: string;
   licensePlate: string;
   brand: string;
+  maxLoadWeight?: number;
 }
 
 const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModalProps) => {
@@ -71,6 +73,10 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
   const [trailers, setTrailers] = useState<TrailerOption[]>([]);
   
   const [error, setError] = useState("");
+  
+  // Add state variables for maxLoadWeight
+  const [tractorMaxLoadWeight, setTractorMaxLoadWeight] = useState<number | null>(null);
+  const [trailerMaxLoadWeight, setTrailerMaxLoadWeight] = useState<number | null>(null);
 
   // Fetch data when modal opens
   useEffect(() => {
@@ -113,6 +119,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
           id: tractor.tractorId,
           licensePlate: tractor.licensePlate,
           brand: tractor.brand || "",
+          maxLoadWeight: tractor.maxLoadWeight || null,
         }));
         setTractors(tractorOptions);
       }
@@ -134,6 +141,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
           id: trailer.trailerId,
           licensePlate: trailer.licensePlate,
           brand: trailer.brand || "",
+          maxLoadWeight: trailer.maxLoadWeight || null,
         }));
         setTrailers(trailerOptions);
       }
@@ -150,6 +158,26 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
       ...prev,
       [name]: value
     }));
+  };
+
+  // Update handleTractorChange to also get maxLoadWeight
+  const handleTractorChange = (_: any, newValue: TractorOption | null) => {
+    handleChange("tractorId", newValue?.id || "");
+    if (newValue) {
+      setTractorMaxLoadWeight(newValue.maxLoadWeight || null);
+    } else {
+      setTractorMaxLoadWeight(null);
+    }
+  };
+
+  // Update handleTrailerChange to also get maxLoadWeight
+  const handleTrailerChange = (_: any, newValue: TrailerOption | null) => {
+    handleChange("trailerId", newValue?.id || "");
+    if (newValue) {
+      setTrailerMaxLoadWeight(newValue.maxLoadWeight || null);
+    } else {
+      setTrailerMaxLoadWeight(null);
+    }
   };
 
   const handleSubmit = async () => {
@@ -228,12 +256,12 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
             </Grid>
             
             {/* Tractor Dropdown */}
-            <Grid item xs={12}>
+            <Grid item xs={12} md={9}>
               <Autocomplete
                 options={tractors}
                 getOptionLabel={(option) => `${option.licensePlate} (${option.brand})`}
                 loading={loadingTractors}
-                onChange={(_, newValue) => handleChange("tractorId", newValue?.id || "")}
+                onChange={handleTractorChange}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -252,14 +280,30 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
                 )}
               />
             </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                label="Trọng tải tối đa"
+                variant="outlined"
+                size="small"
+                fullWidth
+                value={tractorMaxLoadWeight !== null ? `${tractorMaxLoadWeight} kg` : ''}
+                InputProps={{ readOnly: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    color: 'text.secondary',
+                    bgcolor: 'action.hover',
+                  }
+                }}
+              />
+            </Grid>
             
             {/* Trailer Dropdown (Optional) */}
-            <Grid item xs={12}>
+            <Grid item xs={12} md={9}>
               <Autocomplete
                 options={trailers}
                 getOptionLabel={(option) => `${option.licensePlate} (${option.brand})`}
                 loading={loadingTrailers}
-                onChange={(_, newValue) => handleChange("trailerId", newValue?.id || "")}
+                onChange={handleTrailerChange}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -276,6 +320,22 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
                     }}
                   />
                 )}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                label="Trọng tải tối đa"
+                variant="outlined"
+                size="small"
+                fullWidth
+                value={trailerMaxLoadWeight !== null ? `${trailerMaxLoadWeight} kg` : ''}
+                InputProps={{ readOnly: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    color: 'text.secondary',
+                    bgcolor: 'action.hover',
+                  }
+                }}
               />
             </Grid>
           </Grid>

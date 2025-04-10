@@ -98,15 +98,11 @@ export const getTractors = async (
       `/api/Tractor?${params.toString()}`
     );
 
-    // Cache the result
-    tractorCache.set(cacheKey, {
-      data: response.data,
-      timestamp: now,
-    });
-
+    // Return the full response for maximum compatibility
     return response.data;
   } catch (error) {
-    throw error;
+    console.error("Error fetching tractors:", error);
+    return { success: false, data: { tractors: { items: [] } }, message: "Error fetching tractors" };
   }
 };
 
