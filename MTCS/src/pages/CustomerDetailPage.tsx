@@ -58,7 +58,8 @@ import {
   Add as AddIcon,
   Edit as EditOutlinedIcon,
   AttachFile as AttachFileIcon,
-  Delete as DeleteOutlinedIcon
+  Delete as DeleteOutlinedIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { getCustomerById, updateCustomer, deleteCustomer } from '../services/customerApi';
 import { updateContract } from '../services/contractApi';
@@ -739,7 +740,7 @@ const CustomerDetailPage = () => {
                               color={hasFiles ? "primary" : "default"}
                               sx={{ mr: 1 }}
                             >
-                              <VisibilityIcon fontSize="small" />
+                              <DownloadIcon fontSize="small" />
                             </IconButton>
                             <IconButton 
                               size="small"

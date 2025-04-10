@@ -146,8 +146,8 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                   </Box>
                   
                   <Box>
-                    <Typography variant="caption" color="text.secondary">Mã chuyến</Typography>
-                    <Typography variant="body1">{incident.tripId}</Typography>
+                    <Typography variant="caption" color="text.secondary">Mã vận chuyển</Typography>
+                    <Typography variant="body1">{incident.trackingCode}</Typography>
                   </Box>
                   
                   <Box>
@@ -439,6 +439,13 @@ const IncidentManagement = () => {
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+    setPage(0); // Reset to first page when changing tabs
+  };
+
+  // Add handler for card clicks
+  const handleCardClick = (tabIndex: number) => {
+    setTabValue(tabIndex);
+    setPage(0); // Reset to first page when changing filter
   };
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -492,7 +499,7 @@ const IncidentManagement = () => {
       // Search by Incident ID
       (incident.reportId && incident.reportId.toLowerCase().includes(lowerSearchTerm)) ||
       // Search by Trip ID
-      (incident.tripId && incident.tripId.toLowerCase().includes(lowerSearchTerm)) ||
+      (incident.trackingCode && incident.trackingCode.toLowerCase().includes(lowerSearchTerm)) ||
       // Search by Order ID
       (incident.orderId && incident.orderId.toLowerCase().includes(lowerSearchTerm)) ||
       // Search by Incident Type
@@ -521,7 +528,21 @@ const IncidentManagement = () => {
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid item xs={12} sm={4} md={4}>
-          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
+          <Card 
+            elevation={1} 
+            sx={{ 
+              borderRadius: 2, 
+              height: "100%",
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              borderBottom: tabValue === 0 ? '3px solid #1976d2' : 'none',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: 3,
+              } 
+            }}
+            onClick={() => handleCardClick(0)} // All incidents - index 0
+          >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
                 sx={{
@@ -556,7 +577,21 @@ const IncidentManagement = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={4} md={4}>
-          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
+          <Card 
+            elevation={1} 
+            sx={{ 
+              borderRadius: 2, 
+              height: "100%",
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              borderBottom: tabValue === 1 ? '3px solid #2196f3' : 'none',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: 3,
+              } 
+            }}
+            onClick={() => handleCardClick(1)} // Handling incidents - index 1
+          >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
                 sx={{
@@ -582,19 +617,33 @@ const IncidentManagement = () => {
                 </Box>
                 <Box
                   sx={{
-                    backgroundColor: "rgba(255, 152, 0, 0.08)",
+                    backgroundColor: "rgba(33, 150, 243, 0.08)",
                     p: 1,
                     borderRadius: "50%",
                   }}
                 >
-                  <AccessTimeIcon color="warning" />
+                  <AccessTimeIcon color="info" />
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} sm={4} md={4}>
-          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
+          <Card 
+            elevation={1} 
+            sx={{ 
+              borderRadius: 2, 
+              height: "100%",
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              borderBottom: tabValue === 2 ? '3px solid #4caf50' : 'none',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: 3,
+              } 
+            }}
+            onClick={() => handleCardClick(2)} // Completed incidents - index 2
+          >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
                 sx={{
@@ -746,11 +795,11 @@ const IncidentManagement = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell>Mã sự cố</TableCell>
-                        <TableCell>Mã chuyến</TableCell>
+                        <TableCell>Mã vận chuyển</TableCell>
                         <TableCell>Loại sự cố</TableCell>
                         <TableCell>Loại</TableCell>
-                        <TableCell>Trạng thái</TableCell>
-                        <TableCell align="center">Hành động</TableCell>
+                        <TableCell>Thời gian Báo cáo</TableCell>
+                        <TableCell>Trạng thái</TableCell>                        
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -767,7 +816,7 @@ const IncidentManagement = () => {
                               sx={{ cursor: "pointer" }}
                             >
                               <TableCell>{incident.reportId}</TableCell>
-                              <TableCell>{incident.tripId}</TableCell>
+                              <TableCell>{incident.trackingCode}</TableCell>
                               <TableCell>{incident.incidentType}</TableCell>
                               <TableCell>
                                 {incident.type === 1 
@@ -777,6 +826,11 @@ const IncidentManagement = () => {
                                   : incident.type}
                               </TableCell>
                               <TableCell>
+                                {incident.createdDate ? 
+                                  `${new Date(incident.createdDate).toLocaleDateString('vi-VN')} ${new Date(incident.createdDate).toLocaleTimeString('vi-VN')}` : 
+                                  ''}
+                              </TableCell>
+                              <TableCell align="center">
                                 <Chip
                                   size="small"
                                   label={
@@ -794,17 +848,6 @@ const IncidentManagement = () => {
                                       : "success" // Changed to always show success color for non-handling/pending statuses
                                   }
                                 />
-                              </TableCell>
-                              <TableCell align="center">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenDialog(incident);
-                                  }}
-                                >
-                                  <VisibilityIcon />
-                                </IconButton>
                               </TableCell>
                             </TableRow>
                           ))
