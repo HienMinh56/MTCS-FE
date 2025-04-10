@@ -60,7 +60,11 @@ export const getTrailers = async (
     return response.data;
   } catch (error) {
     console.error("Error fetching trailers:", error);
-    return { success: false, data: { trailers: { items: [] } }, message: "Error fetching trailers" };
+    return {
+      success: false,
+      data: { trailers: { items: [] } },
+      message: "Error fetching trailers",
+    };
   }
 };
 
@@ -184,7 +188,7 @@ export const updateTrailerWithFiles = async (
 
   try {
     const response = await axiosInstance.put(
-      `/api/Trailer/update-with-files/${trailerId}`,
+      `/api/Trailer/${trailerId}`,
       formData,
       {
         headers: {
