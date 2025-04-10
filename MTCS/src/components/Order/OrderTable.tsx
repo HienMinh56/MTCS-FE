@@ -394,11 +394,14 @@ const OrderManagement: React.FC = () => {
       label: "Đang giao hàng",
       color: "info",
     },
+    // Commented out Shipped status as requested
+    /*
     {
       value: OrderStatus.Shipped,
       label: "Đã giao hàng",
       color: "info",
     },
+    */
     {
       value: OrderStatus.Completed,
       label: "Hoàn thành",
@@ -415,8 +418,11 @@ const OrderManagement: React.FC = () => {
         return { label: "Đã lên lịch", color: "info" };
       case OrderStatus.Delivering:
         return { label: "Đang giao hàng", color: "info" };
+      // Commented out Shipped status display as requested
+      /*
       case OrderStatus.Shipped:
         return { label: "Đã giao hàng", color: "info" };
+      */
       case OrderStatus.Completed:
         return { label: "Hoàn thành", color: "success" };
       default:
@@ -528,7 +534,7 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid item xs={12} sm={6} md={2.5}>
           <Card 
             elevation={1} 
             sx={{ 
@@ -577,7 +583,7 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid item xs={12} sm={6} md={2.5}>
           <Card 
             elevation={1} 
             sx={{ 
@@ -626,7 +632,7 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid item xs={12} sm={6} md={2.5}>
           <Card 
             elevation={1} 
             sx={{ 
@@ -675,7 +681,7 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        {/* <Grid item xs={12} sm={6} md={2}>
           <Card 
             elevation={1} 
             sx={{ 
@@ -723,8 +729,8 @@ const OrderManagement: React.FC = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        </Grid> */}
+        <Grid item xs={12} sm={6} md={2.5}>
           <Card 
             elevation={1} 
             sx={{ 
