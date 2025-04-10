@@ -56,10 +56,8 @@ export const getTrailers = async (
       `/api/Trailer?${params.toString()}`
     );
 
-    // Return the full response for maximum compatibility
     return response.data;
   } catch (error) {
-    console.error("Error fetching trailers:", error);
     return {
       success: false,
       data: { trailers: { items: [] } },
@@ -100,8 +98,20 @@ export const createTrailerWithFiles = async (
 ) => {
   const formData = new FormData();
 
+  // Map containerSize from UI values (20/40) to backend enum values (1/2)
+  const containerSizeMap = {
+    20: 1, // Feet20
+    40: 2, // Feet40
+  };
+
   Object.entries(trailerData).forEach(([key, value]) => {
-    formData.append(key, value.toString());
+    if (key === "containerSize") {
+      const mappedValue =
+        containerSizeMap[value as keyof typeof containerSizeMap] || 1;
+      formData.append(key, mappedValue.toString());
+    } else {
+      formData.append(key, value.toString());
+    }
   });
 
   fileUploads.forEach((upload, index) => {
@@ -167,22 +177,33 @@ export const updateTrailerWithFiles = async (
 ) => {
   const formData = new FormData();
 
+  const containerSizeMap = {
+    20: 1,
+    40: 2,
+  };
+
   // Add trailer data
   Object.entries(trailerData).forEach(([key, value]) => {
-    formData.append(key, value.toString());
+    if (key === "containerSize") {
+      const mappedValue =
+        containerSizeMap[value as keyof typeof containerSizeMap] || 1;
+      formData.append(key, mappedValue.toString());
+    } else {
+      formData.append(key, value.toString());
+    }
   });
 
   // Add files to remove
-  filesToRemove.forEach((fileId, index) => {
-    formData.append(`filesToRemove[${index}]`, fileId);
+  filesToRemove.forEach((fileId) => {
+    formData.append("fileIdsToRemove", fileId);
   });
 
   // Add new file uploads
   fileUploads.forEach((upload, index) => {
-    formData.append(`fileUploads[${index}].file`, upload.file);
-    formData.append(`fileUploads[${index}].description`, upload.description);
+    formData.append(`newFiles[${index}].file`, upload.file);
+    formData.append(`newFiles[${index}].description`, upload.description);
     if (upload.note) {
-      formData.append(`fileUploads[${index}].note`, upload.note);
+      formData.append(`newFiles[${index}].note`, upload.note);
     }
   });
 
