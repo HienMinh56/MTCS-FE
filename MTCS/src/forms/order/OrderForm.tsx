@@ -452,8 +452,8 @@ const OrderForm: React.FC<OrderFormProps> = ({
                       label="Loại vận chuyển"
                       disabled={isSubmitting}
                     >
-                      <MenuItem value={DeliveryType.Import}>Nhập khẩu</MenuItem>
-                      <MenuItem value={DeliveryType.Export}>Xuất khẩu</MenuItem>
+                      <MenuItem value={DeliveryType.Import}>Nhập</MenuItem>
+                      <MenuItem value={DeliveryType.Export}>Xuất</MenuItem>
                     </Select>
                     {errors.deliveryType && (
                       <FormHelperText>{errors.deliveryType.message}</FormHelperText>
