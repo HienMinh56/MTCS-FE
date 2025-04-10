@@ -228,3 +228,55 @@ export const updateDriverFileDetails = async (
     };
   }
 };
+
+export const activateDriver = async (
+  driverId: string
+): Promise<ApiResponse<boolean>> => {
+  try {
+    const url = `${
+      import.meta.env.VITE_API_BASE_URL
+    }/api/Driver/activate-driver/${driverId}`;
+    const response = await axiosInstance.put<ApiResponse<boolean>>(url);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Failed to activate driver ${driverId}:`, error);
+
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+
+    return {
+      success: false,
+      data: false,
+      message: error.message || "Failed to activate driver",
+      messageVN: "Không thể kích hoạt tài xế",
+      errors: null,
+    };
+  }
+};
+
+export const deactivateDriver = async (
+  driverId: string
+): Promise<ApiResponse<boolean>> => {
+  try {
+    const url = `${
+      import.meta.env.VITE_API_BASE_URL
+    }/api/Driver/deactivate-driver/${driverId}`;
+    const response = await axiosInstance.put<ApiResponse<boolean>>(url);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Failed to deactivate driver ${driverId}:`, error);
+
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+
+    return {
+      success: false,
+      data: false,
+      message: error.message || "Failed to deactivate driver",
+      messageVN: "Không thể vô hiệu hóa tài xế",
+      errors: null,
+    };
+  }
+};

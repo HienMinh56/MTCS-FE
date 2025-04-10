@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { AppBar, Toolbar, Box, Button, useTheme } from "@mui/material";
+import { AppBar, Toolbar, Box, Button, useTheme, Tooltip } from "@mui/material";
 import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
+import StraightenIcon from "@mui/icons-material/Straighten";
 import Login from "./Authentication/Login";
 import logo1 from "../assets/logo1.png";
 import { useAuth } from "../contexts/AuthContext";
 import Cookies from "js-cookie";
+import { useNavigate } from "react-router-dom";
 
 const Header: React.FC = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [loginOpen, setLoginOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
   const [showLoginButton, setShowLoginButton] = useState(true);
@@ -48,6 +51,10 @@ const Header: React.FC = () => {
     window.location.href = "/";
   };
 
+  const handleNavigateToCalculator = () => {
+    navigate("/distance-calculator");
+  };
+
   return (
     <>
       <AppBar
@@ -65,7 +72,25 @@ const Header: React.FC = () => {
             px: { xs: 2, sm: 4, md: 6 },
           }}
         >
-          <Box />
+          <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
+            <Tooltip title="Tính khoảng cách và chi phí vận chuyển">
+              <Button
+                variant="outlined"
+                startIcon={<StraightenIcon />}
+                onClick={handleNavigateToCalculator}
+                size="small"
+                color="primary"
+                sx={{
+                  textTransform: "none",
+                  borderRadius: 2,
+                  fontWeight: 500,
+                  display: { xs: "none", sm: "flex" },
+                }}
+              >
+                Tính khoảng cách
+              </Button>
+            </Tooltip>
+          </Box>
 
           <Box
             component="img"

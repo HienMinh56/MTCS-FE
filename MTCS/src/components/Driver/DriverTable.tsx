@@ -75,18 +75,36 @@ const DriverTable: React.FC<DriverTableProps> = ({
         setDrivers(response.data.items || []);
         setTotalCount(response.data.totalCount || 0);
 
-        // Calculate summary statistics for all drivers
-        if (onUpdateSummary && response.data.items) {
-          const active = response.data.items.filter(
-            (d) => d.status === DriverStatus.Active
-          ).length;
-          const onTrip = response.data.items.filter(
-            (d) => d.status === DriverStatus.OnDuty
-          ).length;
+        // Calculate summary statistics for drivers based on API results
+        if (onUpdateSummary && response.data.totalCount !== undefined) {
+          // Get counts directly from the response if available
+          let activeCount = 0;
+          let onTripCount = 0;
+
+          // Count from current page items only if no filters are applied
+          if (!statusFilter) {
+            activeCount =
+              response.data.items?.filter(
+                (d) => d.status === DriverStatus.Active
+              ).length || 0;
+
+            onTripCount =
+              response.data.items?.filter(
+                (d) => d.status === DriverStatus.OnDuty
+              ).length || 0;
+          } else {
+            // If filtered, we know all items match the filter
+            if (statusFilter === DriverStatus.Active) {
+              activeCount = response.data.totalCount;
+            } else if (statusFilter === DriverStatus.OnDuty) {
+              onTripCount = response.data.totalCount;
+            }
+          }
+
           onUpdateSummary({
             total: response.data.totalCount,
-            active,
-            onTrip,
+            active: activeCount,
+            onTrip: onTripCount,
           });
         }
       } else {
@@ -145,6 +163,20 @@ const DriverTable: React.FC<DriverTableProps> = ({
     }
   }, [searchTerm, statusFilter, loadDrivers]);
 
+  // Ensure we're immediately updating the table when we come back from driver profile
+  useEffect(() => {
+    const handleFocus = () => {
+      shouldFetchDataRef.current = true;
+      loadDrivers();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [loadDrivers]);
+
   // Pagination controls
   const handleNextPage = () => {
     const lastPage = Math.ceil(totalCount / pageSize);
@@ -177,13 +209,13 @@ const DriverTable: React.FC<DriverTableProps> = ({
       case "inactive":
         return <Chip label="Không hoạt động" color="error" size="small" />;
       case "on_duty":
-        return <Chip label="Đang vận chuyển" color="primary" size="small" />; // Changed from warning to primary (blue)
+        return <Chip label="Đang vận chuyển" color="primary" size="small" />;
       default:
         return <Chip label="Không xác định" size="small" />;
     }
   };
 
-  const from = (page - 1) * pageSize + 1;
+  const from = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, totalCount);
   const hasNextPage = page < Math.ceil(totalCount / pageSize);
   const hasPrevPage = page > 1;

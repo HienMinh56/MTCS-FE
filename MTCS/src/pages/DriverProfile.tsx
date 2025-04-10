@@ -27,6 +27,8 @@ import {
   useTheme,
   useMediaQuery,
   CardMedia,
+  DialogContentText,
+  Alert,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import GetAppIcon from "@mui/icons-material/GetApp";
@@ -46,7 +48,13 @@ import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import CloseIcon from "@mui/icons-material/Close";
-import { getDriverById } from "../services/DriverApi";
+import BlockIcon from "@mui/icons-material/Block";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import {
+  getDriverById,
+  activateDriver,
+  deactivateDriver,
+} from "../services/DriverApi";
 import {
   Driver,
   getDriverStatusColor,
@@ -73,6 +81,14 @@ const DriverProfile: React.FC = () => {
     src: "",
     title: "",
   });
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [statusAction, setStatusAction] = useState<
+    "activate" | "deactivate" | null
+  >(null);
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+  const [statusUpdateError, setStatusUpdateError] = useState<string | null>(
+    null
+  );
 
   const fetchDriverProfile = async () => {
     if (!driverId) {
@@ -110,6 +126,53 @@ const DriverProfile: React.FC = () => {
 
   const handleUpdateSuccess = () => {
     fetchDriverProfile();
+  };
+
+  const handleStatusChange = (action: "activate" | "deactivate") => {
+    setStatusAction(action);
+    setStatusUpdateError(null);
+    setStatusDialogOpen(true);
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!driverId || !statusAction || !driver) return;
+
+    setStatusUpdateLoading(true);
+    setStatusUpdateError(null);
+
+    try {
+      let response;
+      if (statusAction === "activate") {
+        response = await activateDriver(driverId);
+      } else {
+        response = await deactivateDriver(driverId);
+      }
+
+      if (response.success) {
+        setStatusDialogOpen(false);
+        // Since the backend returns boolean instead of driver data, we need to fetch updated driver
+        fetchDriverProfile();
+      } else {
+        setStatusUpdateError(response.messageVN || response.message);
+      }
+    } catch (error) {
+      console.error(`Failed to ${statusAction} driver:`, error);
+      setStatusUpdateError(
+        `Không thể ${
+          statusAction === "activate" ? "kích hoạt" : "vô hiệu hóa"
+        } tài xế. Vui lòng thử lại sau.`
+      );
+    } finally {
+      setStatusUpdateLoading(false);
+    }
+  };
+
+  const handleCloseStatusDialog = () => {
+    if (!statusUpdateLoading) {
+      setStatusDialogOpen(false);
+      setStatusAction(null);
+      setStatusUpdateError(null);
+    }
   };
 
   const formatDate = (dateString?: string | null) => {
@@ -598,7 +661,33 @@ const DriverProfile: React.FC = () => {
             </Grid>
           </Grid>
 
-          <Box mt={3} display="flex" justifyContent="flex-end">
+          <Box mt={3} display="flex" justifyContent="space-between">
+            <Box>
+              {driver.status === DriverStatus.Active ||
+              driver.status === DriverStatus.OnDuty ? (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<BlockIcon />}
+                  onClick={() => handleStatusChange("deactivate")}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{ px: 3, py: 1 }}
+                >
+                  Vô hiệu hóa
+                </Button>
+              ) : (
+                <Button
+                  variant="outlined"
+                  color="success"
+                  startIcon={<CheckCircleIcon />}
+                  onClick={() => handleStatusChange("activate")}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{ px: 3, py: 1 }}
+                >
+                  Kích hoạt
+                </Button>
+              )}
+            </Box>
             <Button
               variant="contained"
               color="primary"
@@ -691,6 +780,54 @@ const DriverProfile: React.FC = () => {
             variant="contained"
           >
             Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Status Change Confirmation Dialog */}
+      <Dialog
+        open={statusDialogOpen}
+        onClose={handleCloseStatusDialog}
+        aria-labelledby="status-dialog-title"
+      >
+        <DialogTitle id="status-dialog-title">
+          {statusAction === "activate"
+            ? "Kích hoạt tài xế?"
+            : "Vô hiệu hóa tài xế?"}
+        </DialogTitle>
+        <DialogContent>
+          {statusUpdateError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {statusUpdateError}
+            </Alert>
+          )}
+          <DialogContentText>
+            {statusAction === "activate"
+              ? "Tài xế này sẽ được kích hoạt và có thể nhận chuyến. Bạn chắc chắn muốn tiếp tục?"
+              : "Tài xế này sẽ bị vô hiệu hóa và không thể nhận chuyến. Bạn chắc chắn muốn tiếp tục?"}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleCloseStatusDialog}
+            disabled={statusUpdateLoading}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleConfirmStatusChange}
+            color={statusAction === "activate" ? "success" : "error"}
+            variant="contained"
+            disabled={statusUpdateLoading}
+            startIcon={
+              statusUpdateLoading ? <CircularProgress size={20} /> : null
+            }
+          >
+            {statusUpdateLoading
+              ? "Đang xử lý..."
+              : statusAction === "activate"
+              ? "Kích hoạt"
+              : "Vô hiệu hóa"}
           </Button>
         </DialogActions>
       </Dialog>

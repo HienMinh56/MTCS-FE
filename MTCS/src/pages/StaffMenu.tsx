@@ -36,7 +36,6 @@ import Customers from "../components/Customers";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
-import DistanceCalculatorDialog from "../components/DistanceCalculatorDialog";
 import logo1 from "../assets/logo1.png";
 
 const drawerWidth = 240;
@@ -47,7 +46,6 @@ const StaffMenu: React.FC = () => {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeTab, setActiveTab] = useState<string>("orders");
-  const [calculatorOpen, setCalculatorOpen] = useState(false);
 
   const userId = localStorage.getItem("userId") || "staff-user";
 
@@ -76,12 +74,8 @@ const StaffMenu: React.FC = () => {
     navigate("/profile");
   };
 
-  const handleOpenCalculator = () => {
-    setCalculatorOpen(true);
-  };
-
-  const handleCloseCalculator = () => {
-    setCalculatorOpen(false);
+  const handleNavigateToCalculator = () => {
+    navigate("/distance-calculator");
   };
 
   const menuItems = [
@@ -175,7 +169,7 @@ const StaffMenu: React.FC = () => {
             <Tooltip title="Công cụ tính khoảng cách">
               <IconButton
                 color="inherit"
-                onClick={handleOpenCalculator}
+                onClick={handleNavigateToCalculator}
                 sx={{
                   backgroundColor: "rgba(255,255,255,0.1)",
                   "&:hover": {
@@ -386,11 +380,6 @@ const StaffMenu: React.FC = () => {
           <Route path="/trailers/:trailerId" element={<Trailers />} />
         </Routes>
       </Box>
-
-      <DistanceCalculatorDialog
-        open={calculatorOpen}
-        onClose={handleCloseCalculator}
-      />
     </Box>
   );
 };

@@ -1,25 +1,29 @@
 import React, { useState, useEffect } from "react";
 import {
+  Box,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Box,
+  IconButton,
   Typography,
   Divider,
+  ToggleButtonGroup,
+  ToggleButton,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import { DriverStatus } from "../../types/driver";
+
+interface FilterOptions {
+  status?: DriverStatus | null;
+}
 
 interface DriverFilterProps {
   open: boolean;
   onClose: () => void;
-  onApplyFilter: (filters: { status?: DriverStatus }) => void;
-  currentFilters: { status?: DriverStatus };
+  onApplyFilter: (filters: FilterOptions) => void;
+  currentFilters: FilterOptions;
 }
 
 const DriverFilter: React.FC<DriverFilterProps> = ({
@@ -28,80 +32,115 @@ const DriverFilter: React.FC<DriverFilterProps> = ({
   onApplyFilter,
   currentFilters,
 }) => {
-  const [status, setStatus] = useState<DriverStatus | undefined>(
-    currentFilters.status !== undefined ? currentFilters.status : undefined
+  const [status, setStatus] = useState<DriverStatus | null | undefined>(
+    currentFilters.status
   );
 
   useEffect(() => {
     if (open) {
-      setStatus(
-        currentFilters.status !== undefined ? currentFilters.status : undefined
-      );
+      setStatus(currentFilters.status);
     }
   }, [open, currentFilters]);
 
-  const handleApply = () => {
+  const handleApplyFilter = () => {
     onApplyFilter({
       status: status,
     });
     onClose();
   };
 
-  const handleClearFilters = () => {
+  const handleClearFilter = () => {
     setStatus(undefined);
     onApplyFilter({});
     onClose();
   };
 
-  const handleCancel = () => {
-    onClose();
+  const handleStatusChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newStatus: DriverStatus | null
+  ) => {
+    setStatus(newStatus);
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{ sx: { borderRadius: 2 } }}
-    >
-      <DialogTitle>
-        <Typography variant="h6" fontWeight={500}>
-          Lọc tài xế
-        </Typography>
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle sx={{ m: 0, p: 2 }}>
+        Bộ lọc tài xế
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            right: 8,
+            top: 8,
+            color: "text.secondary",
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
       <Divider />
-      <DialogContent sx={{ pb: 1 }}>
+      <DialogContent sx={{ p: 2 }}>
         <Box sx={{ mb: 2 }}>
-          <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-            <InputLabel id="status-label">Trạng thái</InputLabel>
-            <Select
-              labelId="status-label"
-              value={status !== undefined ? status : ""}
-              onChange={(e) => setStatus(e.target.value as DriverStatus)}
-              label="Trạng thái"
-              displayEmpty
+          <Typography variant="subtitle2" gutterBottom>
+            Trạng thái
+          </Typography>
+          <ToggleButtonGroup
+            value={status}
+            exclusive
+            onChange={handleStatusChange}
+            aria-label="driver status"
+            fullWidth
+            size="small"
+            sx={{ mt: 1 }}
+          >
+            <ToggleButton
+              value={DriverStatus.Active}
+              sx={{
+                "&.Mui-selected": {
+                  backgroundColor: "success.light",
+                  color: "success.contrastText",
+                  "&:hover": {
+                    backgroundColor: "success.main",
+                  },
+                },
+              }}
             >
-              <MenuItem value="">
-                <em>Tất cả</em>
-              </MenuItem>
-              <MenuItem value={DriverStatus.Inactive}>Không hoạt động</MenuItem>
-              <MenuItem value={DriverStatus.Active}>Đang hoạt động</MenuItem>
-              <MenuItem value={DriverStatus.OnDuty}>Đang vận chuyển</MenuItem>
-            </Select>
-          </FormControl>
+              Đang hoạt động
+            </ToggleButton>
+            <ToggleButton
+              value={DriverStatus.OnDuty}
+              sx={{
+                "&.Mui-selected": {
+                  backgroundColor: "primary.light",
+                  color: "primary.contrastText",
+                  "&:hover": {
+                    backgroundColor: "primary.main",
+                  },
+                },
+              }}
+            >
+              Đang vận chuyển
+            </ToggleButton>
+            <ToggleButton
+              value={DriverStatus.Inactive}
+              sx={{
+                "&.Mui-selected": {
+                  backgroundColor: "error.light",
+                  color: "error.contrastText",
+                  "&:hover": {
+                    backgroundColor: "error.main",
+                  },
+                },
+              }}
+            >
+              Không hoạt động
+            </ToggleButton>
+          </ToggleButtonGroup>
         </Box>
       </DialogContent>
-      <Divider />
-      <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={handleClearFilters} color="inherit">
-          Xóa lọc
-        </Button>
-        <Box sx={{ flex: 1 }}></Box>
-        <Button onClick={handleCancel} color="inherit">
-          Hủy
-        </Button>
-        <Button onClick={handleApply} variant="contained">
+      <DialogActions sx={{ px: 2, py: 1.5 }}>
+        <Button onClick={handleClearFilter}>Xóa bộ lọc</Button>
+        <Button onClick={handleApplyFilter} variant="contained">
           Áp dụng
         </Button>
       </DialogActions>

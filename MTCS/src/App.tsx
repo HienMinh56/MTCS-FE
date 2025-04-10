@@ -16,6 +16,7 @@ import TrailerDetailPage from "./pages/TrailerDetailPage";
 import DriverProfile from "./pages/DriverProfile";
 import TripDetailPage from "./pages/TripDetailPage";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
+import DistanceCalculatorPage from "./pages/DistanceCalculatorPage";
 
 const HomeRoute = () => {
   const { isAuthenticated, user } = useAuth();
@@ -65,6 +66,10 @@ function App() {
                   element={<DriverProfile />}
                 />
                 <Route path="/drivers/:driverId" element={<DriverProfile />} />
+                <Route
+                  path="/distance-calculator"
+                  element={<DistanceCalculatorPage />}
+                />
               </Route>
 
               <Route element={<ProtectedRoute />}>
