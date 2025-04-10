@@ -127,7 +127,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
 
   const validateForm = () => {
     if (!summary.trim()) {
-      setError('Vui lòng nhập tiêu đề hợp đồng');
+      setError('Vui lòng nhập Tóm tắt hợp đồng ');
       return false;
     }
 
@@ -320,7 +320,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <TextField
-                label="Tiêu đề hợp đồng"
+                label="Tóm tắt hợp đồng "
                 fullWidth
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
