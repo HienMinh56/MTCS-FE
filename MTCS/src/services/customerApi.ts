@@ -75,14 +75,72 @@ export const createCustomer = async (customerData: {
   taxNumber: string;
   address: string;
 }) => {
+  try {
+    // Make the API request
     const response = await axiosInstance.post("/api/Customer", customerData, {
       headers: {
         "Content-Type": "application/json"
       }
-    })
+    });
 
+    // Check if response itself contains an error status
+    if (response.data && response.data.status === 400) {
+      console.error("Server returned 400 status in response body:", response.data);
+      
+      // Handle the error based on the message in the response
+      const errorMessage = response.data.message || "Lỗi dữ liệu không hợp lệ";
+      
+      if (errorMessage.includes("Phone number already exists")) {
+        throw new Error("Số điện thoại đã được sử dụng bởi khách hàng khác");
+      } else if (errorMessage.includes("Tax number already exists")) {
+        throw new Error("Mã số thuế đã được sử dụng bởi khách hàng khác");
+      } else {
+        throw new Error(errorMessage);
+      }
+    }
+    
+    // If we've gotten this far, the response is successful
     return response.data;
-}
+  } catch (error: any) {
+    console.error("===== createCustomer API ERROR =====");
+    console.error("Error:", error);
+    
+    // Handle axios error response
+    if (error.response) {
+      console.error("Status:", error.response.status);
+      console.error("Response data:", error.response.data);
+      
+      // Handle HTTP 400 error
+      if (error.response.status === 400) {
+        const errorData = error.response.data;
+        
+        // Extract error message from different possible formats
+        let errorMessage = "Lỗi dữ liệu không hợp lệ";
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData?.message) {
+          errorMessage = errorData.message;
+        }
+        
+        // Translate common error messages
+        if (errorMessage.includes("Phone number already exists")) {
+          throw new Error("Số điện thoại đã được sử dụng bởi khách hàng khác");
+        } else if (errorMessage.includes("Tax number already exists")) {
+          throw new Error("Mã số thuế đã được sử dụng bởi khách hàng khác");
+        } else {
+          throw new Error(errorMessage);
+        }
+      }
+    }
+    
+    // If error doesn't have a response or isn't a 400 status
+    if (error.message) {
+      throw error; // Rethrow the error with its message
+    } else {
+      throw new Error("Lỗi khi tạo khách hàng. Vui lòng thử lại sau.");
+    }
+  }
+};
 
 export const updateCustomer = async (customerData: {
   cusId: string;
@@ -126,7 +184,7 @@ export const updateCustomer = async (customerData: {
     }
     throw error;
   }
-}
+};
 
 export const deleteCustomer = async (customerId: string) => {
   try {
@@ -140,4 +198,4 @@ export const deleteCustomer = async (customerId: string) => {
     console.error("Delete Customer Fail with Error", error);
     throw error;
   }
-}
+};

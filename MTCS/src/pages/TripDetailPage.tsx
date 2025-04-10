@@ -173,7 +173,7 @@ const TripDetailPage: React.FC = () => {
 
   // Navigate back
   const handleBack = () => {
-    navigate('/staff-menu/trips'); // Adjust this path if needed
+    navigate('/staff-menu/orders'); // Adjust this path if needed
   };
 
   // Navigate to driver details
@@ -461,8 +461,8 @@ const TripDetailPage: React.FC = () => {
                         {tripData.fuelReports.map((report: any, index) => (
                           <TableRow key={index}>
                             <TableCell>{formatDateTime(report.reportTime)}</TableCell>
-                            <TableCell>{report.amount} lít</TableCell>
-                            <TableCell>{report.cost ? `${new Intl.NumberFormat('vi-VN').format(report.cost)} VNĐ` : "N/A"}</TableCell>
+                            <TableCell>{report.refuelAmount} Lít</TableCell>
+                            <TableCell>{report.fuelCost}  VNĐ</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
