@@ -909,8 +909,7 @@ const OrderManagement: React.FC = () => {
                   <TableCell>Giá (VNĐ)</TableCell>
                   <TableCell>Khoảng cách</TableCell>
                   <TableCell>Trạng thái</TableCell>
-                  <TableCell>Thanh toán</TableCell> {/* Add this column */}
-                  <TableCell align="center">Hành động</TableCell>
+                  <TableCell align="center">Thanh toán</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -952,51 +951,19 @@ const OrderManagement: React.FC = () => {
                       <TableCell>
                         {order.distance ? `${order.distance} km` : "N/A"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         <Chip
                           size="small"
                           label={getStatusDisplay(order.status).label}
                           color={getStatusDisplay(order.status).color as any}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         <Chip
                           size="small"
                           label={getPaymentStatusDisplay(order.isPay).label}
                           color={getPaymentStatusDisplay(order.isPay).color as any}
                         />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "center",
-                            gap: 1,
-                          }}
-                        >
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewOrderDetail(order.orderId);
-                            }}
-                            title="Xem chi tiết"
-                          >
-                            <VisibilityIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="secondary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(order.orderId);
-                            }}
-                            title="Chỉnh sửa"
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Box>
                       </TableCell>
                     </TableRow>
                   ))
