@@ -158,10 +158,7 @@ const OrderManagement: React.FC = () => {
           case 3: // Delivering
             statusFilter = OrderStatus.Delivering;
             break;
-          case 4: // Shipped
-            statusFilter = OrderStatus.Shipped;
-            break;
-          case 5: // Complete
+          case 4: // Complete - fixed index from 5 to 4 since Shipped is commented out
             statusFilter = OrderStatus.Completed;
             break;
           default:
@@ -394,14 +391,7 @@ const OrderManagement: React.FC = () => {
       label: "Đang giao hàng",
       color: "info",
     },
-    // Commented out Shipped status as requested
-    /*
-    {
-      value: OrderStatus.Shipped,
-      label: "Đã giao hàng",
-      color: "info",
-    },
-    */
+    // Removed Shipped status as requested
     {
       value: OrderStatus.Completed,
       label: "Hoàn thành",
@@ -418,11 +408,6 @@ const OrderManagement: React.FC = () => {
         return { label: "Đã lên lịch", color: "info" };
       case OrderStatus.Delivering:
         return { label: "Đang giao hàng", color: "info" };
-      // Commented out Shipped status display as requested
-      /*
-      case OrderStatus.Shipped:
-        return { label: "Đã giao hàng", color: "info" };
-      */
       case OrderStatus.Completed:
         return { label: "Hoàn thành", color: "success" };
       default:
@@ -681,55 +666,6 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        {/* <Grid item xs={12} sm={6} md={2}>
-          <Card 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
-              height: "100%",
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: tabValue === 4 ? '3px solid #1e88e5' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
-                boxShadow: 3,
-              } 
-            }}
-            onClick={() => handleCardClick(4)} // Shipped - index 4
-          >
-            <CardContent sx={{ py: 1.5, px: 2 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Box>
-                  <Typography
-                    color="text.secondary"
-                    variant="body2"
-                    gutterBottom
-                  >
-                    Đã giao
-                  </Typography>
-                  <Typography variant="h5" component="div">
-                    {loadingAllOrders ? <CircularProgress size={20} /> : orderCounts.shipped}
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    backgroundColor: "rgba(30, 136, 229, 0.08)",
-                    p: 1,
-                    borderRadius: "50%",
-                  }}
-                >
-                  <CheckCircleIcon color="info" />
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid> */}
         <Grid item xs={12} sm={6} md={2.5}>
           <Card 
             elevation={1} 
@@ -738,13 +674,13 @@ const OrderManagement: React.FC = () => {
               height: "100%",
               cursor: 'pointer',
               transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: tabValue === 5 ? '3px solid #4caf50' : 'none',
+              borderBottom: tabValue === 4 ? '3px solid #4caf50' : 'none', // Changed from 5 to 4
               '&:hover': {
                 transform: 'translateY(-3px)',
                 boxShadow: 3,
               } 
             }}
-            onClick={() => handleCardClick(5)} // Completed - index 5
+            onClick={() => handleCardClick(4)} // Changed from 5 to 4
           >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box

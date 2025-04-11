@@ -1154,7 +1154,7 @@ const OrderDetailPage: React.FC = () => {
 
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  Khoảng cách
+                  Tổng quãng đường
                 </Typography>
                 <Typography variant="body1" gutterBottom>
                   {orderDetails.distance
