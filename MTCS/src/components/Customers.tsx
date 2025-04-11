@@ -496,8 +496,7 @@ const Customers = () => {
                   <TableCell>Email</TableCell>
                   <TableCell>Số điện thoại</TableCell>
                   <TableCell>Ngày tạo</TableCell>
-                  <TableCell>Số đơn hàng</TableCell>
-                  <TableCell align="center">Hành động</TableCell>
+                  <TableCell align="center">Số đơn hàng</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -533,22 +532,7 @@ const Customers = () => {
                             ? new Date(customer.createdDate).toLocaleDateString('vi-VN') 
                             : 'N/A'}
                         </TableCell>
-                        <TableCell>{customer.totalOrders || 0}</TableCell>
-                        <TableCell align="center">
-                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewCustomerDetail(customer.customerId);
-                              }}
-                              title="Xem chi tiết"
-                            >
-                              <VisibilityIcon />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
+                        <TableCell align="center">{customer.totalOrders || 0}</TableCell>
                       </TableRow>
                     ))
                 ) : (
