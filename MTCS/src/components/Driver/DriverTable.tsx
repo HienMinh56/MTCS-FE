@@ -34,6 +34,7 @@ interface DriverTableProps {
     onTrip: number;
   }) => void;
   refreshTrigger?: number;
+  onStatusClick?: (status: DriverStatus) => void; // New prop for status click handling
 }
 
 const DriverTable: React.FC<DriverTableProps> = ({
@@ -232,11 +233,11 @@ const DriverTable: React.FC<DriverTableProps> = ({
           >
             <TableHead>
               <TableRow>
-                <TableCell>Họ tên</TableCell>
-                <TableCell>Email</TableCell>
+                <TableCell align="center" sx={{pr: 18}}>Họ tên</TableCell>
+                <TableCell align="center" sx={{pr: 18}}>Email</TableCell>
                 <TableCell>Số điện thoại</TableCell>
                 <TableCell align="center">Tổng giờ tuần này</TableCell>
-                <TableCell>Trạng thái</TableCell>
+                <TableCell align="center">Trạng thái</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -268,7 +269,7 @@ const DriverTable: React.FC<DriverTableProps> = ({
                         : "0"}{" "}
                       giờ
                     </TableCell>
-                    <TableCell>{renderStatusChip(driver.status)}</TableCell>
+                    <TableCell align="center">{renderStatusChip(driver.status)}</TableCell>
                   </TableRow>
                 ))
               ) : (

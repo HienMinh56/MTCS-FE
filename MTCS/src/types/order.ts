@@ -53,6 +53,7 @@ export interface Order {
   orderId: string;
   trackingCode: string;
   customerId: string;
+  companyName: string;
   deliveryDate: string;
   status: OrderStatus;
   deliveryType: DeliveryType;
@@ -86,6 +87,7 @@ export interface OrderDetails {
     orderId: string;
     trackingCode: string;
     customerId: string;
+    companyName: string;
     temperature: number;
     weight: string;
     pickUpDate: string;

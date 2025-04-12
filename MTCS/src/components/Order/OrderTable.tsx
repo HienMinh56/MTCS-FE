@@ -838,13 +838,13 @@ const OrderManagement: React.FC = () => {
             >
               <TableHead>
                 <TableRow>
-                  <TableCell>Mã đơn hàng</TableCell>
-                  <TableCell>Khách hàng</TableCell>
-                  <TableCell>Ngày giao hàng</TableCell>
-                  <TableCell>Loại vận chuyển</TableCell>
-                  <TableCell>Giá (VNĐ)</TableCell>
-                  <TableCell>Khoảng cách</TableCell>
-                  <TableCell>Trạng thái</TableCell>
+                  <TableCell align="center">Mã đơn hàng</TableCell>
+                  <TableCell align="center">Khách hàng</TableCell>
+                  <TableCell align="center">Ngày giao hàng</TableCell>
+                  <TableCell align="center">Loại vận chuyển</TableCell>
+                  <TableCell align="center">Giá (VNĐ)</TableCell>
+                  <TableCell align="center">Khoảng cách</TableCell>
+                  <TableCell align="center">Trạng thái</TableCell>
                   <TableCell align="center">Thanh toán</TableCell>
                 </TableRow>
               </TableHead>
@@ -871,20 +871,20 @@ const OrderManagement: React.FC = () => {
                       onClick={() => handleViewOrderDetail(order.orderId)}
                       sx={{ cursor: "pointer" }}
                     >
-                      <TableCell>{order.trackingCode}</TableCell>
-                      <TableCell>{order.customerId}</TableCell>
-                      <TableCell>
+                      <TableCell align="center">{order.trackingCode}</TableCell>
+                      <TableCell align="center">{order.customerId}</TableCell>
+                      <TableCell align="center">
                         {new Date(order.deliveryDate).toLocaleDateString(
                           "vi-VN"
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         {getDeliveryTypeDisplay(order.deliveryType)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         {new Intl.NumberFormat("vi-VN").format(order.price)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         {order.distance ? `${order.distance} km` : "N/A"}
                       </TableCell>
                       <TableCell align="center">

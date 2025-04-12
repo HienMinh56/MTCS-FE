@@ -107,31 +107,22 @@ const TripDetailPage: React.FC = () => {
     if (!status) return { label: "Không xác định", color: "default" };
 
     switch (status) {
+      case "not_started":
+        return { label: "Chưa bắt đầu", color: "default" };
+      case "going_to_port":
+        return { label: "Đang di chuyển đến cảng", color: "info" };
+      case "pick_up_container":
+        return { label: "Đang lấy container", color: "info" };
+      case "is_delivering":
+        return { label: "Đang giao container", color: "info" };
+      case "at_delivery_point":
+        return { label: "Đang tại điểm giao hàng", color: "info" };
+      case "going_to_port/depot":
+        return { label: "Đang quay lại cảng trả container", color: "info" };
       case "completed":
         return { label: "Hoàn thành", color: "success" };
       case "delaying":
         return { label: "Tạm dừng", color: "warning" };
-      case "going_to_port":
-        return { label: "Đang di chuyển đến cảng", color: "info" };
-      case "0":
-        return { label: "Chưa bắt đầu", color: "default" };
-      case "1":
-        return { label: "Đang di chuyển đến điểm lấy hàng", color: "info" };
-      case "2":
-        return { label: "Đã đến điểm lấy hàng", color: "info" };
-      case "3":
-        return { label: "Đang di chuyển đến điểm giao hàng", color: "info" };
-      case "4":
-        return { label: "Đã đến điểm giao hàng", color: "info" };
-      case "5":
-        return {
-          label: "Đang di chuyển đến điểm trả container",
-          color: "info",
-        };
-      case "6":
-        return { label: "Đã đến điểm trả container", color: "success" };
-      case "7":
-        return { label: "Hoàn thành", color: "success" };
       default:
         return { label: status, color: "default" };
     }
@@ -188,7 +179,7 @@ const TripDetailPage: React.FC = () => {
 
   // Navigate back
   const handleBack = () => {
-    navigate('/staff-menu/orders'); // Adjust this path if needed
+    navigate("/staff-menu/orders"); // Adjust this path if needed
   };
 
   // Navigate to driver details
@@ -223,10 +214,10 @@ const TripDetailPage: React.FC = () => {
       <Box p={3}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={handleBack}
+          onClick={() => handleOrderClick(tripData.orderId)}
           sx={{ mb: 2 }}
         >
-          Quay lại danh sách chuyến đi
+          Quay lại đơn hàng
         </Button>
         <Alert severity="error">
           {error}
@@ -243,10 +234,10 @@ const TripDetailPage: React.FC = () => {
       <Box p={3}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={handleBack}
+          onClick={() => handleOrderClick(tripData.orderId)}
           sx={{ mb: 2 }}
         >
-          Quay lại danh sách chuyến đi
+          Quay lại đơn hàng
         </Button>
         <Alert severity="warning">
           Không tìm thấy thông tin chuyến đi
@@ -271,8 +262,12 @@ const TripDetailPage: React.FC = () => {
 
   return (
     <Box p={3}>
-      <Button startIcon={<ArrowBackIcon />} onClick={handleBack} sx={{ mb: 2 }}>
-        Quay lại danh sách chuyến đi
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => handleOrderClick(tripData.orderId)}
+        sx={{ mb: 2 }}
+      >
+        Quay lại đơn hàng
       </Button>
 
       <Box
@@ -295,11 +290,29 @@ const TripDetailPage: React.FC = () => {
         {/* Main Trip Info */}
         <Grid item xs={12} md={8}>
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-            <Box display="flex" alignItems="center" mb={2}>
-              <DirectionsIcon sx={{ mr: 1, color: "primary.main" }} />
-              <Typography variant="h6">Thông tin chung</Typography>
+            <Box
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: 1,
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: -3, // Negative margin to extend to the edges
+                mt: -3, // Negative margin to remove top padding
+                px: 3, // Add padding on sides to match parent padding
+                pt: 1.5, // Add padding on top to match parent padding
+                pb: 1.5, // Keep the original padding-bottom
+              }}
+            >
+              <DirectionsIcon sx={{ color: "inherit" }} />
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                Thông tin chung
+              </Typography>
             </Box>
-            <Divider sx={{ mb: 3 }} />
+            {/* <Divider sx={{ mb: 3 }} /> */}
 
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
@@ -316,7 +329,7 @@ const TripDetailPage: React.FC = () => {
               <Grid item xs={12} md={6}>
                 <Box mb={2}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Mã đơn hàng
+                    Mã vận đơn
                   </Typography>
                   <Typography
                     variant="body1"
@@ -329,9 +342,9 @@ const TripDetailPage: React.FC = () => {
                         color: "primary.dark",
                       },
                     }}
-                    onClick={() => handleOrderClick(tripData.orderId)}
+                    onClick={() => handleOrderClick(tripData.trackingCode)}
                   >
-                    {tripData.orderId || "N/A"}
+                    {tripData.trackingCode || "N/A"}
                   </Typography>
                 </Box>
               </Grid>
@@ -395,16 +408,45 @@ const TripDetailPage: React.FC = () => {
                   </Box>
                 </Box>
               </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Ghép bởi
+                  </Typography>
+                  <Typography variant="body1">
+                    {tripData.matchType == 1 ? "Staff" : "Hệ thống"}
+                  </Typography>
+                </Box>
+              </Grid>
             </Grid>
           </Paper>
 
           {/* Trip Status History */}
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-            <Box display="flex" alignItems="center" mb={2}>
-              <EventNoteIcon sx={{ mr: 1, color: "primary.main" }} />
-              <Typography variant="h6">Lịch sử trạng thái</Typography>
+            <Box
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: 1,
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: -3, // Negative margin to extend to the edges
+                mt: -3, // Negative margin to remove top padding
+                px: 3, // Add padding on sides to match parent padding
+                pt: 1.5, // Add padding on top to match parent padding
+                pb: 1.5, // Keep the original padding-bottom
+              }}
+            >
+              <EventNoteIcon sx={{ color: "inherit" }} />
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                Lịch sử trạng thái
+              </Typography>
             </Box>
-            <Divider sx={{ mb: 3 }} />
+            {/* <Divider sx={{ mb: 3 }} /> */}
 
             {sortedStatusHistories.length > 0 ? (
               <Stepper orientation="vertical">
@@ -450,26 +492,49 @@ const TripDetailPage: React.FC = () => {
 
           {/* Reports and Logs */}
           <Paper elevation={2} sx={{ p: 3 }}>
-            <Box display="flex" alignItems="center" mb={2}>
-              <ReportIcon sx={{ mr: 1, color: "primary.main" }} />
-              <Typography variant="h6">Báo cáo & Nhật ký</Typography>
+            <Box
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: 1,
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: -3, // Negative margin to extend to the edges
+                mt: -3, // Negative margin to remove top padding
+                px: 3, // Add padding on sides to match parent padding
+                pt: 1.5, // Add padding on top to match parent padding
+                pb: 1.5, // Keep the original padding-bottom
+              }}
+            >
+              <ReportIcon sx={{ color: "inherit" }} />
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                Báo cáo & Nhật ký
+              </Typography>
             </Box>
-            <Divider sx={{ mb: 3 }} />
+            {/* <Divider sx={{ mb: 3 }} /> */}
 
             <Grid container spacing={3}>
-              {/* Delivery Reports */}
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle1" gutterBottom fontWeight="500">
+              {/* Delivery Reports - Full width on mobile, half width on md+ */}
+              <Grid item xs={12}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  fontWeight="500"
+                  sx={{ mb: 2 }}
+                >
                   Báo cáo giao hàng
                 </Typography>
                 {tripData.deliveryReports &&
                 tripData.deliveryReports.length > 0 ? (
-                  <TableContainer>
+                  <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableHead>
                         <TableRow>
                           <TableCell>Thời gian</TableCell>
-                          <TableCell>Ghi chú</TableCell>
+                          <TableCell align="center">Ghi chú</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -478,7 +543,9 @@ const TripDetailPage: React.FC = () => {
                             <TableCell>
                               {formatDateTime(report.reportTime)}
                             </TableCell>
-                            <TableCell>{report.notes || "N/A"}</TableCell>
+                            <TableCell align="center">
+                              {report.notes || "N/A"}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -491,19 +558,25 @@ const TripDetailPage: React.FC = () => {
                 )}
               </Grid>
 
-              {/* Fuel Reports */}
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle1" gutterBottom fontWeight="500">
+              {/* Fuel Reports - Full width on mobile, half width on md+ */}
+              <Grid item xs={12}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  fontWeight="500"
+                  sx={{ mb: 2 }}
+                >
                   Báo cáo nhiên liệu
                 </Typography>
                 {tripData.fuelReports && tripData.fuelReports.length > 0 ? (
-                  <TableContainer>
+                  <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableHead>
                         <TableRow>
                           <TableCell>Thời gian</TableCell>
-                          <TableCell>Lượng tiêu thụ</TableCell>
-                          <TableCell>Chi phí</TableCell>
+                          <TableCell align="center">Lượng tiêu thụ</TableCell>
+                          <TableCell align="center">Chi phí</TableCell>
+                          <TableCell align="center">Hoá đơn</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -512,8 +585,58 @@ const TripDetailPage: React.FC = () => {
                             <TableCell>
                               {formatDateTime(report.reportTime)}
                             </TableCell>
-                            <TableCell>{report.refuelAmount} lít</TableCell>
-                            <TableCell>{report.fuelCost} VNĐ</TableCell>
+                            <TableCell align="center">
+                              {report.refuelAmount} lít
+                            </TableCell>
+                            <TableCell align="center">
+                              {new Intl.NumberFormat("vi-VN").format(
+                                report.fuelCost
+                              )}{" "}
+                              VNĐ
+                            </TableCell>
+                            <TableCell
+                              align="center"
+                              sx={{
+                                textAlign: "center",
+                                verticalAlign: "middle",
+                              }}
+                            >
+                              {report.fuelReportFiles &&
+                              report.fuelReportFiles.length > 0 ? (
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    gap: 1,
+                                    flexWrap: "wrap",
+                                    justifyContent: "center", // Center the image container horizontally
+                                    alignItems: "center", // Center items vertically
+                                  }}
+                                >
+                                  {report.fuelReportFiles.map(
+                                    (file: any, fileIndex: number) => (
+                                      <Box
+                                        key={fileIndex}
+                                        component="img"
+                                        src={file.fileUrl}
+                                        alt="Hoá đơn nhiên liệu"
+                                        sx={{
+                                          width: 80,
+                                          height: 60,
+                                          objectFit: "cover",
+                                          cursor: "pointer",
+                                          borderRadius: 1,
+                                        }}
+                                        onClick={() =>
+                                          window.open(file.fileUrl, "_blank")
+                                        }
+                                      />
+                                    )
+                                  )}
+                                </Box>
+                              ) : (
+                                "Không có hoá đơn"
+                              )}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -528,7 +651,7 @@ const TripDetailPage: React.FC = () => {
 
               {/* Incident Reports */}
               <Grid item xs={12}>
-                <Typography variant="subtitle1" gutterBottom fontWeight="500">
+                <Typography variant="h6" gutterBottom fontWeight="500">
                   Báo cáo sự cố
                 </Typography>
                 {tripData.incidentReports &&
@@ -654,55 +777,6 @@ const TripDetailPage: React.FC = () => {
                   </Typography>
                 )}
               </Grid>
-
-              {/* Inspection Logs */}
-              <Grid item xs={12}>
-                <Typography
-                  variant="subtitle1"
-                  gutterBottom
-                  fontWeight="500"
-                  mt={2}
-                >
-                  Nhật ký kiểm tra
-                </Typography>
-                {tripData.inspectionLogs &&
-                tripData.inspectionLogs.length > 0 ? (
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Thời gian</TableCell>
-                          <TableCell>Loại kiểm tra</TableCell>
-                          <TableCell>Kết quả</TableCell>
-                          <TableCell>Người kiểm tra</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {tripData.inspectionLogs.map((log: any, index) => (
-                          <TableRow key={index}>
-                            <TableCell>
-                              {formatDateTime(log.inspectionTime)}
-                            </TableCell>
-                            <TableCell>{log.type}</TableCell>
-                            <TableCell>
-                              <Chip
-                                label={log.passed ? "Đạt" : "Không đạt"}
-                                color={log.passed ? "success" : "error"}
-                                size="small"
-                              />
-                            </TableCell>
-                            <TableCell>{log.inspector || "N/A"}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Không có nhật ký kiểm tra
-                  </Typography>
-                )}
-              </Grid>
             </Grid>
           </Paper>
         </Grid>
@@ -711,11 +785,29 @@ const TripDetailPage: React.FC = () => {
         <Grid item xs={12} md={4}>
           {/* Driver Information */}
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-            <Box display="flex" alignItems="center" mb={2}>
-              <PersonIcon sx={{ mr: 1, color: "primary.main" }} />
-              <Typography variant="h6">Thông tin tài xế</Typography>
+            <Box
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: 1,
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: -3, // Negative margin to extend to the edges
+                mt: -3, // Negative margin to remove top padding
+                px: 3, // Add padding on sides to match parent padding
+                pt: 1.5, // Add padding on top to match parent padding
+                pb: 1.5, // Keep the original padding-bottom
+              }}
+            >
+              <PersonIcon sx={{ color: "inherit" }} />
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                Thông tin tài xế
+              </Typography>
             </Box>
-            <Divider sx={{ mb: 2 }} />
+            {/* <Divider sx={{ mb: 2 }} /> */}
 
             {tripData.driverId ? (
               <Card sx={{ mb: 2 }}>
@@ -766,11 +858,29 @@ const TripDetailPage: React.FC = () => {
 
           {/* Vehicle Information */}
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-            <Box display="flex" alignItems="center" mb={2}>
-              <LocalShippingIcon sx={{ mr: 1, color: "primary.main" }} />
-              <Typography variant="h6">Thông tin phương tiện</Typography>
+            <Box
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: 1,
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: -3, // Negative margin to extend to the edges
+                mt: -3, // Negative margin to remove top padding
+                px: 3, // Add padding on sides to match parent padding
+                pt: 1.5, // Add padding on top to match parent padding
+                pb: 1.5, // Keep the original padding-bottom
+              }}
+            >
+              <LocalShippingIcon sx={{ color: "inherit" }} />
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                Thông tin phương tiện
+              </Typography>
             </Box>
-            <Divider sx={{ mb: 3 }} />
+            {/* <Divider sx={{ mb: 3 }} /> */}
 
             <Grid container spacing={3}>
               {/* Tractor Info */}
@@ -789,7 +899,22 @@ const TripDetailPage: React.FC = () => {
                           >
                             Mã xe đầu kéo
                           </Typography>
-                          <Typography variant="body1">
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              cursor: "pointer",
+                              color: "primary.main",
+                              "&:hover": {
+                                textDecoration: "underline",
+                                color: "primary.dark",
+                              },
+                            }}
+                            onClick={() =>
+                              navigate(
+                                `/staff-menu/tractors/${tripData.tractorId}`
+                              )
+                            }
+                          >
                             {tripData.tractorId}
                           </Typography>
                         </Grid>
@@ -847,7 +972,22 @@ const TripDetailPage: React.FC = () => {
                           >
                             Mã rơ moóc
                           </Typography>
-                          <Typography variant="body1">
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              cursor: "pointer",
+                              color: "primary.main",
+                              "&:hover": {
+                                textDecoration: "underline",
+                                color: "primary.dark",
+                              },
+                            }}
+                            onClick={() =>
+                              navigate(
+                                `/staff-menu/trailers/${tripData.trailerId}`
+                              )
+                            }
+                          >
                             {tripData.trailerId}
                           </Typography>
                         </Grid>
@@ -893,11 +1033,29 @@ const TripDetailPage: React.FC = () => {
 
           {/* Trip Actions */}
           <Paper elevation={2} sx={{ p: 3 }}>
-            <Box display="flex" alignItems="center" mb={2}>
-              <MapIcon sx={{ mr: 1, color: "primary.main" }} />
-              <Typography variant="h6">Hành động</Typography>
+            <Box
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: 1,
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: -3, // Negative margin to extend to the edges
+                mt: -3, // Negative margin to remove top padding
+                px: 3, // Add padding on sides to match parent padding
+                pt: 1.5, // Add padding on top to match parent padding
+                pb: 1.5, // Keep the original padding-bottom
+              }}
+            >
+              <MapIcon sx={{ color: "inherit" }} />
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                Hành động
+              </Typography>
             </Box>
-            <Divider sx={{ mb: 2 }} />
+            {/* <Divider sx={{ mb: 2 }} /> */}
 
             <Box display="flex" flexDirection="column" gap={2}>
               {tripData.orderId && (

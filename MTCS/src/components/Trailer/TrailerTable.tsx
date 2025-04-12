@@ -92,11 +92,14 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
 
         setTotalCount(filteredCount);
 
+        // Cập nhật các số liệu tóm tắt
+        // repair (cần đăng kiểm) sẽ được hiển thị là onDuty (đang vận chuyển)
+        // maintenance (cần bảo dưỡng) sẽ được hiển thị là inactive (không hoạt động)
         onUpdateSummary({
           total: result.data.allCount,
           active: result.data.activeCount,
-          maintenance: result.data.maintenanceDueCount,
-          repair: result.data.registrationExpiryDueCount,
+          maintenance: result.data.inactiveCount || 0,
+          repair: result.data.onDutyCount || 0,
         });
       } else {
         setTrailers([]);

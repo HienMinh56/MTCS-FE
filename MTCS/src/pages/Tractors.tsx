@@ -21,7 +21,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import BuildIcon from "@mui/icons-material/Build";
-import EventIcon from "@mui/icons-material/Event";
+import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
+import DoNotDisturbIcon from "@mui/icons-material/DoNotDisturb";
 import AddIcon from "@mui/icons-material/Add";
 import { TractorStatus, ContainerType } from "../types/tractor";
 import TractorCreate from "../components/Tractor/TractorCreate";
@@ -30,6 +31,7 @@ import TractorTable from "../components/Tractor/TractorTable";
 import { useNavigate } from "react-router-dom";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { getTractors } from "../services/tractorApi";
 
 const Tractors = () => {
   const navigate = useNavigate();
@@ -38,8 +40,14 @@ const Tractors = () => {
   const [summary, setSummary] = useState({
     total: 0,
     active: 0,
-    maintenance: 0,
-    repair: 0,
+    onDuty: 0,
+    inactive: 0,
+  });
+  const [totalSummary, setTotalSummary] = useState({
+    total: 0,
+    active: 0,
+    onDuty: 0,
+    inactive: 0,
   });
   const [openCreate, setOpenCreate] = useState(false);
   const [openFilter, setOpenFilter] = useState(false);
@@ -51,6 +59,7 @@ const Tractors = () => {
   }>({});
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
   const isManualRefreshRef = useRef(false);
+  const [loadingTotalSummary, setLoadingTotalSummary] = useState(false);
 
   const handleOpenCreate = () => setOpenCreate(true);
   const handleCloseCreate = () => setOpenCreate(false);
@@ -67,7 +76,12 @@ const Tractors = () => {
     maintenance: number;
     repair: number;
   }) => {
-    setSummary(newSummary);
+    setSummary({
+      total: newSummary.total,
+      active: newSummary.active,
+      onDuty: newSummary.repair,
+      inactive: newSummary.maintenance,
+    });
   };
 
   const handleApplyFilter = (filters: {
@@ -80,6 +94,16 @@ const Tractors = () => {
     setHasActiveFilters(Object.keys(filters).length > 0);
   };
 
+  const handleCardClick = (status?: TractorStatus) => {
+    if (status === undefined || (filterOptions.status === status && hasActiveFilters)) {
+      setFilterOptions({});
+      setHasActiveFilters(false);
+    } else {
+      setFilterOptions({ status });
+      setHasActiveFilters(true);
+    }
+  };
+
   const refreshTable = () => {
     console.log("Refreshing table data...");
     isManualRefreshRef.current = true;
@@ -88,21 +112,64 @@ const Tractors = () => {
 
   const handleCreateSuccess = () => {
     refreshTable();
+    fetchTotalSummary();
   };
 
   const handleDeleteSuccess = () => {
     console.log("Delete/activate success called, triggering refresh");
     refreshTable();
+    fetchTotalSummary();
   };
+
+  const fetchTotalSummary = async () => {
+    setLoadingTotalSummary(true);
+    try {
+      const totalResponse = await getTractors(1, 1);
+      const activeResponse = await getTractors(1, 1, "", TractorStatus.Active);
+      const onDutyResponse = await getTractors(1, 1, "", TractorStatus.OnDuty);
+      const inactiveResponse = await getTractors(1, 1, "", TractorStatus.Inactive);
+
+      if (totalResponse.success && activeResponse.success && 
+          onDutyResponse.success && inactiveResponse.success) {
+        setTotalSummary({
+          total: totalResponse.data.allCount || 0,
+          active: activeResponse.data.tractors.totalCount || 0,
+          onDuty: onDutyResponse.data.tractors.totalCount || 0,
+          inactive: inactiveResponse.data.tractors.totalCount || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching total summary:", error);
+    } finally {
+      setLoadingTotalSummary(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTotalSummary();
+  }, [refreshTrigger]);
 
   return (
     <Box
       sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}
     >
-      {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid item xs={6} sm={6} md={3}>
-          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
+          <Card 
+            elevation={1} 
+            sx={{ 
+              borderRadius: 2, 
+              height: "100%",
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              borderBottom: !hasActiveFilters ? '3px solid #1976d2' : 'none',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: 3,
+              } 
+            }}
+            onClick={() => handleCardClick()}
+          >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
                 sx={{
@@ -120,7 +187,7 @@ const Tractors = () => {
                     Tổng số đầu kéo
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {summary.total}
+                    {totalSummary.total}
                   </Typography>
                 </Box>
                 <Box
@@ -137,7 +204,21 @@ const Tractors = () => {
           </Card>
         </Grid>
         <Grid item xs={6} sm={6} md={3}>
-          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
+          <Card 
+            elevation={1} 
+            sx={{ 
+              borderRadius: 2, 
+              height: "100%",
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              borderBottom: filterOptions.status === TractorStatus.Active ? '3px solid #4caf50' : 'none',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: 3,
+              } 
+            }}
+            onClick={() => handleCardClick(TractorStatus.Active)}
+          >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
                 sx={{
@@ -155,7 +236,7 @@ const Tractors = () => {
                     Đang hoạt động
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {summary.active}
+                    {totalSummary.active}
                   </Typography>
                 </Box>
                 <Box
@@ -172,7 +253,21 @@ const Tractors = () => {
           </Card>
         </Grid>
         <Grid item xs={6} sm={6} md={3}>
-          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
+          <Card 
+            elevation={1} 
+            sx={{ 
+              borderRadius: 2, 
+              height: "100%",
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              borderBottom: filterOptions.status === TractorStatus.OnDuty ? '3px solid #1976d2' : 'none',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: 3,
+              } 
+            }}
+            onClick={() => handleCardClick(TractorStatus.OnDuty)}
+          >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
                 sx={{
@@ -187,27 +282,41 @@ const Tractors = () => {
                     variant="body2"
                     gutterBottom
                   >
-                    Cần đăng kiểm
+                    Đang vận chuyển
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {summary.repair}
+                    {totalSummary.onDuty}
                   </Typography>
                 </Box>
                 <Box
                   sx={{
-                    backgroundColor: "rgba(255, 152, 0, 0.08)",
+                    backgroundColor: "rgba(25, 118, 210, 0.08)",
                     p: 1,
                     borderRadius: "50%",
                   }}
                 >
-                  <EventIcon color="warning" />
+                  <DirectionsCarIcon color="primary" />
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={6} sm={6} md={3}>
-          <Card elevation={1} sx={{ borderRadius: 2, height: "100%" }}>
+          <Card 
+            elevation={1} 
+            sx={{ 
+              borderRadius: 2, 
+              height: "100%",
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              borderBottom: filterOptions.status === TractorStatus.Inactive ? '3px solid #f44336' : 'none',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: 3,
+              } 
+            }}
+            onClick={() => handleCardClick(TractorStatus.Inactive)}
+          >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
                 sx={{
@@ -222,10 +331,10 @@ const Tractors = () => {
                     variant="body2"
                     gutterBottom
                   >
-                    Cần bảo dưỡng
+                    Không hoạt động
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {summary.maintenance}
+                    {totalSummary.inactive}
                   </Typography>
                 </Box>
                 <Box
@@ -235,7 +344,7 @@ const Tractors = () => {
                     borderRadius: "50%",
                   }}
                 >
-                  <BuildIcon color="error" />
+                  <DoNotDisturbIcon color="error" />
                 </Box>
               </Box>
             </CardContent>
@@ -243,7 +352,6 @@ const Tractors = () => {
         </Grid>
       </Grid>
 
-      {/* Tractors Table Section */}
       <Paper
         elevation={1}
         sx={{
@@ -309,7 +417,6 @@ const Tractors = () => {
           </Box>
         </Box>
 
-        {/* Integrate the TractorTable component */}
         <TractorTable
           searchTerm={searchTerm}
           filterOptions={filterOptions}
@@ -346,7 +453,6 @@ const Tractors = () => {
           </Box>
         </Modal>
 
-        {/* Filter Dialog */}
         <TractorFilter
           open={openFilter}
           onClose={handleCloseFilter}

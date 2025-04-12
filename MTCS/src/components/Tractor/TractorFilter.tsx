@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Dialog,
@@ -53,6 +53,16 @@ const TractorFilter: React.FC<TractorFilterProps> = ({
   );
   const [registrationExpiringSoon, setRegistrationExpiringSoon] =
     useState<boolean>(currentFilters.registrationExpiringSoon || false);
+
+  // Đồng bộ hóa các trạng thái của dialog với currentFilters khi mở dialog
+  useEffect(() => {
+    if (open) {
+      setStatus(currentFilters.status);
+      setContainerType(currentFilters.containerType);
+      setMaintenanceDueSoon(currentFilters.maintenanceDueSoon || false);
+      setRegistrationExpiringSoon(currentFilters.registrationExpiringSoon || false);
+    }
+  }, [open, currentFilters]);
 
   const handleApplyFilter = () => {
     const filterOptions: FilterOptions = {};

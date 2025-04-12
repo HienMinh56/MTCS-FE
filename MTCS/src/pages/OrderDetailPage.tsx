@@ -36,7 +36,11 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import DeleteIcon from "@mui/icons-material/Delete";
-import DirectionsIcon from '@mui/icons-material/Directions';
+import DirectionsIcon from "@mui/icons-material/Directions";
+import InfoIcon from "@mui/icons-material/Info";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import FolderIcon from '@mui/icons-material/Folder';
+import ContactsIcon from '@mui/icons-material/Contacts';
 import {
   OrderDetails,
   ContainerType,
@@ -67,7 +71,9 @@ const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
-  const [contractFiles, setContractFiles] = useState<ContractFile[] | null>(null);
+  const [contractFiles, setContractFiles] = useState<ContractFile[] | null>(
+    null
+  );
   const [tripData, setTripData] = useState<trip[] | null>(null);
   const [tripLoading, setTripLoading] = useState<boolean>(false);
   const [tripError, setTripError] = useState<string | null>(null);
@@ -108,15 +114,21 @@ const OrderDetailPage: React.FC = () => {
   });
   const [createTripLoading, setCreateTripLoading] = useState(false);
   const [createTripError, setCreateTripError] = useState<string | null>(null);
-  const [createTripSuccess, setCreateTripSuccess] = useState<string | null>(null);
+  const [createTripSuccess, setCreateTripSuccess] = useState<string | null>(
+    null
+  );
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [tractors, setTractors] = useState<Tractor[]>([]);
   const [trailers, setTrailers] = useState<Trailer[]>([]);
   const [loadingDrivers, setLoadingDrivers] = useState(false);
   const [loadingTractors, setLoadingTractors] = useState(false);
   const [loadingTrailers, setLoadingTrailers] = useState(false);
-  const [tractorMaxLoadWeight, setTractorMaxLoadWeight] = useState<number | null>(null);
-  const [trailerMaxLoadWeight, setTrailerMaxLoadWeight] = useState<number | null>(null);
+  const [tractorMaxLoadWeight, setTractorMaxLoadWeight] = useState<
+    number | null
+  >(null);
+  const [trailerMaxLoadWeight, setTrailerMaxLoadWeight] = useState<
+    number | null
+  >(null);
 
   const fetchData = async () => {
     try {
@@ -188,10 +200,7 @@ const OrderDetailPage: React.FC = () => {
                 contract.status === 1 &&
                 contract.contractFiles?.length > 0
               ) {
-                extractedFiles = [
-                  ...extractedFiles,
-                  ...contract.contractFiles,
-                ];
+                extractedFiles = [...extractedFiles, ...contract.contractFiles];
               }
             }
 
@@ -329,12 +338,12 @@ const OrderDetailPage: React.FC = () => {
         description: [],
         notes: [],
       });
-      
+
       setNewFiles([]);
       setFilesToDelete([]);
       setFileDescriptions([]);
       setFileNotes([]);
-      
+
       setOpenEditDialog(true);
     }
   };
@@ -368,7 +377,7 @@ const OrderDetailPage: React.FC = () => {
 
   const handleFileToggle = (fileUrl: string) => {
     if (filesToDelete.includes(fileUrl)) {
-      setFilesToDelete(filesToDelete.filter(url => url !== fileUrl));
+      setFilesToDelete(filesToDelete.filter((url) => url !== fileUrl));
     } else {
       setFilesToDelete([...filesToDelete, fileUrl]);
     }
@@ -378,10 +387,10 @@ const OrderDetailPage: React.FC = () => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
       setNewFiles([...newFiles, ...filesArray]);
-      
-      const newDescriptions = Array(filesArray.length).fill('');
-      const newNotes = Array(filesArray.length).fill('');
-      
+
+      const newDescriptions = Array(filesArray.length).fill("");
+      const newNotes = Array(filesArray.length).fill("");
+
       setFileDescriptions([...fileDescriptions, ...newDescriptions]);
       setFileNotes([...fileNotes, ...newNotes]);
     }
@@ -391,11 +400,11 @@ const OrderDetailPage: React.FC = () => {
     const updatedFiles = [...newFiles];
     updatedFiles.splice(index, 1);
     setNewFiles(updatedFiles);
-    
+
     const updatedDescriptions = [...fileDescriptions];
     updatedDescriptions.splice(index, 1);
     setFileDescriptions(updatedDescriptions);
-    
+
     const updatedNotes = [...fileNotes];
     updatedNotes.splice(index, 1);
     setFileNotes(updatedNotes);
@@ -415,23 +424,23 @@ const OrderDetailPage: React.FC = () => {
 
   const handleUpdateOrder = async () => {
     if (!orderDetails || !orderId) return;
-    
+
     setIsSubmitting(true);
     try {
       console.log("Current order details:", orderDetails);
       console.log("Current files to delete:", filesToDelete);
       console.log("Current new files:", newFiles);
-      
+
       if (newFiles.length > 0) {
         while (fileDescriptions.length < newFiles.length) {
-          fileDescriptions.push('');
+          fileDescriptions.push("");
         }
-        
+
         while (fileNotes.length < newFiles.length) {
-          fileNotes.push('');
+          fileNotes.push("");
         }
       }
-      
+
       const updateData = {
         orderId: orderId,
         status: orderDetails.status,
@@ -442,40 +451,41 @@ const OrderDetailPage: React.FC = () => {
         contactPhone: editFormData.contactPhone || "",
         orderPlacer: editFormData.orderPlacer || "",
         isPay: editFormData.isPay,
-        temperature: orderDetails.containerType === ContainerType["Container Lạnh"] 
-          ? editFormData.temperature 
-          : null,
-        description: newFiles.length > 0 ? fileDescriptions.slice(0, newFiles.length) : [],
+        temperature:
+          orderDetails.containerType === ContainerType["Container Lạnh"]
+            ? editFormData.temperature
+            : null,
+        description:
+          newFiles.length > 0 ? fileDescriptions.slice(0, newFiles.length) : [],
         notes: newFiles.length > 0 ? fileNotes.slice(0, newFiles.length) : [],
         filesToRemove: filesToDelete.length > 0 ? filesToDelete : null,
         filesToAdd: newFiles.length > 0 ? newFiles : null,
       };
-      
+
       console.log("Sending update data:", updateData);
-      
+
       const result = await updateOrder(updateData);
       console.log("Order updated successfully:", result);
-      
+
       setUpdateSuccess("Đơn hàng đã được cập nhật thành công");
       handleCloseEditDialog();
       fetchData();
-      
+
       setTimeout(() => {
         setUpdateSuccess(null);
       }, 5000);
-      
     } catch (err) {
       console.error("Error updating order:", err);
-      
+
       let errorMessage = "Không thể cập nhật đơn hàng. Vui lòng thử lại sau.";
-      
+
       if (err.response) {
         console.error("API response error:", err.response.data);
         if (err.response.data && err.response.data.message) {
           errorMessage = err.response.data.message;
         }
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -533,7 +543,7 @@ const OrderDetailPage: React.FC = () => {
 
   const handleStatusUpdate = async () => {
     if (!orderDetails || !orderId || newStatus === "") return;
-    
+
     setStatusUpdateLoading(true);
     try {
       const updateData = {
@@ -552,19 +562,18 @@ const OrderDetailPage: React.FC = () => {
         filesToRemove: null,
         filesToAdd: null,
       };
-      
+
       console.log("Updating order status with data:", updateData);
       const result = await updateOrder(updateData);
       console.log("Order status updated successfully:", result);
-      
+
       setUpdateSuccess("Trạng thái đơn hàng đã được cập nhật thành công");
       handleStatusUpdateClose();
       fetchData();
-      
+
       setTimeout(() => {
         setUpdateSuccess(null);
       }, 5000);
-      
     } catch (err) {
       console.error("Error updating order status:", err);
       setError("Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại sau.");
@@ -575,7 +584,7 @@ const OrderDetailPage: React.FC = () => {
 
   const getTripStatusDisplay = (status: string | null) => {
     if (!status) return { label: "Không xác định", color: "default" };
-    
+
     switch (status) {
       case "completed":
         return { label: "Hoàn thành", color: "success" };
@@ -594,7 +603,10 @@ const OrderDetailPage: React.FC = () => {
       case "4":
         return { label: "Đã đến điểm giao hàng", color: "info" };
       case "5":
-        return { label: "Đang di chuyển đến điểm trả container", color: "info" };
+        return {
+          label: "Đang di chuyển đến điểm trả container",
+          color: "info",
+        };
       case "6":
         return { label: "Đã đến điểm trả container", color: "success" };
       case "7":
@@ -623,16 +635,16 @@ const OrderDetailPage: React.FC = () => {
       });
       setCreateTripError(null);
       setOpenCreateTripDialog(true);
-      
+
       try {
         await loadDrivers();
-        
+
         try {
           await loadTractors();
         } catch (tractorError) {
           console.error("Tractor loading failed independently:", tractorError);
         }
-        
+
         try {
           await loadTrailers();
         } catch (trailerError) {
@@ -640,20 +652,22 @@ const OrderDetailPage: React.FC = () => {
         }
       } catch (error) {
         console.error("Error loading form data:", error);
-        setCreateTripError("Không thể tải đủ dữ liệu cho biểu mẫu. Một số tùy chọn có thể không khả dụng.");
+        setCreateTripError(
+          "Không thể tải đủ dữ liệu cho biểu mẫu. Một số tùy chọn có thể không khả dụng."
+        );
       }
     }
   };
-  
+
   const loadDrivers = async () => {
     try {
       setLoadingDrivers(true);
       const response = await getDriverList({
         pageNumber: 1,
         pageSize: 100,
-        status: 1
+        status: 1,
       });
-      
+
       if (response.success && response.data && response.data.items) {
         setDrivers(response.data.items);
       } else {
@@ -666,23 +680,27 @@ const OrderDetailPage: React.FC = () => {
       setLoadingDrivers(false);
     }
   };
-  
+
   const loadTractors = async () => {
     try {
       setLoadingTractors(true);
-      
+
       // Thực hiện hai lần gọi API riêng biệt
       const activeResponse = await getTractors(1, 100, undefined, "Active");
       const onDutyResponse = await getTractors(1, 100, undefined, "OnDuty");
-      
+
       console.log("Active tractors response:", activeResponse);
       console.log("OnDuty tractors response:", onDutyResponse);
-      
+
       // Hàm trích xuất danh sách tractors từ response
       const extractTractors = (response: any): any[] => {
         if (!response) return [];
-        
-        if (response.data && response.data.tractors && response.data.tractors.items) {
+
+        if (
+          response.data &&
+          response.data.tractors &&
+          response.data.tractors.items
+        ) {
           return response.data.tractors.items;
         } else if (Array.isArray(response)) {
           return response;
@@ -691,27 +709,28 @@ const OrderDetailPage: React.FC = () => {
         } else if (response.tractors && response.tractors.items) {
           return response.tractors.items;
         }
-        
+
         return [];
       };
-      
+
       // Lấy danh sách tractors từ cả hai response
       const activeTractors = extractTractors(activeResponse);
       const onDutyTractors = extractTractors(onDutyResponse);
-      
+
       // Kết hợp danh sách và loại bỏ trùng lặp dựa trên tractorId
       const combinedTractors = [
         ...activeTractors,
-        ...onDutyTractors.filter(onDutyTractor => 
-          !activeTractors.some(activeTractor => 
-            activeTractor.tractorId === onDutyTractor.tractorId
-          )
-        )
+        ...onDutyTractors.filter(
+          (onDutyTractor) =>
+            !activeTractors.some(
+              (activeTractor) =>
+                activeTractor.tractorId === onDutyTractor.tractorId
+            )
+        ),
       ];
-      
+
       console.log("Combined tractors count:", combinedTractors.length);
       setTractors(combinedTractors);
-      
     } catch (error) {
       console.error("Error loading tractors:", error);
       setCreateTripError("Không thể tải dữ liệu đầu kéo. Vui lòng thử lại.");
@@ -719,20 +738,24 @@ const OrderDetailPage: React.FC = () => {
       setLoadingTractors(false);
     }
   };
-  
+
   const loadTrailers = async () => {
     try {
       setLoadingTrailers(true);
-      
+
       // Thực hiện hai lần gọi API riêng biệt
       const activeResponse = await getTrailers(1, 100, undefined, "Active");
       const onDutyResponse = await getTrailers(1, 100, undefined, "OnDuty");
-      
+
       // Hàm trích xuất danh sách trailers từ response
       const extractTrailers = (response: any): any[] => {
         if (!response) return [];
-        
-        if (response.data && response.data.trailers && response.data.trailers.items) {
+
+        if (
+          response.data &&
+          response.data.trailers &&
+          response.data.trailers.items
+        ) {
           return response.data.trailers.items;
         } else if (Array.isArray(response)) {
           return response;
@@ -741,26 +764,27 @@ const OrderDetailPage: React.FC = () => {
         } else if (response.trailers && response.trailers.items) {
           return response.trailers.items;
         }
-        
+
         return [];
       };
-      
+
       // Lấy danh sách trailers từ cả hai response
       const activeTrailers = extractTrailers(activeResponse);
       const onDutyTrailers = extractTrailers(onDutyResponse);
-      
+
       // Kết hợp danh sách và loại bỏ trùng lặp
       const combinedTrailers = [
         ...activeTrailers,
-        ...onDutyTrailers.filter(onDutyTrailer => 
-          !activeTrailers.some(activeTrailer => 
-            activeTrailer.trailerId === onDutyTrailer.trailerId
-          )
-        )
+        ...onDutyTrailers.filter(
+          (onDutyTrailer) =>
+            !activeTrailers.some(
+              (activeTrailer) =>
+                activeTrailer.trailerId === onDutyTrailer.trailerId
+            )
+        ),
       ];
-      
+
       setTrailers(combinedTrailers);
-      
     } catch (error) {
       console.error("Error loading trailers:", error);
       setCreateTripError("Không thể tải dữ liệu rơ moóc. Vui lòng thử lại.");
@@ -773,22 +797,28 @@ const OrderDetailPage: React.FC = () => {
     setOpenCreateTripDialog(false);
   };
 
-  const handleCreateTripChange = (event: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+  const handleCreateTripChange = (
+    event: React.ChangeEvent<{ name?: string; value: unknown }>
+  ) => {
     const name = event.target.name as string;
     const value = event.target.value as string;
-    
+
     setCreateTripData({
       ...createTripData,
       [name]: value,
     });
 
     if (name === "tractorId") {
-      const selectedTractor = tractors.find(tractor => tractor.tractorId === value);
+      const selectedTractor = tractors.find(
+        (tractor) => tractor.tractorId === value
+      );
       setTractorMaxLoadWeight(selectedTractor?.maxLoadWeight || null);
     }
-    
+
     if (name === "TrailerId") {
-      const selectedTrailer = trailers.find(trailer => trailer.trailerId === value);
+      const selectedTrailer = trailers.find(
+        (trailer) => trailer.trailerId === value
+      );
       setTrailerMaxLoadWeight(selectedTrailer?.maxLoadWeight || null);
     }
   };
@@ -798,31 +828,35 @@ const OrderDetailPage: React.FC = () => {
     setCreateTripError(null);
 
     try {
-      if (!createTripData.orderId || !createTripData.driverId || 
-          !createTripData.tractorId || !createTripData.TrailerId) {
+      if (
+        !createTripData.orderId ||
+        !createTripData.driverId ||
+        !createTripData.tractorId ||
+        !createTripData.TrailerId
+      ) {
         throw new Error("Vui lòng điền đầy đủ thông tin");
       }
 
       console.log("Creating trip with data:", createTripData);
       await manualCreateTrip(createTripData);
-      
+
       setCreateTripSuccess("Tạo chuyến đi thành công");
       setTimeout(() => {
         setCreateTripSuccess(null);
       }, 5000);
-      
+
       handleCloseCreateTripDialog();
       fetchData();
     } catch (err: any) {
       console.error("Error creating trip:", err);
-      
+
       let errorMessage = "Không thể tạo chuyến đi. Vui lòng thử lại sau.";
       if (err.response && err.response.data) {
         errorMessage = err.response.data;
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setCreateTripError(errorMessage);
     } finally {
       setCreateTripLoading(false);
@@ -888,10 +922,13 @@ const OrderDetailPage: React.FC = () => {
     weight: parseFloat(orderDetails.weight) || 0,
     pickUpDate: new Date(orderDetails.pickUpDate),
     deliveryDate: new Date(orderDetails.deliveryDate),
-    completeTime: orderDetails.completeTime ? new Date(orderDetails.completeTime) : null,
+    completeTime: orderDetails.completeTime
+      ? new Date(orderDetails.completeTime)
+      : null,
     note: orderDetails.note || "",
     containerType: orderDetails.containerType,
-    containerSize: orderDetails.containerSize || ContainerSize["Container 20 FEET"],
+    containerSize:
+      orderDetails.containerSize || ContainerSize["Container 20 FEET"],
     deliveryType: orderDetails.deliveryType,
     pickUpLocation: orderDetails.pickUpLocation,
     deliveryLocation: orderDetails.deliveryLocation,
@@ -932,9 +969,9 @@ const OrderDetailPage: React.FC = () => {
             color={getStatusDisplay(orderDetails.status).color as any}
           />
           {orderDetails.status === OrderStatus.Pending && (
-            <Button 
-              variant="outlined" 
-              color="primary" 
+            <Button
+              variant="outlined"
+              color="primary"
               startIcon={<EditIcon />}
               onClick={handleOpenEditDialog}
             >
@@ -947,276 +984,382 @@ const OrderDetailPage: React.FC = () => {
       <Grid container spacing={3}>
         <Grid item xs={12} md={7}>
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Thông tin chung
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
+            <Box
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: 1,
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: -3, // Negative margin to extend to the edges
+                mt: -3, // Negative margin to remove top padding
+                px: 3, // Add padding on sides to match parent padding
+                pt: 1.5, // Add padding on top to match parent padding
+                pb: 1.5, // Keep the original padding-bottom
+              }}
+            >
+              <InfoIcon sx={{ color: "inherit" }} />
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                Thông tin chung
+              </Typography>
+            </Box>
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Trạng thái
-                </Typography>
-                <Typography
-                  variant="body1"
-                  gutterBottom
-                  sx={{
-                    fontWeight: "medium",
-                    color:
-                      orderDetails.status === OrderStatus.Completed
-                        ? "success.main"
-                        : orderDetails.status === OrderStatus.Scheduled
-                        ? "info.main"
-                        : "warning.main",
-                  }}
-                >
-                  {getStatusDisplay(orderDetails.status).label}
-                </Typography>
-              </Grid>
+            {/* <Divider sx={{ mb: 0 }} /> */}
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Trạng thái thanh toán
-                </Typography>
-                <Box sx={{ mt: 0.5 }}>
-                  <Chip
-                    size="small"
-                    label={getPaymentStatusDisplay(orderDetails.isPay).label}
-                    color={getPaymentStatusDisplay(orderDetails.isPay).color as any}
-                  />
-                </Box>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Giá
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {new Intl.NumberFormat("vi-VN").format(orderDetails.price)}{" "}
-                  VNĐ
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Khách hàng
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.customer || orderDetails.customerId || "N/A"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Số container
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.containerNumber || "N/A"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Loại container
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {getContainerTypeName(orderDetails.containerType)}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Kích thước container
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {getContainerSizeName(orderDetails.containerSize || ContainerSize["Container 20 FEEET"])}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Loại vận chuyển
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {getDeliveryTypeName(orderDetails.deliveryType)}
-                </Typography>
-              </Grid>
-
-              {orderDetails.containerType === ContainerType["Container Lạnh"] && (
+            <Box mt={3}>
+              <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Nhiệt độ
+                    Trạng thái
                   </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {orderDetails.temperature !== null ? `${orderDetails.temperature}°C` : "N/A"}
+                  <Typography
+                    variant="body1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: "medium",
+                      color:
+                        orderDetails.status === OrderStatus.Completed
+                          ? "success.main"
+                          : orderDetails.status === OrderStatus.Scheduled
+                          ? "info.main"
+                          : "warning.main",
+                    }}
+                  >
+                    {getStatusDisplay(orderDetails.status).label}
                   </Typography>
                 </Grid>
-              )}
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Trọng lượng
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.weight} tấn
-                </Typography>
-              </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Trạng thái thanh toán
+                  </Typography>
+                  <Box sx={{ mt: 0.5 }}>
+                    <Chip
+                      size="small"
+                      label={getPaymentStatusDisplay(orderDetails.isPay).label}
+                      color={
+                        getPaymentStatusDisplay(orderDetails.isPay).color as any
+                      }
+                    />
+                  </Box>
+                </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Ngày lấy hàng
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {formatDate(orderDetails.pickUpDate)}
-                </Typography>
-              </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Giá
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {new Intl.NumberFormat("vi-VN").format(orderDetails.price)}{" "}
+                    VNĐ
+                  </Typography>
+                </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Ngày giao hàng
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {formatDate(orderDetails.deliveryDate)}
-                </Typography>
-              </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Khách hàng
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    gutterBottom
+                    sx={{
+                      cursor: "pointer",
+                      color: "primary.main",
+                      "&:hover": {
+                        textDecoration: "underline",
+                        color: "primary.dark",
+                      },
+                    }}
+                    onClick={() =>
+                      orderDetails.customerId &&
+                      navigate(
+                        `/staff-menu/customers/${orderDetails.customerId}`
+                      )
+                    }
+                  >
+                    {orderDetails.companyName || "N/A"}
+                  </Typography>
+                </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Ngày tạo
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {formatDate(orderDetails.createdDate)}
-                </Typography>
-              </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Số container
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.containerNumber || "N/A"}
+                  </Typography>
+                </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Ước lượng thời gian giao
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.completionTime || "N/A"}
-                </Typography>
-              </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Loại container
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {getContainerTypeName(orderDetails.containerType)}
+                  </Typography>
+                </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Người tạo
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.createdBy || "N/A"}
-                </Typography>
-              </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Kích thước container
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {getContainerSizeName(
+                      orderDetails.containerSize ||
+                        ContainerSize["Container 20 FEET"]
+                    )}
+                  </Typography>
+                </Grid>
 
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Ghi chú
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.note || "Không có ghi chú"}
-                </Typography>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Loại vận chuyển
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {getDeliveryTypeName(orderDetails.deliveryType)}
+                  </Typography>
+                </Grid>
+
+                {orderDetails.containerType ===
+                  ContainerType["Container Lạnh"] && (
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Nhiệt độ
+                    </Typography>
+                    <Typography variant="body1" gutterBottom>
+                      {orderDetails.temperature !== null
+                        ? `${orderDetails.temperature}°C`
+                        : "N/A"}
+                    </Typography>
+                  </Grid>
+                )}
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Trọng lượng
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.weight} tấn
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Ngày lấy hàng
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {formatDate(orderDetails.pickUpDate)}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Ngày giao hàng
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {formatDate(orderDetails.deliveryDate)}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Ngày tạo
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {formatDate(orderDetails.createdDate)}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Ước lượng thời gian tài xế chạy
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.completionTime || "N/A"}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Người tạo
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.createdBy || "N/A"}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Ghi chú
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.note || "Không có ghi chú"}
+                  </Typography>
+                </Grid>
               </Grid>
-            </Grid>
+            </Box>
           </Paper>
 
           <Paper elevation={2} sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Thông tin địa điểm
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
+            <Box
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: 1,
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: -3,
+                mt: -3,
+                px: 3,
+                pt: 1.5,
+                pb: 1.5,
+              }}
+            >
+              <LocationOnIcon sx={{ color: "inherit" }} />
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                Thông tin địa điểm
+              </Typography>
+            </Box>
+            {/* <Divider sx={{ mb: 2 }} /> */}
 
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Địa điểm lấy hàng
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.pickUpLocation}
-                </Typography>
-              </Grid>
+            <Box mt={3}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Địa điểm lấy hàng
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.pickUpLocation}
+                  </Typography>
+                </Grid>
 
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Địa điểm giao hàng
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.deliveryLocation}
-                </Typography>
-              </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Địa điểm giao hàng
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.deliveryLocation}
+                  </Typography>
+                </Grid>
 
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Địa điểm trả container
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.conReturnLocation}
-                </Typography>
-              </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Địa điểm trả container
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.conReturnLocation}
+                  </Typography>
+                </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Tổng quãng đường
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.distance
-                    ? `${orderDetails.distance} km`
-                    : "N/A"}
-                </Typography>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Tổng quãng đường
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.distance
+                      ? `${orderDetails.distance} km`
+                      : "N/A"}
+                  </Typography>
+                </Grid>
               </Grid>
-            </Grid>
+            </Box>
           </Paper>
         </Grid>
 
         <Grid item xs={12} md={5}>
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Thông tin liên hệ
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
+            <Box
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: 1,
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: -3,
+                mt: -3,
+                px: 3,
+                pt: 1.5,
+                pb: 1.5,
+              }}
+            >
+              <ContactsIcon sx={{ color: "inherit" }} />
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                Thông tin liên hệ
+              </Typography>
+            </Box>
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Người liên hệ
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.contactPerson}
-                </Typography>
-              </Grid>
+            {/* <Divider sx={{ mb: 2 }} /> */}
 
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Số điện thoại
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.contactPhone}
-                </Typography>
-              </Grid>
+            <Box mt={3}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Người liên hệ
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.contactPerson}
+                  </Typography>
+                </Grid>
 
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Người đặt hàng
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {orderDetails.orderPlacer}
-                </Typography>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Số điện thoại
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.contactPhone}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Người đặt hàng
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.orderPlacer}
+                  </Typography>
+                </Grid>
               </Grid>
-            </Grid>
+            </Box>
           </Paper>
 
           <Paper elevation={2} sx={{ p: 3 }}>
             <Box
               display="flex"
-              justifyContent="space-between"
+              // justifyContent="space-between"
               alignItems="center"
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: 1,
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: -3,
+                mt: -3,
+                px: 3,
+                pt: 1.5,
+                pb: 1.5,
+              }}
             >
-              <Typography variant="h6" gutterBottom>
-                Tài liệu & Hồ sơ
+              <FolderIcon sx={{ color: "inherit" }} />
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                Tài liệu hồ sơ
               </Typography>
             </Box>
-            <Divider sx={{ mb: 2 }} />
+            {/* <Divider sx={{ mb: 2 }} /> */}
 
             <Box mb={3}>
-              <Typography variant="subtitle1" gutterBottom>
+              <Typography variant="subtitle2" gutterBottom>
                 Tài liệu đơn hàng
               </Typography>
               {orderDetails.orderFiles && orderDetails.orderFiles.length > 0 ? (
@@ -1230,6 +1373,10 @@ const OrderDetailPage: React.FC = () => {
                         : fileObj.fileName;
                     const fileType =
                       typeof fileObj === "string" ? null : fileObj.fileType;
+                    const description =
+                      typeof fileObj === "string" ? null : fileObj.description;
+                    const notes =
+                      typeof fileObj === "string" ? null : fileObj.note;
 
                     const isImage = fileType
                       ? fileType === "Image" ||
@@ -1294,6 +1441,58 @@ const OrderDetailPage: React.FC = () => {
                                 </a>
                               </Typography>
                             )}
+
+                            {(description || notes) && (
+                              <Box
+                                mt={1}
+                                pt={1}
+                                sx={{
+                                  borderTop: "1px dashed rgba(0, 0, 0, 0.12)",
+                                  maxHeight: "80px",
+                                  overflow: "auto",
+                                }}
+                              >
+                                {description && (
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      component="span"
+                                      sx={{ fontWeight: "medium" }}
+                                    >
+                                      Mô tả:
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      component="span"
+                                      sx={{ ml: 0.5 }}
+                                    >
+                                      {description}
+                                    </Typography>
+                                  </Box>
+                                )}
+
+                                {notes && (
+                                  <Box mt={0.5}>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      component="span"
+                                      sx={{ fontWeight: "medium" }}
+                                    >
+                                      Ghi chú:
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      component="span"
+                                      sx={{ ml: 0.5 }}
+                                    >
+                                      {notes}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              </Box>
+                            )}
                           </CardContent>
                         </Card>
                       </Grid>
@@ -1342,7 +1541,8 @@ const OrderDetailPage: React.FC = () => {
                                   component="img"
                                   src={file.fileUrl}
                                   alt={
-                                    file.fileName || `Contract image ${index + 1}`
+                                    file.fileName ||
+                                    `Contract image ${index + 1}`
                                   }
                                   sx={{
                                     width: "100%",
@@ -1375,7 +1575,9 @@ const OrderDetailPage: React.FC = () => {
                                 </Box>
                                 <a
                                   href={file.fileUrl}
-                                  download={file.fileName || `file-${index + 1}`}
+                                  download={
+                                    file.fileName || `file-${index + 1}`
+                                  }
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
@@ -1401,13 +1603,28 @@ const OrderDetailPage: React.FC = () => {
           <Paper elevation={2} sx={{ p: 3 }}>
             <Box
               display="flex"
-              justifyContent="space-between"
+              // justifyContent="space-between"
               alignItems="center"
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: 1,
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: -3,
+                mt: -3,
+                px: 3,
+                pt: 1.5,
+                pb: 1.5,
+              }}
             >
-              <Typography variant="h6" gutterBottom>
+              <DirectionsIcon sx={{ color: "inherit" }} />
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Thông tin chuyến đi
               </Typography>
-              <DirectionsIcon color="primary" />
             </Box>
             <Divider sx={{ mb: 2 }} />
 
@@ -1429,52 +1646,71 @@ const OrderDetailPage: React.FC = () => {
               </Alert>
             )}
 
-            {!tripLoading && !tripError && (!tripData || tripData.length === 0) && (
-              <>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  Chưa có thông tin chuyến đi cho đơn hàng này
-                </Alert>
-                
-                {orderDetails.orderFiles && 
-                 orderDetails.orderFiles.length > 0 && 
-                 contractFiles && 
-                 contractFiles.length > 0 ? (
-                  <Box display="flex" justifyContent="center" mt={2}>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      startIcon={<AddIcon />}
-                      onClick={handleOpenCreateTripDialog}
-                    >
-                      Tạo chuyến đi
-                    </Button>
-                  </Box>
-                ) : (
-                  <Alert severity="warning" sx={{ mt: 2 }}>
-                    Cần có tài liệu đơn hàng và tài liệu hợp đồng để tạo chuyến đi
+            {!tripLoading &&
+              !tripError &&
+              (!tripData || tripData.length === 0) && (
+                <>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Chưa có thông tin chuyến đi cho đơn hàng này
                   </Alert>
-                )}
-              </>
-            )}
 
-            {!tripLoading && !tripError && tripData && tripData.length > 0 && (
+                  {orderDetails.orderFiles &&
+                  orderDetails.orderFiles.length > 0 &&
+                  contractFiles &&
+                  contractFiles.length > 0 ? (
+                    <Box display="flex" justifyContent="center" mt={2}>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<AddIcon />}
+                        onClick={handleOpenCreateTripDialog}
+                      >
+                        Tạo chuyến đi
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                      Cần có tài liệu đơn hàng và tài liệu hợp đồng để tạo
+                      chuyến đi
+                    </Alert>
+                  )}
+                </>
+              )}
+
+            {!tripLoading &&
+              !tripError &&
+              tripData &&
+              tripData.length > 0 &&
               tripData.map((trip, index) => (
-                <Box 
+                <Box
                   key={trip.tripId || index}
                   sx={{
                     mb: index < tripData.length - 1 ? 3 : 0,
                     pb: index < tripData.length - 1 ? 3 : 0,
-                    borderBottom: index < tripData.length - 1 ? '1px dashed rgba(0, 0, 0, 0.12)' : 'none'
+                    borderBottom:
+                      index < tripData.length - 1
+                        ? "1px dashed rgba(0, 0, 0, 0.12)"
+                        : "none",
                   }}
                 >
                   {index > 0 && (
-                    <Typography variant="subtitle1" fontWeight="medium" gutterBottom mt={2}>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight="medium"
+                      gutterBottom
+                      mt={2}
+                    >
                       Chuyến đi {index + 1}
                     </Typography>
                   )}
                   <Grid container spacing={2}>
                     <Grid item xs={12}>
-                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        mb={1}
+                      >
                         <Typography variant="subtitle2" color="text.secondary">
                           Trạng thái chuyến đi
                         </Typography>
@@ -1495,6 +1731,31 @@ const OrderDetailPage: React.FC = () => {
                       </Typography>
                     </Grid>
 
+                    {trip.driverId && (
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Mã tài xế
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          gutterBottom
+                          sx={{
+                            color: "primary.main",
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                            "&:hover": {
+                              color: "primary.dark",
+                            },
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }}
+                          onClick={() => navigate(`/drivers/${trip.driverId}`)}
+                        >
+                          {trip.driverId}
+                        </Typography>
+                      </Grid>
+                    )}
+
                     <Grid item xs={12} sm={6}>
                       <Typography variant="subtitle2" color="text.secondary">
                         Thời gian bắt đầu
@@ -1513,39 +1774,16 @@ const OrderDetailPage: React.FC = () => {
                       </Typography>
                     </Grid>
 
-                    {trip.driverId && (
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Mã tài xế
-                        </Typography>
-                        <Typography 
-                          variant="body1" 
-                          gutterBottom
-                          sx={{
-                            color: 'primary.main',
-                            cursor: 'pointer',
-                            textDecoration: 'underline',
-                            '&:hover': {
-                              color: 'primary.dark'
-                            },
-                            display: 'inline-flex',
-                            alignItems: 'center'
-                          }}
-                          onClick={() => navigate(`/drivers/${trip.driverId}`)}
-                        >
-                          {trip.driverId}
-                        </Typography>
-                      </Grid>
-                    )}
-
                     {trip.tripId && (
                       <Grid item xs={12}>
                         <Box mt={1}>
-                          <Button 
-                            variant="outlined" 
+                          <Button
+                            variant="outlined"
                             size="small"
                             startIcon={<DirectionsIcon />}
-                            onClick={() => navigate(`/staff-menu/trips/${trip.tripId}`)}
+                            onClick={() =>
+                              navigate(`/staff-menu/trips/${trip.tripId}`)
+                            }
                           >
                             Chi tiết chuyến đi
                           </Button>
@@ -1554,8 +1792,7 @@ const OrderDetailPage: React.FC = () => {
                     )}
                   </Grid>
                 </Box>
-              ))
-            )}
+              ))}
           </Paper>
         </Grid>
       </Grid>
@@ -1574,12 +1811,10 @@ const OrderDetailPage: React.FC = () => {
         open={statusUpdateOpen}
         onClose={handleStatusUpdateClose}
         PaperProps={{
-          sx: { borderRadius: 2 }
+          sx: { borderRadius: 2 },
         }}
       >
-        <DialogTitle>
-          Cập nhật trạng thái đơn hàng
-        </DialogTitle>
+        <DialogTitle>Cập nhật trạng thái đơn hàng</DialogTitle>
         <DialogContent sx={{ pt: 1, width: 300 }}>
           <FormControl fullWidth margin="normal">
             <InputLabel id="status-select-label">Trạng thái</InputLabel>
@@ -1608,11 +1843,9 @@ const OrderDetailPage: React.FC = () => {
           </FormControl>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleStatusUpdateClose}>
-            Hủy
-          </Button>
-          <Button 
-            variant="contained" 
+          <Button onClick={handleStatusUpdateClose}>Hủy</Button>
+          <Button
+            variant="contained"
             onClick={handleStatusUpdate}
             disabled={statusUpdateLoading || newStatus === orderDetails?.status}
           >
@@ -1627,7 +1860,7 @@ const OrderDetailPage: React.FC = () => {
         fullWidth
         maxWidth="md"
         PaperProps={{
-          sx: { borderRadius: 2, maxHeight: '90vh' }
+          sx: { borderRadius: 2, maxHeight: "90vh" },
         }}
       >
         <DialogTitle>
@@ -1678,13 +1911,14 @@ const OrderDetailPage: React.FC = () => {
                 />
               </Grid>
               <Grid item xs={12} md={6}>
-                {orderDetails?.containerType === ContainerType["Container Lạnh"] && (
+                {orderDetails?.containerType ===
+                  ContainerType["Container Lạnh"] && (
                   <TextField
                     fullWidth
                     label="Nhiệt độ (°C)"
                     type="number"
                     name="temperature"
-                    value={editFormData.temperature || ''}
+                    value={editFormData.temperature || ""}
                     onChange={handleInputChange}
                     margin="normal"
                   />
@@ -1731,23 +1965,32 @@ const OrderDetailPage: React.FC = () => {
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
 
-                {orderDetails?.orderFiles && orderDetails.orderFiles.length > 0 ? (
+                {orderDetails?.orderFiles &&
+                orderDetails.orderFiles.length > 0 ? (
                   <Box mb={3}>
                     <Typography variant="subtitle2" gutterBottom>
                       Tài liệu hiện tại
                     </Typography>
                     <List>
                       {orderDetails.orderFiles.map((fileObj, index) => {
-                        const fileUrl = typeof fileObj === "string" ? fileObj : fileObj.fileUrl;
-                        const fileName = typeof fileObj === "string" 
-                          ? `Tài liệu ${index + 1}` 
-                          : fileObj.fileName || `Tài liệu ${index + 1}`;
-                          
+                        const fileUrl =
+                          typeof fileObj === "string"
+                            ? fileObj
+                            : fileObj.fileUrl;
+                        const fileName =
+                          typeof fileObj === "string"
+                            ? `Tài liệu ${index + 1}`
+                            : fileObj.fileName || `Tài liệu ${index + 1}`;
+
                         return (
                           <ListItem key={index} dense>
-                            <ListItemText 
-                              primary={fileName} 
-                              secondary={filesToDelete.includes(fileUrl) ? "Sẽ bị xóa" : ""}
+                            <ListItemText
+                              primary={fileName}
+                              secondary={
+                                filesToDelete.includes(fileUrl)
+                                  ? "Sẽ bị xóa"
+                                  : ""
+                              }
                             />
                             <ListItemSecondaryAction>
                               <Checkbox
@@ -1756,9 +1999,9 @@ const OrderDetailPage: React.FC = () => {
                                 checked={filesToDelete.includes(fileUrl)}
                                 color="error"
                               />
-                              <IconButton 
-                                size="small" 
-                                href={fileUrl} 
+                              <IconButton
+                                size="small"
+                                href={fileUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
@@ -1799,22 +2042,26 @@ const OrderDetailPage: React.FC = () => {
                     <Box sx={{ mt: 2 }}>
                       <List>
                         {newFiles.map((file, index) => (
-                          <Box 
-                            key={index} 
-                            sx={{ 
-                              mb: 3, 
-                              p: 2, 
-                              border: '1px solid rgba(0, 0, 0, 0.12)',
-                              borderRadius: 1
+                          <Box
+                            key={index}
+                            sx={{
+                              mb: 3,
+                              p: 2,
+                              border: "1px solid rgba(0, 0, 0, 0.12)",
+                              borderRadius: 1,
                             }}
                           >
-                            <Box sx={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between',
-                              alignItems: 'center', 
-                              mb: 2 
-                            }}>
-                              <Typography variant="body2">{file.name}</Typography>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                mb: 2,
+                              }}
+                            >
+                              <Typography variant="body2">
+                                {file.name}
+                              </Typography>
                               <IconButton
                                 size="small"
                                 color="error"
@@ -1823,20 +2070,27 @@ const OrderDetailPage: React.FC = () => {
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
                             </Box>
-                            
+
                             <TextField
                               label="Mô tả file"
-                              value={fileDescriptions[index] || ''}
-                              onChange={(e) => handleFileDescriptionChange(index, e.target.value)}
+                              value={fileDescriptions[index] || ""}
+                              onChange={(e) =>
+                                handleFileDescriptionChange(
+                                  index,
+                                  e.target.value
+                                )
+                              }
                               fullWidth
                               margin="normal"
                               size="small"
                             />
-                            
+
                             <TextField
                               label="Ghi chú file"
-                              value={fileNotes[index] || ''}
-                              onChange={(e) => handleFileNoteChange(index, e.target.value)}
+                              value={fileNotes[index] || ""}
+                              onChange={(e) =>
+                                handleFileNoteChange(index, e.target.value)
+                              }
                               fullWidth
                               margin="normal"
                               size="small"
@@ -1852,9 +2106,7 @@ const OrderDetailPage: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCloseEditDialog}>
-            Hủy
-          </Button>
+          <Button onClick={handleCloseEditDialog}>Hủy</Button>
           <Button
             variant="contained"
             color="primary"
@@ -1870,19 +2122,17 @@ const OrderDetailPage: React.FC = () => {
         open={openCreateTripDialog}
         onClose={handleCloseCreateTripDialog}
         PaperProps={{
-          sx: { borderRadius: 2 }
+          sx: { borderRadius: 2 },
         }}
       >
-        <DialogTitle>
-          Tạo chuyến đi mới
-        </DialogTitle>
+        <DialogTitle>Tạo chuyến đi mới</DialogTitle>
         <DialogContent sx={{ pt: 1, width: 500 }}>
           {createTripError && (
             <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
               {createTripError}
             </Alert>
           )}
-          
+
           <TextField
             fullWidth
             margin="normal"
@@ -1891,7 +2141,7 @@ const OrderDetailPage: React.FC = () => {
             value={createTripData.orderId}
             disabled
           />
-          
+
           <FormControl fullWidth margin="normal">
             <InputLabel id="driver-select-label">Tài xế</InputLabel>
             <Select
@@ -1905,7 +2155,7 @@ const OrderDetailPage: React.FC = () => {
             >
               {loadingDrivers ? (
                 <MenuItem value="">
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
                     <CircularProgress size={20} sx={{ mr: 1 }} /> Đang tải...
                   </Box>
                 </MenuItem>
@@ -1916,13 +2166,13 @@ const OrderDetailPage: React.FC = () => {
               ) : (
                 drivers.map((driver) => (
                   <MenuItem key={driver.driverId} value={driver.driverId}>
-                    {driver.fullName} - {driver.phoneNumber || 'Không có SĐT'}
+                    {driver.fullName} - {driver.phoneNumber || "Không có SĐT"}
                   </MenuItem>
                 ))
               )}
             </Select>
           </FormControl>
-          
+
           <Grid container spacing={2}>
             <Grid item xs={12} md={8}>
               <FormControl fullWidth margin="normal">
@@ -1938,8 +2188,9 @@ const OrderDetailPage: React.FC = () => {
                 >
                   {loadingTractors ? (
                     <MenuItem value="">
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <CircularProgress size={20} sx={{ mr: 1 }} /> Đang tải...
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <CircularProgress size={20} sx={{ mr: 1 }} /> Đang
+                        tải...
                       </Box>
                     </MenuItem>
                   ) : tractors.length === 0 ? (
@@ -1948,8 +2199,12 @@ const OrderDetailPage: React.FC = () => {
                     </MenuItem>
                   ) : (
                     tractors.map((tractor) => (
-                      <MenuItem key={tractor.tractorId} value={tractor.tractorId}>
-                        {tractor.licensePlate} - {tractor.brand || 'Không rõ hãng'}
+                      <MenuItem
+                        key={tractor.tractorId}
+                        value={tractor.tractorId}
+                      >
+                        {tractor.licensePlate} -{" "}
+                        {tractor.brand || "Không rõ hãng"}
                       </MenuItem>
                     ))
                   )}
@@ -1962,19 +2217,23 @@ const OrderDetailPage: React.FC = () => {
                 variant="outlined"
                 size="small"
                 fullWidth
-                value={tractorMaxLoadWeight !== null ? `${tractorMaxLoadWeight} tấn` : ''}
+                value={
+                  tractorMaxLoadWeight !== null
+                    ? `${tractorMaxLoadWeight} tấn`
+                    : ""
+                }
                 InputProps={{ readOnly: true }}
                 sx={{
                   mt: 2,
-                  '& .MuiInputBase-input': {
-                    color: 'text.secondary',
-                    bgcolor: 'action.hover',
-                  }
+                  "& .MuiInputBase-input": {
+                    color: "text.secondary",
+                    bgcolor: "action.hover",
+                  },
                 }}
               />
             </Grid>
           </Grid>
-          
+
           <Grid container spacing={2}>
             <Grid item xs={12} md={8}>
               <FormControl fullWidth margin="normal">
@@ -1990,8 +2249,9 @@ const OrderDetailPage: React.FC = () => {
                 >
                   {loadingTrailers ? (
                     <MenuItem value="">
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <CircularProgress size={20} sx={{ mr: 1 }} /> Đang tải...
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <CircularProgress size={20} sx={{ mr: 1 }} /> Đang
+                        tải...
                       </Box>
                     </MenuItem>
                   ) : trailers.length === 0 ? (
@@ -2000,8 +2260,12 @@ const OrderDetailPage: React.FC = () => {
                     </MenuItem>
                   ) : (
                     trailers.map((trailer) => (
-                      <MenuItem key={trailer.trailerId} value={trailer.trailerId}>
-                        {trailer.licensePlate} - {trailer.brand || 'Không rõ hãng'}
+                      <MenuItem
+                        key={trailer.trailerId}
+                        value={trailer.trailerId}
+                      >
+                        {trailer.licensePlate} -{" "}
+                        {trailer.brand || "Không rõ hãng"}
                       </MenuItem>
                     ))
                   )}
@@ -2014,27 +2278,34 @@ const OrderDetailPage: React.FC = () => {
                 variant="outlined"
                 size="small"
                 fullWidth
-                value={trailerMaxLoadWeight !== null ? `${trailerMaxLoadWeight} tấn` : ''}
+                value={
+                  trailerMaxLoadWeight !== null
+                    ? `${trailerMaxLoadWeight} tấn`
+                    : ""
+                }
                 InputProps={{ readOnly: true }}
                 sx={{
                   mt: 2,
-                  '& .MuiInputBase-input': {
-                    color: 'text.secondary',
-                    bgcolor: 'action.hover',
-                  }
+                  "& .MuiInputBase-input": {
+                    color: "text.secondary",
+                    bgcolor: "action.hover",
+                  },
                 }}
               />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCloseCreateTripDialog}>
-            Hủy
-          </Button>
-          <Button 
-            variant="contained" 
+          <Button onClick={handleCloseCreateTripDialog}>Hủy</Button>
+          <Button
+            variant="contained"
             onClick={handleCreateTrip}
-            disabled={createTripLoading || !createTripData.driverId || !createTripData.tractorId || !createTripData.TrailerId}
+            disabled={
+              createTripLoading ||
+              !createTripData.driverId ||
+              !createTripData.tractorId ||
+              !createTripData.TrailerId
+            }
           >
             {createTripLoading ? "Đang tạo..." : "Tạo chuyến đi"}
           </Button>
