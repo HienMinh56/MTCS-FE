@@ -155,7 +155,7 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
             onForgotPassword={handleForgotPasswordClick}
             generalError={errors.general}
           />
-          <Box sx={{ display: "flex", justifyContent: "center" }}>
+          {/* <Box sx={{ display: "flex", justifyContent: "center" }}>
             <Typography variant="body2" sx={{ mr: 1 }}>
               Chưa có tài khoản?
             </Typography>
@@ -167,7 +167,7 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
             >
               Đăng ký ngay
             </Button>
-          </Box>
+          </Box> */}
         </DialogContent>
       </Dialog>
 

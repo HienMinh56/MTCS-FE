@@ -92,8 +92,8 @@ const TractorTable: React.FC<TractorTableProps> = ({
         onUpdateSummary({
           total: result.data.allCount,
           active: result.data.activeCount,
-          maintenance: result.data.maintenanceDueCount,
-          repair: result.data.registrationExpiryDueCount,
+          maintenance: result.data.inactiveCount || 0,
+          repair: result.data.onDutyCount || 0,
         });
       } else {
         setTractors([]);

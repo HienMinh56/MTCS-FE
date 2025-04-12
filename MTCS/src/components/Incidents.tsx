@@ -108,7 +108,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ pb: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pr: 2 }}>
           <Typography variant="h6">Chi tiết sự cố #{incident.reportId}</Typography>
           <Chip 
             size="small" 
@@ -118,7 +118,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
             color={
               incident.status === "Handling" ? "info" : "success"
             } 
-            sx={{ ml: 2 }}
+            sx={{ ml: 2 }}            
           />
         </Box>
       </DialogTitle>
@@ -144,14 +144,8 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                     <Typography variant="caption" color="text.secondary">Mã sự cố</Typography>
                     <Typography variant="body1">{incident.reportId}</Typography>
                   </Box>
-                  
                   <Box>
-                    <Typography variant="caption" color="text.secondary">Mã vận chuyển</Typography>
-                    <Typography variant="body1">{incident.trackingCode}</Typography>
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Mã đơn</Typography>
+                    <Typography variant="caption" color="text.secondary">Mã vận đơn</Typography>
                     <Box mt={0.5}>
                       <Typography 
                         variant="body1" 
@@ -168,7 +162,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                           navigate(`/staff-menu/orders/${incident.trip.orderId}`);
                         }}
                       >
-                        {incident.trip.orderId}
+                        {incident.trackingCode}
                       </Typography>
                     </Box>
                   </Box>
@@ -181,6 +175,11 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                   <Box>
                     <Typography variant="caption" color="text.secondary">Loại sự cố</Typography>
                     <Typography variant="body1">{incident.incidentType}</Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Mô tả sự cố</Typography>                    
+                    <Typography variant="body1" paragraph>{incident.description}</Typography>
                   </Box>
                 </Box>
               </Grid>
@@ -206,10 +205,11 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                     <Typography variant="caption" color="text.secondary">Loại</Typography>
                     <Typography variant="body1">
                       {incident.type === 1 ? "Có thể sửa" : 
-                       incident.type === 2 ? "Không thể sửa" : 
+                       incident.type === 2 ? "Cần hỗ trợ" : 
                        incident.type}
                     </Typography>
                   </Box>
+
                 </Box>
               </Grid>
             </Grid>
@@ -217,22 +217,30 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
           
           {/* Section: Status Information */}
           <Paper variant="outlined" sx={{ p: 2, borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.12)' }}>
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, borderBottom: '2px solid #e0e0e0', pb: 1 }}>
-              Thông tin xử lý
-            </Typography>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              borderBottom: '2px solid #e0e0e0', 
+              pb: 1,
+              mb: 2
+            }}>
+              <Typography variant="subtitle1" fontWeight="bold">
+                Thông tin xử lý
+              </Typography>
+              <Chip 
+                size="small"
+                label={incident.status === "Handling" ? "Đang xử lý" : "Đã xử lý"} 
+                color={incident.status === "Handling" ? "info" : "success"} 
+              />
+            </Box>
             
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                   <Box>
-                    <Typography variant="caption" color="text.secondary">Trạng thái</Typography>
-                    <Box sx={{ mt: 0.5 }}>
-                      <Chip 
-                        size="small" 
-                        label={incident.status === "Handling" ? "Đang xử lý" : "Đã xử lý"} 
-                        color={incident.status === "Handling" ? "info" : "success"} 
-                      />
-                    </Box>
+                    <Typography variant="caption" color="text.secondary">Chi tiết xử lý</Typography>
+                    <Typography variant="body1" paragraph>{incident.resolutionDetails}</Typography>
                   </Box>
                 </Box>
               </Grid>
@@ -255,22 +263,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                 </Box>
               </Grid>
             </Grid>
-          </Paper>
-          
-          {/* Section: Description */}
-          <Paper variant="outlined" sx={{ p: 2, borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.12)' }}>
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, borderBottom: '2px solid #e0e0e0', pb: 1 }}>
-              Mô tả
-            </Typography>
-            <Typography variant="body1" paragraph>{incident.description}</Typography>
-            
-            {incident.resolutionDetails && (
-              <>
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>Chi tiết xử lý</Typography>
-                <Typography variant="body1" paragraph>{incident.resolutionDetails}</Typography>
-              </>
-            )}
-          </Paper>
+          </Paper>        
           
           {/* Section: Images */}
           <Paper variant="outlined" sx={{ p: 2, borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.12)' }}>
@@ -794,12 +787,12 @@ const IncidentManagement = () => {
                   >
                     <TableHead>
                       <TableRow>
-                        <TableCell>Mã sự cố</TableCell>
-                        <TableCell>Mã vận chuyển</TableCell>
-                        <TableCell>Loại sự cố</TableCell>
-                        <TableCell>Loại</TableCell>
-                        <TableCell>Thời gian Báo cáo</TableCell>
-                        <TableCell>Trạng thái</TableCell>                        
+                        <TableCell align="center">Mã sự cố</TableCell>
+                        <TableCell align="center">Mã vận chuyển</TableCell>
+                        <TableCell align="center">Loại sự cố</TableCell>
+                        <TableCell align="center">Loại</TableCell>
+                        <TableCell align="center">Thời gian Báo cáo</TableCell>
+                        <TableCell align="center">Trạng thái</TableCell>                        
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -815,17 +808,17 @@ const IncidentManagement = () => {
                               onClick={() => handleOpenDialog(incident)}
                               sx={{ cursor: "pointer" }}
                             >
-                              <TableCell>{incident.reportId}</TableCell>
-                              <TableCell>{incident.trackingCode}</TableCell>
-                              <TableCell>{incident.incidentType}</TableCell>
-                              <TableCell>
+                              <TableCell align="center">{incident.reportId}</TableCell>
+                              <TableCell align="center">{incident.trackingCode}</TableCell>
+                              <TableCell align="center">{incident.incidentType}</TableCell>
+                              <TableCell align="center">
                                 {incident.type === 1 
                                   ? "Có thể sửa" 
                                   : incident.type === 2 
-                                  ? "Không thể sửa" 
+                                  ? "Cần hỗ trợ" 
                                   : incident.type}
                               </TableCell>
-                              <TableCell>
+                              <TableCell align="center">
                                 {incident.createdDate ? 
                                   `${new Date(incident.createdDate).toLocaleDateString('vi-VN')} ${new Date(incident.createdDate).toLocaleTimeString('vi-VN')}` : 
                                   ''}

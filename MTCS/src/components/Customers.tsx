@@ -492,10 +492,10 @@ const Customers = () => {
             >
               <TableHead>
                 <TableRow>
-                  <TableCell>Công ty</TableCell>
-                  <TableCell>Email</TableCell>
+                  <TableCell align="center" sx={{pr: 18}}>Công ty</TableCell>
+                  <TableCell align="center" sx={{pr: 18}}>Email</TableCell>
                   <TableCell>Số điện thoại</TableCell>
-                  <TableCell>Ngày tạo</TableCell>
+                  <TableCell align="center">Ngày tạo</TableCell>
                   <TableCell align="center">Số đơn hàng</TableCell>
                 </TableRow>
               </TableHead>
@@ -527,7 +527,7 @@ const Customers = () => {
                         <TableCell>{customer.companyName}</TableCell>
                         <TableCell>{customer.email}</TableCell>
                         <TableCell>{customer.phoneNumber}</TableCell>
-                        <TableCell>
+                        <TableCell align="center">
                           {customer.createdDate 
                             ? new Date(customer.createdDate).toLocaleDateString('vi-VN') 
                             : 'N/A'}

@@ -997,17 +997,17 @@ const CustomerDetailPage = () => {
               </Typography>
               
               <Box sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
-                <EmailIcon fontSize="small" color="action" sx={{ mr: 1 }} />
+                <EmailIcon fontSize="small" color="primary" sx={{ mr: 1 }} />
                 <Typography variant="body2">{customer.email || 'N/A'}</Typography>
               </Box>
               
               <Box sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
-                <PhoneIcon fontSize="small" color="action" sx={{ mr: 1 }} />
+                <PhoneIcon fontSize="small" color="primary" sx={{ mr: 1 }} />
                 <Typography variant="body2">{customer.phoneNumber || 'N/A'}</Typography>
               </Box>
               
               <Box sx={{ display: 'flex', my: 1 }}>
-                <BusinessIcon fontSize="small" color="action" sx={{ mr: 1, mt: 0.3 }} />
+                <BusinessIcon fontSize="small" color="primary" sx={{ mr: 1, mt: 0.3 }} />
                 <Typography variant="body2">{customer.address || 'N/A'}</Typography>
               </Box>
 
@@ -1041,12 +1041,14 @@ const CustomerDetailPage = () => {
                   variant="outlined"
                   size="small"
                   sx={{ mr: 1 }}
+                  color="primary"
                 />
                 <Chip 
                   icon={<LocalShippingIcon />} 
                   label={`${customer.orders?.length || 0} Đơn hàng`}
                   variant="outlined"
                   size="small"
+                  color="primary"
                 />
               </Box>
             </Box>
@@ -1075,23 +1077,23 @@ const CustomerDetailPage = () => {
                       <Typography variant="h6" sx={{ mb: 2 }}>Thông tin chi tiết</Typography>
                       <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
-                          <Typography variant="subtitle2" color="text.secondary">Tên công ty</Typography>
+                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Tên công ty</Typography>
                           <Typography variant="body1" sx={{ mb: 2 }}>{customer.companyName}</Typography>
                           
-                          <Typography variant="subtitle2" color="text.secondary">Email</Typography>
+                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Email</Typography>
                           <Typography variant="body1" sx={{ mb: 2 }}>{customer.email}</Typography>
                           
-                          <Typography variant="subtitle2" color="text.secondary">Số điện thoại</Typography>
+                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Số điện thoại</Typography>
                           <Typography variant="body1" sx={{ mb: 2 }}>{customer.phoneNumber}</Typography>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                          <Typography variant="subtitle2" color="text.secondary">Mã số thuế</Typography>
+                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Mã số thuế</Typography>
                           <Typography variant="body1" sx={{ mb: 2 }}>{customer.taxNumber || 'N/A'}</Typography>
                           
-                          <Typography variant="subtitle2" color="text.secondary">Địa chỉ</Typography>
+                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Địa chỉ</Typography>
                           <Typography variant="body1" sx={{ mb: 2 }}>{customer.address || 'N/A'}</Typography>
                           
-                          <Typography variant="subtitle2" color="text.secondary">Trạng thái</Typography>
+                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Trạng thái</Typography>
                           <Chip 
                             label={customer.deletedDate ? "Đã xóa" : "Đang hoạt động"}
                             color={customer.deletedDate ? "error" : "success"}

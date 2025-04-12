@@ -75,6 +75,11 @@ const LoginForm: React.FC<LoginFormProps> = ({
     await onSubmit(credentials);
   };
 
+  const handleForgotPassword = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onForgotPassword();
+  };
+
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
       {generalError && (
@@ -108,11 +113,10 @@ const LoginForm: React.FC<LoginFormProps> = ({
         <Link
           component="button"
           variant="body2"
-          onClick={(e) => {
-            e.preventDefault();
-            onForgotPassword();
-          }}
+          onClick={handleForgotPassword}
           disabled={isLoading}
+          tabIndex={-1} // Ngăn nút này nhận focus khi nhấn Tab
+          type="button" // Xác định rõ đây không phải nút submit
         >
           Quên mật khẩu?
         </Link>
