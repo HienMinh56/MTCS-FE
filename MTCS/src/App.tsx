@@ -17,12 +17,17 @@ import DriverProfile from "./pages/DriverProfile";
 import TripDetailPage from "./pages/TripDetailPage";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import DistanceCalculatorPage from "./pages/DistanceCalculatorPage";
+import AdminFinanceDashboard from "./pages/AdminFinanceDashboard";
 
 const HomeRoute = () => {
   const { isAuthenticated, user } = useAuth();
 
-  if (isAuthenticated && user && ["Staff", "Admin"].includes(user.role)) {
-    return <Navigate to="/staff-menu/orders" replace />;
+  if (isAuthenticated && user) {
+    if (user.role === "Admin") {
+      return <Navigate to="/admin/finance" replace />;
+    } else if (user.role === "Staff") {
+      return <Navigate to="/staff-menu/orders" replace />;
+    }
   }
 
   return <MTCSLogistics />;
@@ -69,6 +74,13 @@ function App() {
                 <Route
                   path="/distance-calculator"
                   element={<DistanceCalculatorPage />}
+                />
+              </Route>
+
+              <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
+                <Route
+                  path="/admin/finance"
+                  element={<AdminFinanceDashboard />}
                 />
               </Route>
 

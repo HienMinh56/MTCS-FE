@@ -1,0 +1,249 @@
+import React, { useState } from "react";
+import {
+  Box,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  useTheme,
+  Chip,
+  IconButton,
+  TablePagination,
+  Tooltip,
+  alpha,
+  Card,
+  Stack,
+} from "@mui/material";
+import {
+  PictureAsPdf,
+  LocalGasStation,
+  DirectionsCar,
+  FilterList,
+  Search,
+} from "@mui/icons-material";
+import { AdminTripFinancial } from "../../types/admin-finance";
+
+interface AdminTripFinancialsTableProps {
+  data: AdminTripFinancial[];
+  title?: string;
+}
+
+const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
+  data,
+  title = "Tài Chính Mỗi Chuyến",
+}) => {
+  const theme = useTheme();
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  const handleChangePage = (
+    _event: React.MouseEvent<HTMLButtonElement> | null,
+    newPage: number
+  ) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const getChipColor = (percentage: number) => {
+    if (percentage >= 30) return "success";
+    if (percentage >= 20) return "info";
+    if (percentage >= 10) return "warning";
+    return "error";
+  };
+
+  const displayedRows = data.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
+  return (
+    <Card
+      elevation={0}
+      className="transition-all duration-300 hover:shadow-md"
+      sx={{
+        borderRadius: 3,
+        border: `1px solid ${theme.palette.grey[200]}`,
+        backgroundColor: "#ffffff",
+        overflow: "hidden",
+      }}
+    >
+      <Box
+        sx={{
+          p: 3,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          borderBottom: `1px solid ${theme.palette.grey[100]}`,
+        }}
+      >
+        <Typography variant="h6" fontWeight="bold" className="text-lg">
+          {title}
+        </Typography>
+
+        <Stack direction="row" spacing={1}>
+          <Tooltip title="Lọc dữ liệu">
+            <IconButton
+              size="small"
+              color="primary"
+              className="hover:bg-blue-50"
+            >
+              <FilterList />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Tìm kiếm">
+            <IconButton
+              size="small"
+              color="primary"
+              className="hover:bg-blue-50"
+            >
+              <Search />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </Box>
+
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow className="bg-gray-50">
+              <TableCell sx={{ fontWeight: 600, py: 2 }}>Mã Chuyến</TableCell>
+              <TableCell sx={{ fontWeight: 600, py: 2 }}>Mã Đơn Hàng</TableCell>
+              <TableCell sx={{ fontWeight: 600, py: 2 }}>Khách Hàng</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600, py: 2 }}>
+                Doanh Thu
+              </TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600, py: 2 }}>
+                Chi Phí Nhiên Liệu
+              </TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600, py: 2 }}>
+                Lợi Nhuận
+              </TableCell>
+              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
+                Biên LN
+              </TableCell>
+              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
+                Hành Động
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {displayedRows.map((trip) => {
+              const chipColor = getChipColor(trip.profitMarginPercentage);
+              const isProfit = trip.profitMargin > 0;
+
+              return (
+                <TableRow
+                  key={trip.tripId}
+                  hover
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <TableCell
+                    sx={{ fontWeight: 500, color: "primary.main", py: 2 }}
+                    className="border-l-4"
+                    style={{ borderLeftColor: theme.palette.primary.main }}
+                  >
+                    {trip.tripCode || trip.tripId}
+                  </TableCell>
+                  <TableCell sx={{ py: 2 }}>{trip.orderId}</TableCell>
+                  <TableCell sx={{ py: 2 }}>{trip.customerName}</TableCell>
+                  <TableCell align="right" sx={{ py: 2 }}>
+                    <Typography className="font-medium">
+                      {trip.revenue.toLocaleString()} VNĐ
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right" sx={{ py: 2 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        gap: 0.5,
+                      }}
+                    >
+                      <LocalGasStation fontSize="small" color="error" />
+                      <Typography className="font-medium">
+                        {trip.fuelCost.toLocaleString()} VNĐ
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell
+                    align="right"
+                    sx={{ fontWeight: 600, py: 2 }}
+                    color={isProfit ? "success" : "error"}
+                  >
+                    <Typography
+                      className="font-semibold"
+                      color={isProfit ? "success.main" : "error.main"}
+                    >
+                      {trip.profitMargin.toLocaleString()} VNĐ
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center" sx={{ py: 2 }}>
+                    <Chip
+                      label={`${trip.profitMarginPercentage}%`}
+                      size="small"
+                      color={chipColor}
+                      sx={{ fontWeight: 600 }}
+                      className="min-w-16"
+                    />
+                  </TableCell>
+                  <TableCell align="center" sx={{ py: 2 }}>
+                    <Stack direction="row" spacing={1} justifyContent="center">
+                      <Tooltip title="Xem Chi Tiết">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          className="hover:bg-blue-50"
+                        >
+                          <DirectionsCar fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Xuất PDF">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          className="hover:bg-red-50"
+                        >
+                          <PictureAsPdf fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Box sx={{ borderTop: `1px solid ${theme.palette.grey[200]}` }}>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={data.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage="Số dòng:"
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}-${to} của ${count}`
+          }
+          className="border-t border-gray-100"
+        />
+      </Box>
+    </Card>
+  );
+};
+
+export default AdminTripFinancialsTable;
