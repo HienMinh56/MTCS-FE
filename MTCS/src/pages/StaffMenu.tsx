@@ -16,20 +16,25 @@ import {
   Menu,
   MenuItem,
   useTheme,
+  Tooltip,
+  Badge,
 } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import WarningIcon from "@mui/icons-material/Warning";
 import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import PersonIcon from "@mui/icons-material/Person";
-import OrderManagement from "../components/Orders";
-import Drivers from "../components/Drivers";
-import Tractors from "../components/Tractors";
-import Trailers from "../components/Trailers";
+import StraightenIcon from "@mui/icons-material/Straighten";
+import OrderManagement from "../components/Order/OrderTable";
+import IncidentManagement from "../components/Incidents";
+import Drivers from "./Drivers";
+import Tractors from "./Tractors";
+import Trailers from "./Trailers";
 import Customers from "../components/Customers";
-import { useNavigate } from "react-router-dom";
-import LogoutButton from "../components/Logout";
+import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
+import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
 import logo1 from "../assets/logo1.png";
 
@@ -37,15 +42,19 @@ const drawerWidth = 240;
 
 const StaffMenu: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [activeTab, setActiveTab] = useState("orders");
+  const [activeTab, setActiveTab] = useState<string>("orders");
 
   const userId = localStorage.getItem("userId") || "staff-user";
 
   useEffect(() => {
-    console.log("StaffMenu is using userId:", userId);
-  }, [userId]);
+    const path = location.pathname.split("/").pop();
+    if (path) {
+      setActiveTab(path);
+    }
+  }, [location.pathname]);
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -57,11 +66,16 @@ const StaffMenu: React.FC = () => {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    navigate(`/staff-menu/${tab}`);
   };
 
   const handleOpenProfile = () => {
     setAnchorEl(null);
     navigate("/profile");
+  };
+
+  const handleNavigateToCalculator = () => {
+    navigate("/distance-calculator");
   };
 
   const menuItems = [
@@ -70,6 +84,12 @@ const StaffMenu: React.FC = () => {
       text: "Đơn hàng",
       icon: <ShoppingCartIcon />,
       selected: activeTab === "orders",
+    },
+    {
+      id: "incidents",
+      text: "Sự cố",
+      icon: <WarningIcon />,
+      selected: activeTab === "incidents",
     },
     {
       id: "customers",
@@ -101,6 +121,8 @@ const StaffMenu: React.FC = () => {
     switch (activeTab) {
       case "orders":
         return <OrderManagement />;
+      case "incidents":
+        return <IncidentManagement />;
       case "customers":
         return <Customers />;
       case "drivers":
@@ -123,7 +145,7 @@ const StaffMenu: React.FC = () => {
           ml: { sm: `${drawerWidth}px` },
           background: "linear-gradient(90deg, #0146C7, #3369d1)",
           color: "white",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
           zIndex: (theme) => theme.zIndex.drawer + 1,
         }}
       >
@@ -143,7 +165,23 @@ const StaffMenu: React.FC = () => {
             }}
           />
 
-          <Box sx={{ display: "flex" }}>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Tooltip title="Công cụ tính khoảng cách">
+              <IconButton
+                color="inherit"
+                onClick={handleNavigateToCalculator}
+                sx={{
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  "&:hover": {
+                    backgroundColor: "rgba(255,255,255,0.2)",
+                  },
+                  transition: "all 0.2s",
+                }}
+              >
+                <StraightenIcon />
+              </IconButton>
+            </Tooltip>
+
             <NotificationComponent userId={userId} />
 
             <IconButton
@@ -153,8 +191,31 @@ const StaffMenu: React.FC = () => {
               aria-haspopup="true"
               onClick={handleProfileMenuOpen}
               color="inherit"
+              sx={{
+                ml: 0.5,
+                border: "2px solid rgba(255,255,255,0.2)",
+                "&:hover": {
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                },
+              }}
             >
-              <AccountCircleIcon />
+              <Badge
+                overlap="circular"
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                badgeContent={
+                  <Box
+                    sx={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      backgroundColor: "#4caf50",
+                      border: "2px solid white",
+                    }}
+                  />
+                }
+              >
+                <AccountCircleIcon />
+              </Badge>
             </IconButton>
           </Box>
           <Menu
@@ -163,9 +224,35 @@ const StaffMenu: React.FC = () => {
             keepMounted
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+                minWidth: 180,
+                boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+              },
+            }}
+            transformOrigin={{ horizontal: "right", vertical: "top" }}
+            anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
           >
-            <MenuItem onClick={handleOpenProfile}>Hồ sơ</MenuItem>
-            <MenuItem sx={{ color: "error.main" }}>
+            <MenuItem
+              onClick={handleOpenProfile}
+              sx={{
+                py: 1.5,
+                "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+              }}
+            >
+              <AccountCircleIcon
+                sx={{ mr: 1.5, color: theme.palette.primary.main }}
+              />
+              Hồ sơ
+            </MenuItem>
+            <MenuItem
+              sx={{
+                color: "error.main",
+                py: 1.5,
+                "&:hover": { backgroundColor: "rgba(211,47,47,0.04)" },
+              }}
+            >
               <LogoutButton buttonType="menuItem" onClick={handleMenuClose} />
             </MenuItem>
           </Menu>
@@ -282,7 +369,16 @@ const StaffMenu: React.FC = () => {
           backgroundColor: "#f8f9fa",
         }}
       >
-        {renderActiveComponent()}
+        <Routes>
+          <Route path="/orders" element={<OrderManagement />} />
+          <Route path="/incidents" element={<IncidentManagement />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/drivers" element={<Drivers />} />
+          <Route path="/tractors" element={<Tractors />} />
+          <Route path="/tractors/:tractorId" element={<Tractors />} />
+          <Route path="/trailers" element={<Trailers />} />
+          <Route path="/trailers/:trailerId" element={<Trailers />} />
+        </Routes>
       </Box>
     </Box>
   );

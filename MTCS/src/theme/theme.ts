@@ -71,6 +71,11 @@ export const theme = createTheme({
       primary: "#0146C7",
       secondary: "#75EDD1",
     },
+    error: {
+      main: "#d32f2f",
+      light: "#ef5350",
+      dark: "#c62828",
+    },
   },
   components: {
     MuiButton: {
@@ -82,6 +87,24 @@ export const theme = createTheme({
           background: "linear-gradient(135deg, #0146C7, #75EDD1)",
           "&:hover": {
             background: "linear-gradient(135deg, #00318b, #52a592)",
+          },
+        },
+        containedError: {
+          background: "#d32f2f !important",
+          backgroundImage: "none !important",
+          color: "#ffffff !important",
+          "&:hover": {
+            background: "#b71c1c !important",
+            backgroundImage: "none !important",
+          },
+        },
+        containedSuccess: {
+          background: "#2e7d32 !important",
+          backgroundImage: "none !important",
+          color: "#ffffff !important",
+          "&:hover": {
+            background: "#1b5e20 !important",
+            backgroundImage: "none !important",
           },
         },
       },
