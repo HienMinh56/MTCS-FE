@@ -33,6 +33,7 @@ import Drivers from "./Drivers";
 import Tractors from "./Tractors";
 import Trailers from "./Trailers";
 import Customers from "../components/Customers";
+import DeliveryStatusPage from "./DeliveryStatusPage"; // Import DeliveryStatusPage
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
@@ -119,6 +120,12 @@ const StaffMenu: React.FC = () => {
       icon: <DirectionsCarFilledIcon />,
       selected: activeTab === "trailers",
     },
+    {
+      id: "delivery-status",
+      text: "Trạng thái giao hàng",
+      icon: <StraightenIcon />, // You can replace this icon with a more suitable one
+      selected: activeTab === "delivery-status",
+    },
   ];
 
   const renderActiveComponent = () => {
@@ -135,6 +142,8 @@ const StaffMenu: React.FC = () => {
         return <Tractors />;
       case "trailers":
         return <Trailers />;
+      case "delivery-status":
+        return <DeliveryStatusPage />;
       default:
         return <OrderManagement />;
     }
@@ -406,6 +415,7 @@ const StaffMenu: React.FC = () => {
           <Route path="/tractors/:tractorId" element={<Tractors />} />
           <Route path="/trailers" element={<Trailers />} />
           <Route path="/trailers/:trailerId" element={<Trailers />} />
+          <Route path="/delivery-status" element={<DeliveryStatusPage />} />
         </Routes>
       </Box>
     </Box>
