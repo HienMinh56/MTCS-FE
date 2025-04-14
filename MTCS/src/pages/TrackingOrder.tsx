@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Container,
   Paper,
   Typography,
-  TextField,
-  Button,
   Box,
   Grid,
   Divider,
@@ -17,23 +15,27 @@ import {
   CardContent,
   CircularProgress,
   Avatar,
-  IconButton,
+  InputAdornment,
+  TextField,
+  Button
 } from "@mui/material";
 import { 
-  Search as SearchIcon,
-  LocalShipping,
   LocationOn,
   AccessTime,
   CheckCircle,
   Phone,
   PersonPin,
-  DirectionsCar
+  DirectionsCar,
+  LocalShipping,
+  Close,
+  Search as SearchIcon
 } from "@mui/icons-material";
 import { trackingOrder } from "../services/orderApi";
 import { getGeocodeByAddress } from "../services/mapApi";
 import { styled } from "@mui/material/styles";
 import dayjs from "dayjs";
 import { useTheme } from "@mui/material/styles";
+import { useParams, useNavigate } from "react-router-dom";
 
 // Define types based on the response structure
 interface Driver {
@@ -94,6 +96,13 @@ interface LocationWithCoords {
   coordinates?: Coordinates;
 }
 
+// Add WebSocket tracking types
+interface DriverLocation {
+  lat: number;
+  lng: number;
+  timestamp?: string;
+}
+
 // Styled components for better visuals
 const StatusChip = styled(Chip)(({ theme, status }: { theme: any, status: string }) => ({
   fontWeight: 600,
@@ -126,8 +135,45 @@ const MapContainer = styled(Paper)(({ theme }) => ({
   boxShadow: theme.shadows[3],
 }));
 
+// Create styled components for driver tracking controls
+const MapControlsContainer = styled(Paper)(({ theme }) => ({
+  position: 'absolute',
+  top: '10px',
+  right: '10px',
+  padding: theme.spacing(2),
+  zIndex: 1000,
+  borderRadius: theme.shape.borderRadius,
+  boxShadow: theme.shadows[2],
+  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  maxWidth: '300px',
+}));
+
+const ConnectionStatus = styled(Box)(({ theme, status }: { theme: any, status: 'connecting' | 'connected' | 'disconnected' | 'receiving' }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  marginTop: theme.spacing(1),
+  color: status === 'connected' ? theme.palette.success.main :
+         status === 'receiving' ? theme.palette.info.main :
+         status === 'connecting' ? theme.palette.warning.main :
+         theme.palette.error.main
+}));
+
+const StatusIndicator = styled('span')(({ theme, status }: { theme: any, status: 'connecting' | 'connected' | 'disconnected' | 'receiving' }) => ({
+  display: 'inline-block',
+  width: '10px',
+  height: '10px',
+  borderRadius: '50%',
+  marginRight: theme.spacing(1),
+  backgroundColor: status === 'connected' ? theme.palette.success.main :
+                   status === 'receiving' ? theme.palette.info.main :
+                   status === 'connecting' ? theme.palette.warning.main :
+                   theme.palette.error.main
+}));
+
 const TrackingOrder: React.FC = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
+  const { trackingCode: urlTrackingCode } = useParams<{ trackingCode?: string }>();
   const [trackingCode, setTrackingCode] = useState<string>("");
   const [trackingData, setTrackingData] = useState<OrderTrackingData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -136,6 +182,16 @@ const TrackingOrder: React.FC = () => {
     pickup?: LocationWithCoords;
     delivery?: LocationWithCoords;
   }>({});
+
+  // Add state for driver tracking
+  const [driverId, setDriverId] = useState<string>("");
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'receiving'>('disconnected');
+  const [trackingActive, setTrackingActive] = useState<boolean>(false);
+  const socketRef = useRef<WebSocket | null>(null);
+  const mapRef = useRef<any>(null);
+  const driverMarkerRef = useRef<any>(null);
+  const driverPathRef = useRef<any>(null);
+  const pathCoordinatesRef = useRef<[number, number][]>([]);
 
   // Function to fetch order tracking data
   const handleTrackOrder = async () => {
@@ -181,6 +237,14 @@ const TrackingOrder: React.FC = () => {
     }
   };
 
+  // Auto-fetch tracking data if tracking code is provided in URL
+  useEffect(() => {
+    if (urlTrackingCode) {
+      setTrackingCode(urlTrackingCode);
+      handleTrackOrder();
+    }
+  }, [urlTrackingCode]);
+
   // Sort trip status histories by startTime
   const sortedStatuses = useMemo(() => {
     if (!trackingData?.trips[0]?.tripStatusHistories) return [];
@@ -189,6 +253,224 @@ const TrackingOrder: React.FC = () => {
       (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     );
   }, [trackingData]);
+
+  // Function to handle stopping driver tracking
+  const handleStopTracking = () => {
+    // Stop tracking
+    if (socketRef.current) {
+      socketRef.current.close();
+      socketRef.current = null;
+    }
+
+    // Remove driver marker from map
+    if (driverMarkerRef.current && mapRef.current) {
+      driverMarkerRef.current.remove();
+      driverMarkerRef.current = null;
+    }
+
+    // Remove driver path from map
+    if (driverPathRef.current && mapRef.current) {
+      driverPathRef.current.remove();
+      driverPathRef.current = null;
+    }
+
+    // Reset path coordinates
+    pathCoordinatesRef.current = [];
+    
+    setConnectionStatus('disconnected');
+    setTrackingActive(false);
+  };
+
+  // Function to connect to WebSocket server
+  const connectWebSocket = (userId: string) => {
+    // Close existing connection if any
+    if (socketRef.current) {
+      socketRef.current.close();
+    }
+    
+    setConnectionStatus('connecting');
+    console.log(`Connecting to WebSocket for driver: ${userId}`);
+    
+    // Connect to WebSocket server as subscriber
+    const wsUrl = `wss://mtcs-server.azurewebsites.net/ws?userId=${userId}&action=subscribe`;
+    console.log(`WebSocket URL: ${wsUrl}`);
+    
+    try {
+      socketRef.current = new WebSocket(wsUrl);
+      
+      socketRef.current.onopen = () => {
+        console.log(`WebSocket connection opened for driver: ${userId}`);
+        setConnectionStatus('connected');
+      };
+      
+      socketRef.current.onmessage = (event) => {
+        console.log(`WebSocket message received:`, event.data);
+        try {
+          const data = JSON.parse(event.data);
+          console.log(`Parsed WebSocket data:`, data);
+          
+          // Extended debugging to check all potential location data formats
+          console.log(`Data properties:`, Object.keys(data));
+          
+          // Check for standard formats
+          if (data.Latitude !== undefined && data.Longitude !== undefined) {
+            console.log(`Location found in format 1: Lat=${data.Latitude}, Lng=${data.Longitude}`);
+            updateDriverLocation(data.Latitude, data.Longitude);
+            setConnectionStatus('receiving');
+          } 
+          // Check alternative format
+          else if (data.lat !== undefined && data.lng !== undefined) {
+            console.log(`Location found in format 2: lat=${data.lat}, lng=${data.lng}`);
+            updateDriverLocation(data.lat, data.lng);
+            setConnectionStatus('receiving');
+          }
+          // Check if data is nested under a location object
+          else if (data.location && (data.location.lat !== undefined && data.location.lng !== undefined)) {
+            console.log(`Location found in nested format: lat=${data.location.lat}, lng=${data.location.lng}`);
+            updateDriverLocation(data.location.lat, data.location.lng);
+            setConnectionStatus('receiving');
+          }
+          // Check for alternate capitalization
+          else if (data.latitude !== undefined && data.longitude !== undefined) {
+            console.log(`Location found in lowercase format: lat=${data.latitude}, lng=${data.longitude}`);
+            updateDriverLocation(data.latitude, data.longitude);
+            setConnectionStatus('receiving');
+          }
+          else {
+            console.warn(`No recognized location format found in message:`, data);
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error, 'Raw data:', event.data);
+        }
+      };
+      
+      socketRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setConnectionStatus('disconnected');
+      };
+      
+      socketRef.current.onclose = (event) => {
+        console.log(`WebSocket closed with code: ${event.code}, reason: ${event.reason}`);
+        setConnectionStatus('disconnected');
+        setTrackingActive(false);
+      };
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+      setConnectionStatus('disconnected');
+      setTrackingActive(false);
+    }
+  };
+
+  // Function to update driver marker position on the map
+  const updateDriverLocation = (lat: number, lng: number) => {
+    if (!mapRef.current) return;
+
+    const map = mapRef.current;
+    
+    // Store the new coordinates in the path history
+    pathCoordinatesRef.current.push([lng, lat]);
+    
+    // Create or update driver marker
+    if (!driverMarkerRef.current) {
+      // Create a container truck icon element instead of a car
+      const el = document.createElement('div');
+      el.className = 'driver-marker';
+      el.style.width = '40px';
+      el.style.height = '40px';
+      el.style.backgroundImage = "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"%233f51b5\"><path d=\"M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z\"/></svg>')";
+
+      el.style.backgroundSize = 'contain';
+      el.style.backgroundRepeat = 'no-repeat';
+      el.style.backgroundPosition = 'center';
+      el.style.cursor = 'pointer';
+      el.style.filter = 'drop-shadow(0px 3px 3px rgba(0,0,0,0.5))'; // Enhance shadow for better visibility
+      
+      driverMarkerRef.current = new window.goongjs.Marker(el)
+        .setLngLat([lng, lat])
+        .addTo(map);
+      
+      driverMarkerRef.current.setPopup(
+        new window.goongjs.Popup({ offset: 25 })
+          .setHTML(`<h3>Driver Location</h3><p>Driver ID: ${driverId}</p>`)
+      );
+      
+      // Create path polyline
+      driverPathRef.current = map.addSource('driverPath', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: pathCoordinatesRef.current
+          }
+        }
+      });
+      
+      map.addLayer({
+        id: 'driverPathLine',
+        type: 'line',
+        source: 'driverPath',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#FF4081',
+          'line-width': 4,
+          'line-dasharray': [2, 1]
+        }
+      });
+    } else {
+      // Update existing marker
+      driverMarkerRef.current.setLngLat([lng, lat]);
+      
+      // Update the path with new coordinates
+      if (map.getSource('driverPath')) {
+        map.getSource('driverPath').setData({
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: pathCoordinatesRef.current
+          }
+        });
+      }
+    }
+    
+    // Animate to the new position smoothly
+    if (pathCoordinatesRef.current.length === 1) {
+      map.flyTo({
+        center: [lng, lat],
+        zoom: 15,
+        duration: 1000
+      });
+    }
+  };
+
+  // Set driver ID and auto-start tracking when tracking data loads
+  useEffect(() => {
+    if (trackingData?.trips?.[0]?.driverId) {
+      const tripDriverId = trackingData.trips[0].driverId;
+      setDriverId(tripDriverId);
+      
+      // Auto-start tracking if we're not already tracking
+      if (!trackingActive && tripDriverId) {
+        console.log("Auto-starting driver tracking for:", tripDriverId);
+        connectWebSocket(tripDriverId);
+        setTrackingActive(true);
+      }
+    }
+  }, [trackingData, trackingActive]);
+
+  // Cleanup WebSocket connection on unmount
+  useEffect(() => {
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
+    };
+  }, []);
 
   // Load Goong Map when we have location coordinates
   useEffect(() => {
@@ -215,10 +497,13 @@ const TrackingOrder: React.FC = () => {
         zoom: 13
       });
 
+      // Store the map reference for driver tracking
+      mapRef.current = map;
+
       // Add markers when the map is loaded
       map.on('load', () => {
         // Add pickup marker
-        new window.goongjs.Marker()
+        new window.goongjs.Marker({ color: '#4CAF50' })
           .setLngLat(pickupCoords)
           .setPopup(new window.goongjs.Popup({ offset: 25 })
             .setHTML(`<h3>Pickup Location</h3><p>${locations.pickup!.name}</p>`))
@@ -454,6 +739,60 @@ const TrackingOrder: React.FC = () => {
     );
   };
 
+  // Render driver tracking controls that overlay on the map
+  const renderDriverTrackingControls = () => {
+    const statusLabels = {
+      'connected': 'Connected, waiting for location...',
+      'disconnected': 'Not tracking',
+      'connecting': 'Connecting...',
+      'receiving': `Receiving location for ${driverId}`
+    };
+
+    return (
+      <MapControlsContainer>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Driver Location Tracker</Typography>
+        </Box>
+        
+        {/* <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1 }}>
+          <TextField
+            size="small"
+            value={driverId}
+            disabled={true}
+            placeholder="Driver ID"
+            variant="outlined"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PersonPin fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            fullWidth
+          />
+          
+          {trackingActive && (
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={handleStopTracking}
+              startIcon={<Close />}
+              size="small"
+              fullWidth
+            >
+              Stop Tracking
+            </Button>
+          )}
+        </Box> */}
+        
+        <ConnectionStatus status={connectionStatus}>
+          <StatusIndicator status={connectionStatus} />
+          <Typography variant="body2">{statusLabels[connectionStatus]}</Typography>
+        </ConnectionStatus>
+      </MapControlsContainer>
+    );
+  };
+
   return (
     <Container maxWidth="lg" sx={{ my: 4 }}>
       <Paper sx={{ p: { xs: 2, md: 4 }, borderRadius: 2, mb: 4 }}>
@@ -474,7 +813,9 @@ const TrackingOrder: React.FC = () => {
             helperText={error}
             InputProps={{
               startAdornment: (
-                <SearchIcon color="action" sx={{ mr: 1 }} />
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
               ),
             }}
             onKeyPress={(e) => {
@@ -499,6 +840,20 @@ const TrackingOrder: React.FC = () => {
             {loading ? <CircularProgress size={24} color="inherit" /> : "Track"}
           </Button>
         </Box>
+
+        {/* Loading Indicator */}
+        {loading && !trackingData && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+            <CircularProgress />
+          </Box>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <Box sx={{ my: 4, textAlign: 'center' }}>
+            <Typography color="error">{error}</Typography>
+          </Box>
+        )}
 
         {/* Results Section */}
         {trackingData && (
@@ -608,6 +963,7 @@ const TrackingOrder: React.FC = () => {
                       <CircularProgress />
                     </Box>
                   )}
+                  {locations.pickup?.coordinates && locations.delivery?.coordinates && renderDriverTrackingControls()}
                 </MapContainer>
               </Grid>
             </Grid>
