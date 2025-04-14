@@ -3,6 +3,7 @@ import {
   listenToFirebaseMessages,
   fetchUserNotifications,
   Notification,
+  markNotificationAsRead,
 } from "../firebase";
 import {
   Badge,
@@ -86,6 +87,31 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
     setAnchorEl(null);
   };
 
+  const handleNotificationClick = async (notificationId: string) => {
+    try {
+      const notification = notifications.find((n) => n.id === notificationId);
+      // Only proceed if notification exists and is not already read
+      if (notification && !notification.isRead) {
+        const success = await markNotificationAsRead(notificationId);
+        if (success) {
+          // Only update local state to reflect the change immediately
+          // The real-time listener will handle updating the count
+          setNotifications((prevNotifications) =>
+            prevNotifications.map((notification) =>
+              notification.id === notificationId
+                ? { ...notification, isRead: true }
+                : notification
+            )
+          );
+          // No need to manually update unread count here
+          // The Firestore listener will handle this automatically
+        }
+      }
+    } catch (err) {
+      console.error("Error marking notification as read:", err);
+    }
+  };
+
   const open = Boolean(anchorEl);
   const id = open ? "notifications-popover" : undefined;
 
@@ -95,7 +121,7 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
       const unsubscribe = fetchUserNotifications(userId, (newNotifications) => {
         setNotifications(newNotifications);
         const unread = newNotifications.filter(
-          (notification) => !notification.read
+          (notification) => !notification.isRead
         ).length;
 
         setUnreadCount(unread);
@@ -182,16 +208,18 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
                 <ListItem
                   alignItems="flex-start"
                   sx={{
-                    backgroundColor: notification.read
+                    backgroundColor: notification.isRead
                       ? "inherit"
                       : "rgba(1, 70, 199, 0.05)",
                     "&:hover": {
                       backgroundColor: "rgba(1, 70, 199, 0.1)",
                     },
                     padding: "12px 16px",
+                    cursor: "pointer",
                   }}
+                  onClick={() => handleNotificationClick(notification.id)}
                 >
-                  {!notification.read && (
+                  {!notification.isRead && (
                     <FiberManualRecordIcon
                       sx={{
                         color: theme.palette.mtcs.primary,
@@ -229,7 +257,11 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
                     }
                     // Fix the hydration issue by using Typography with component="div"
                     secondary={
-                      <Typography component="div" variant="body2" sx={{ mt: 0.5 }}>
+                      <Typography
+                        component="div"
+                        variant="body2"
+                        sx={{ mt: 0.5 }}
+                      >
                         <ExpandableText
                           text={notification.Body}
                           maxLength={100}

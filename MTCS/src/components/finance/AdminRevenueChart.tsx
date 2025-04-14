@@ -24,7 +24,6 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
 }) => {
   const theme = useTheme();
 
-  // Tạo dữ liệu chi tiết
   const chartData =
     data.totalRevenue > 0
       ? [
