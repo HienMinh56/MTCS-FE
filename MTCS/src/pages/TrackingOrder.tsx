@@ -17,7 +17,8 @@ import {
   Avatar,
   InputAdornment,
   TextField,
-  Button
+  Button,
+  IconButton
 } from "@mui/material";
 import { 
   LocationOn,
@@ -36,7 +37,8 @@ import { styled } from "@mui/material/styles";
 import dayjs from "dayjs";
 import { useTheme } from "@mui/material/styles";
 import { useParams, useNavigate } from "react-router-dom";
-
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import StraightenIcon from "@mui/icons-material/Straighten";
 // Define types based on the response structure
 interface Driver {
   driverId: string;
@@ -182,6 +184,10 @@ const TrackingOrder: React.FC = () => {
     pickup?: LocationWithCoords;
     delivery?: LocationWithCoords;
   }>({});
+
+  const handleGoBack = () => {
+    navigate(-1);
+  };
 
   // Add state for driver tracking
   const [driverId, setDriverId] = useState<string>("");
@@ -796,9 +802,35 @@ const TrackingOrder: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ my: 4 }}>
       <Paper sx={{ p: { xs: 2, md: 4 }, borderRadius: 2, mb: 4 }}>
-        <Typography variant="h4" align="center" sx={{ mb: 4, fontWeight: 700 }}>
-          Track Your Order
-        </Typography>
+      <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <IconButton
+                onClick={handleGoBack}
+                sx={{ mr: 1, mb: 1 }}
+                color="primary"
+                aria-label="back"
+              >
+                <ArrowBackIcon fontSize="large" />
+              </IconButton>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Typography
+                  variant= "h1"
+                  component="h1"
+                  fontWeight="bold"
+                  color="primary.main"
+                  sx= {{ mb: 2 }}
+                >
+                  Theo dõi đơn hàng của bạn
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
 
         {/* Search Bar */}
         <Box sx={{ display: 'flex', mb: 4, gap: 1 }}>

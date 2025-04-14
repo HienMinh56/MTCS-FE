@@ -20,6 +20,7 @@
     "@mui/x-date-pickers": "^7.28.0",
     "@reduxjs/toolkit": "^2.5.1",
     "@tailwindcss/vite": "^4.0.4",
+    "@vercel/speed-insights": "^1.2.0",
     "axios": "^1.7.9",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
