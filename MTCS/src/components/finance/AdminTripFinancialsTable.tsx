@@ -24,6 +24,7 @@ import {
   DirectionsCar,
   FilterList,
   Search,
+  AttachMoney,
 } from "@mui/icons-material";
 import { AdminTripFinancial } from "../../types/admin-finance";
 
@@ -90,25 +91,47 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
           {title}
         </Typography>
 
-        <Stack direction="row" spacing={1}>
-          <Tooltip title="Lọc dữ liệu">
-            <IconButton
-              size="small"
-              color="primary"
-              className="hover:bg-blue-50"
-            >
-              <FilterList />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Tìm kiếm">
-            <IconButton
-              size="small"
-              color="primary"
-              className="hover:bg-blue-50"
-            >
-              <Search />
-            </IconButton>
-          </Tooltip>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: alpha(theme.palette.info.main, 0.08),
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 1.5,
+              mr: 1,
+            }}
+          >
+            <AttachMoney
+              fontSize="small"
+              sx={{ mr: 0.5, color: "info.main" }}
+            />
+            <Typography variant="body2" fontWeight={500} color="info.main">
+              Đơn vị: VNĐ
+            </Typography>
+          </Box>
+
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="Lọc dữ liệu">
+              <IconButton
+                size="small"
+                color="primary"
+                className="hover:bg-blue-50"
+              >
+                <FilterList />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Tìm kiếm">
+              <IconButton
+                size="small"
+                color="primary"
+                className="hover:bg-blue-50"
+              >
+                <Search />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         </Stack>
       </Box>
 
@@ -116,16 +139,22 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
         <Table>
           <TableHead>
             <TableRow className="bg-gray-50">
-              <TableCell sx={{ fontWeight: 600, py: 2 }}>Mã Chuyến</TableCell>
-              <TableCell sx={{ fontWeight: 600, py: 2 }}>Mã Đơn Hàng</TableCell>
-              <TableCell sx={{ fontWeight: 600, py: 2 }}>Khách Hàng</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 600, py: 2 }}>
+              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
+                Mã Chuyến
+              </TableCell>
+              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
+                Mã Đơn Hàng
+              </TableCell>
+              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
+                Khách Hàng
+              </TableCell>
+              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
                 Doanh Thu
               </TableCell>
-              <TableCell align="right" sx={{ fontWeight: 600, py: 2 }}>
+              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
                 Chi Phí Nhiên Liệu
               </TableCell>
-              <TableCell align="right" sx={{ fontWeight: 600, py: 2 }}>
+              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
                 Lợi Nhuận
               </TableCell>
               <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
@@ -148,36 +177,41 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <TableCell
+                    align="center"
                     sx={{ fontWeight: 500, color: "primary.main", py: 2 }}
                     className="border-l-4"
                     style={{ borderLeftColor: theme.palette.primary.main }}
                   >
                     {trip.tripCode || trip.tripId}
                   </TableCell>
-                  <TableCell sx={{ py: 2 }}>{trip.orderId}</TableCell>
-                  <TableCell sx={{ py: 2 }}>{trip.customerName}</TableCell>
-                  <TableCell align="right" sx={{ py: 2 }}>
+                  <TableCell align="center" sx={{ py: 2 }}>
+                    {trip.orderId}
+                  </TableCell>
+                  <TableCell align="center" sx={{ py: 2 }}>
+                    {trip.customerName}
+                  </TableCell>
+                  <TableCell align="center" sx={{ py: 2 }}>
                     <Typography className="font-medium">
-                      {trip.revenue.toLocaleString()} VNĐ
+                      {trip.revenue.toLocaleString()}
                     </Typography>
                   </TableCell>
-                  <TableCell align="right" sx={{ py: 2 }}>
+                  <TableCell align="center" sx={{ py: 2 }}>
                     <Box
                       sx={{
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "flex-end",
+                        justifyContent: "center",
                         gap: 0.5,
                       }}
                     >
                       <LocalGasStation fontSize="small" color="error" />
                       <Typography className="font-medium">
-                        {trip.fuelCost.toLocaleString()} VNĐ
+                        {trip.fuelCost.toLocaleString()}
                       </Typography>
                     </Box>
                   </TableCell>
                   <TableCell
-                    align="right"
+                    align="center"
                     sx={{ fontWeight: 600, py: 2 }}
                     color={isProfit ? "success" : "error"}
                   >
@@ -185,7 +219,7 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
                       className="font-semibold"
                       color={isProfit ? "success.main" : "error.main"}
                     >
-                      {trip.profitMargin.toLocaleString()} VNĐ
+                      {trip.profitMargin.toLocaleString()}
                     </Typography>
                   </TableCell>
                   <TableCell align="center" sx={{ py: 2 }}>

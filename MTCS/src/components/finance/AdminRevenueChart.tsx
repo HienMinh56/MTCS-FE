@@ -9,9 +9,16 @@ import {
   Grid,
   Divider,
   Stack,
+  Tooltip,
+  IconButton,
 } from "@mui/material";
+import {
+  TrendingUp,
+  Payments,
+  ShoppingCart,
+  AttachMoney,
+} from "@mui/icons-material";
 import { AdminRevenueAnalytics } from "../../types/admin-finance";
-import { TrendingUp, Payments, ShoppingCart } from "@mui/icons-material";
 
 interface AdminRevenueChartProps {
   data: AdminRevenueAnalytics;
@@ -65,39 +72,63 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
           <Typography
             variant="body2"
             color="text.secondary"
-            className="text-sm"
+            className="text-sm mt-1"
           >
             {data.period}
           </Typography>
         </Box>
-        <Box
-          sx={{
-            px: 2,
-            py: 1,
-            borderRadius: 2,
-            backgroundColor: alpha(theme.palette.success.main, 0.1),
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-          }}
-        >
-          <TrendingUp fontSize="small" color="success" />
-          <Typography
-            fontWeight="bold"
-            color="success.main"
-            className="text-sm"
+
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: alpha(theme.palette.info.main, 0.08),
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 1.5,
+              mr: 1,
+            }}
           >
-            {data.totalRevenue.toLocaleString()} VNĐ
-          </Typography>
-        </Box>
+            <AttachMoney
+              fontSize="small"
+              sx={{ mr: 0.5, color: "info.main" }}
+            />
+            <Typography variant="body2" fontWeight={500} color="info.main">
+              Tất cả giá trị bằng VNĐ
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              px: 2,
+              py: 1,
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.success.main, 0.1),
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <TrendingUp fontSize="small" color="success" />
+            <Typography
+              fontWeight="bold"
+              color="success.main"
+              className="text-sm"
+            >
+              {data.totalRevenue.toLocaleString()}
+            </Typography>
+          </Box>
+        </Stack>
       </Box>
 
       <Grid container sx={{ px: 3, py: 2 }}>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={4} sx={{ textAlign: "center" }}>
           <Stack
             direction="row"
             spacing={2}
             alignItems="center"
+            justifyContent="center"
             className="p-2"
           >
             <Box
@@ -123,17 +154,18 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                 Doanh Thu Tổng
               </Typography>
               <Typography variant="h6" fontWeight="bold" className="text-base">
-                {data.totalRevenue.toLocaleString()} VNĐ
+                {data.totalRevenue.toLocaleString()}
               </Typography>
             </Box>
           </Stack>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={4} sx={{ textAlign: "center" }}>
           <Stack
             direction="row"
             spacing={2}
             alignItems="center"
+            justifyContent="center"
             className="p-2"
           >
             <Box
@@ -165,11 +197,12 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
           </Stack>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={4} sx={{ textAlign: "center" }}>
           <Stack
             direction="row"
             spacing={2}
             alignItems="center"
+            justifyContent="center"
             className="p-2"
           >
             <Box
@@ -195,7 +228,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                 Doanh Thu TB/Đơn
               </Typography>
               <Typography variant="h6" fontWeight="bold" className="text-base">
-                {data.averageRevenuePerOrder.toLocaleString()} VNĐ
+                {data.averageRevenuePerOrder.toLocaleString()}
               </Typography>
             </Box>
           </Stack>
@@ -222,7 +255,8 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
             {
               dataKey: "value",
               label: "Doanh Thu",
-              valueFormatter: (value) => `${value.toLocaleString()} VNĐ`,
+              valueFormatter: (value) =>
+                value != null ? `${value.toLocaleString()}` : "0",
             },
           ]}
           xAxis={[

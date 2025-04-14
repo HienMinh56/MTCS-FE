@@ -135,15 +135,20 @@ const AdminFinanceDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    if (activeTab === 0) {
-      fetchRevenueData();
-    } else if (activeTab === 1) {
-      fetchCustomerRevenueData();
-    } else if (activeTab === 2) {
-      fetchProfitData();
-    } else if (activeTab === 3) {
-      fetchTripsData();
-    }
+    const fetchData = async () => {
+      if (activeTab === 0) {
+        await fetchRevenueData();
+      } else if (activeTab === 1) {
+        await fetchCustomerRevenueData();
+      } else if (activeTab === 2) {
+        await fetchProfitData();
+      } else if (activeTab === 3) {
+        await fetchTripsData();
+      }
+    };
+
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, periodType, startDate, endDate]);
 
   const fetchRevenueData = async () => {
