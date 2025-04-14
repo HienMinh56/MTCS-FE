@@ -871,7 +871,7 @@ const OrderManagement: React.FC = () => {
                       sx={{ cursor: "pointer" }}
                     >
                       <TableCell align="center">{order.trackingCode}</TableCell>
-                      <TableCell align="center">{order.customerId}</TableCell>
+                      <TableCell align="center">{order.companyName}</TableCell>
                       <TableCell align="center">
                         {new Date(order.deliveryDate).toLocaleDateString(
                           "vi-VN"
