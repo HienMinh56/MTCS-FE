@@ -17,9 +17,9 @@ import DriverProfile from "./pages/DriverProfile";
 import TripDetailPage from "./pages/TripDetailPage";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import DistanceCalculatorPage from "./pages/DistanceCalculatorPage";
-import AdminFinanceDashboard from "./pages/AdminFinanceDashboard";
+import AdminFinanceDashboard from "./pages/AdminPage";
 import TrackingOrder from "./pages/TrackingOrder";
-import { SpeedInsights } from "@vercel/speed-insights/react"
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 const HomeRoute = () => {
   const { isAuthenticated, user } = useAuth();
@@ -43,15 +43,15 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<HomeRoute />} />
-              
+
               {/* Public route for order tracking - accessible to everyone */}
               <Route path="/tracking-order" element={<TrackingOrder />} />
 
               <Route
-                  path="/distance-calculator"
-                  element={<DistanceCalculatorPage />}
-                />
-                
+                path="/distance-calculator"
+                element={<DistanceCalculatorPage />}
+              />
+
               <Route
                 element={<ProtectedRoute allowedRoles={["Staff", "Admin"]} />}
               >
@@ -86,7 +86,7 @@ function App() {
                   element={<DistanceCalculatorPage />}
                 />
               </Route>
-              
+
               <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
                 <Route
                   path="/admin/finance"
