@@ -44,6 +44,7 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { tripDetail, tripStatusHistory } from "../types/trip";
 import { getTripDetail } from "../services/tripApi"; // Import getTripDetail
+import { getDeliveryStatus } from "../services/deliveryStatus";
 
 const TripDetailPage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
@@ -52,6 +53,7 @@ const TripDetailPage: React.FC = () => {
   const [tripData, setTripData] = useState<tripDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [deliveryStatuses, setDeliveryStatuses] = useState<{[key: string]: {statusName: string, color: string}} | null>(null);
 
   // Fetch trip details using getTripDetail
   useEffect(() => {
@@ -101,30 +103,76 @@ const TripDetailPage: React.FC = () => {
 
     fetchTripDetails();
   }, [tripId]);
+  
+  // Fetch delivery statuses
+  useEffect(() => {
+    const fetchDeliveryStatuses = async () => {
+      try {
+        const statusData = await getDeliveryStatus();
+        
+        // Convert to a lookup map for easier use
+        const statusMap: {[key: string]: {statusName: string, color: string}} = {};
+        
+        if (Array.isArray(statusData)) {
+          statusData.forEach((status) => {
+            // Use status.statusId as key and provide statusName with default color of "default"
+            // You can modify this to map different colors based on status if needed
+            statusMap[status.statusId] = {
+              statusName: status.statusName,
+              color: getStatusColor(status.statusId)
+            };
+          });
+        } else if (statusData && typeof statusData === 'object') {
+          // Handle if response is an object with a data property
+          const dataArray = statusData.data || [];
+          dataArray.forEach((status) => {
+            statusMap[status.statusId] = {
+              statusName: status.statusName,
+              color: getStatusColor(status.statusId)
+            };
+          });
+        }
+        
+        setDeliveryStatuses(statusMap);
+      } catch (error) {
+        console.error("Failed to fetch delivery statuses:", error);
+        // Continue without delivery statuses - will fall back to hardcoded values
+      }
+    };
+    
+    fetchDeliveryStatuses();
+  }, []);
+  
+  // Helper function to assign color based on status
+  const getStatusColor = (statusId: string) => {
+    switch (statusId) {
+      case "not_started":
+        return "default";
+      case "going_to_port":
+      case "pick_up_container":
+      case "is_delivering":
+      case "at_delivery_point":
+      case "going_to_port/depot":
+        return "info";
+      case "completed":
+        return "success";
+      case "delaying":
+        return "warning";
+      default:
+        return "default";
+    }
+  };
 
   // Helper function to format trip status
   const getTripStatusDisplay = (status: string | null) => {
     if (!status) return { label: "Không xác định", color: "default" };
-
-    switch (status) {
-      case "not_started":
-        return { label: "Chưa bắt đầu", color: "default" };
-      case "going_to_port":
-        return { label: "Đang di chuyển đến cảng", color: "info" };
-      case "pick_up_container":
-        return { label: "Đang lấy container", color: "info" };
-      case "is_delivering":
-        return { label: "Đang giao container", color: "info" };
-      case "at_delivery_point":
-        return { label: "Đang tại điểm giao hàng", color: "info" };
-      case "going_to_port/depot":
-        return { label: "Đang quay lại cảng trả container", color: "info" };
-      case "completed":
-        return { label: "Hoàn thành", color: "success" };
-      case "delaying":
-        return { label: "Tạm dừng", color: "warning" };
-      default:
-        return { label: status, color: "default" };
+    
+    // Check if we have dynamic statuses from API and if this status exists in our map
+    if (deliveryStatuses && deliveryStatuses[status]) {
+      return { 
+        label: deliveryStatuses[status].statusName, 
+        color: deliveryStatuses[status].color 
+      };
     }
   };
 

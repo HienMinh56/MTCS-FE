@@ -365,6 +365,12 @@ export const updatePaymentStatus = async (orderId: string) => {
 export const trackingOrder = async (trackingCode: string) => {
   try {
     const response = await axiosInstance.get(`/api/order/${trackingCode}`);
+    
+    // Check if the order is completed
+    if (response.data && response.data.status === OrderStatus.Completed) {
+      throw new Error("ORDER_COMPLETED");
+    }
+    
     return response;
   }
   catch (error) {
