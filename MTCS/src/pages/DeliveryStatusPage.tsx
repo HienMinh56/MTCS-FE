@@ -98,7 +98,7 @@ const DeliveryStatusPage: React.FC = () => {
       setStatuses(sortedData);
     } catch (error) {
       console.error('Error fetching delivery statuses:', error);
-      showAlert('Failed to load delivery statuses', 'error');
+      showAlert('Không thể tải trạng thái giao hàng', 'error');
     } finally {
       setLoading(false);
     }
@@ -176,11 +176,11 @@ const DeliveryStatusPage: React.FC = () => {
       }));
       
       const response = await updateDeliveryStatuses(payload);
-      showAlert('Delivery statuses updated successfully', 'success');
+      showAlert('Cập nhật trạng thái giao hàng thành công', 'success');
       setModified(false);
     } catch (error) {
       console.error('Error updating delivery statuses:', error);
-      showAlert('Failed to update delivery statuses', 'error');
+      showAlert('Không thể cập nhật trạng thái giao hàng', 'error');
     } finally {
       setSaving(false);
     }
@@ -248,10 +248,10 @@ const DeliveryStatusPage: React.FC = () => {
 
     // Validate Status ID
     if (!newStatusId.trim()) {
-      setStatusIdError('Status ID is required');
+      setStatusIdError('Mã trạng thái không được để trống');
       isValid = false;
     } else if (statuses.some(status => status.statusId === newStatusId.trim())) {
-      setStatusIdError('Status ID already exists');
+      setStatusIdError('Mã trạng thái đã tồn tại');
       isValid = false;
     } else {
       setStatusIdError('');
@@ -259,7 +259,7 @@ const DeliveryStatusPage: React.FC = () => {
 
     // Validate Status Name
     if (!newStatusName.trim()) {
-      setStatusNameError('Status Name is required');
+      setStatusNameError('Tên trạng thái không được để trống');
       isValid = false;
     } else {
       setStatusNameError('');
@@ -300,7 +300,7 @@ const DeliveryStatusPage: React.FC = () => {
     handleCloseAddStatusDialog();
     
     // Show success message
-    showAlert('New status added successfully. Remember to save changes!', 'success');
+    showAlert('Thêm trạng thái mới thành công. Hãy nhớ lưu thay đổi!', 'success');
   };
 
   const handleOpenConfirmDialog = () => {
@@ -335,10 +335,10 @@ const DeliveryStatusPage: React.FC = () => {
           }}
         >
           <Typography variant="h4" color="white" fontWeight="bold">
-            Delivery Statuses
+            Trạng Thái Giao Hàng
           </Typography>
           <Typography variant="body1" color="white" sx={{ mt: 0.5, opacity: 0.9 }}>
-            Overview of all delivery status types in the system
+            Tổng quan các loại trạng thái giao hàng trong hệ thống
           </Typography>
         </Box>
         <CardContent>
@@ -346,7 +346,7 @@ const DeliveryStatusPage: React.FC = () => {
             <FormGroup>
               <FormControlLabel
                 control={<Checkbox checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />}
-                label="Show Inactive Statuses"
+                label="Hiển thị trạng thái không hoạt động"
               />
             </FormGroup>
           </Box>
@@ -354,9 +354,9 @@ const DeliveryStatusPage: React.FC = () => {
             <Table sx={{ minWidth: 650 }}>
               <TableHead>
                 <TableRow sx={{ backgroundColor: theme.palette.grey[100] }}>
-                  <TableCell width="40%" sx={{ fontWeight: 'bold' }}>Status Name</TableCell>
-                  <TableCell align="center" width="20%" sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                  <TableCell align="center" width="40%" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+                  <TableCell width="40%" sx={{ fontWeight: 'bold' }}>Tên Trạng Thái</TableCell>
+                  <TableCell align="center" width="20%" sx={{ fontWeight: 'bold' }}>Tình Trạng</TableCell>
+                  <TableCell align="center" width="40%" sx={{ fontWeight: 'bold' }}>Hành Động</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -387,7 +387,7 @@ const DeliveryStatusPage: React.FC = () => {
                       {status.isActive ? (
                         <Chip 
                           icon={<CheckCircleIcon />} 
-                          label="Active" 
+                          label="Đang hoạt động" 
                           size="small" 
                           color="success" 
                           sx={{ fontWeight: 'medium' }}
@@ -395,7 +395,7 @@ const DeliveryStatusPage: React.FC = () => {
                       ) : (
                         <Chip 
                           icon={<CancelIcon />} 
-                          label="Inactive" 
+                          label="Không hoạt động" 
                           size="small" 
                           color="error"
                           sx={{ fontWeight: 'medium' }} 
@@ -404,7 +404,7 @@ const DeliveryStatusPage: React.FC = () => {
                     </TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                        <Tooltip title="Toggle Active Status">
+                        <Tooltip title="Đổi trạng thái hoạt động">
                           <Switch 
                             checked={status.isActive === 1} 
                             onChange={() => toggleStatusActive(status.statusId)}
@@ -413,7 +413,7 @@ const DeliveryStatusPage: React.FC = () => {
                         </Tooltip>
 
                         <ButtonGroup size="small" sx={{ ml: 1 }}>
-                          <Tooltip title="Move Up">
+                          <Tooltip title="Di chuyển lên">
                             <span> {/* Wrap with span to allow tooltip on disabled button */}
                               <IconButton 
                                 onClick={() => moveStatusUp(index)} 
@@ -425,7 +425,7 @@ const DeliveryStatusPage: React.FC = () => {
                             </span>
                           </Tooltip>
                           
-                          <Tooltip title="Move Down">
+                          <Tooltip title="Di chuyển xuống">
                             <span> {/* Wrap with span to allow tooltip on disabled button */}
                               <IconButton 
                                 onClick={() => moveStatusDown(index)} 
@@ -439,7 +439,7 @@ const DeliveryStatusPage: React.FC = () => {
                         </ButtonGroup>
 
                         {editModeId === status.statusId ? (
-                          <Tooltip title="Save Name">
+                          <Tooltip title="Lưu tên">
                             <IconButton 
                               onClick={() => saveStatusName(status.statusId)}
                               size="small"
@@ -449,7 +449,7 @@ const DeliveryStatusPage: React.FC = () => {
                             </IconButton>
                           </Tooltip>
                         ) : (
-                          <Tooltip title="Edit Name">
+                          <Tooltip title="Sửa tên">
                             <IconButton 
                               onClick={() => enableEditMode(status.statusId, status.statusName)}
                               size="small"
@@ -470,7 +470,7 @@ const DeliveryStatusPage: React.FC = () => {
           {statuses.length === 0 && (
             <Box sx={{ py: 4, textAlign: 'center' }}>
               <Typography variant="body1" color="text.secondary">
-                No delivery statuses found
+                Không tìm thấy trạng thái giao hàng nào
               </Typography>
             </Box>
           )}
@@ -481,8 +481,8 @@ const DeliveryStatusPage: React.FC = () => {
         <Box display="flex" alignItems="center">
           <Typography variant="body2" color="text.secondary" sx={{ mr: 2 }}>
             {showInactive 
-              ? `Total Statuses: ${statuses.length}` 
-              : `Active Statuses: ${statuses.filter(status => status.isActive === 1).length}`
+              ? `Tổng số trạng thái: ${statuses.length}` 
+              : `Trạng thái đang hoạt động: ${statuses.filter(status => status.isActive === 1).length}`
             }
           </Typography>
           <Button
@@ -492,7 +492,7 @@ const DeliveryStatusPage: React.FC = () => {
             onClick={handleOpenAddStatusDialog}
             size="small"
           >
-            Add New Status
+            Thêm trạng thái mới
           </Button>
         </Box>
         <Button 
@@ -502,7 +502,7 @@ const DeliveryStatusPage: React.FC = () => {
           onClick={handleOpenConfirmDialog} 
           disabled={!modified || saving}
         >
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
         </Button>
       </Box>
 
@@ -519,17 +519,17 @@ const DeliveryStatusPage: React.FC = () => {
           color: 'white',
           fontWeight: 'bold'
         }}>
-          Add New Delivery Status
+          Thêm Trạng Thái Giao Hàng Mới
         </DialogTitle>
         <DialogContent sx={{ pt: 2, mt: 2 }}>
           <DialogContentText sx={{ mb: 2 }}>
-            Enter the details for the new delivery status.
+            Nhập thông tin chi tiết cho trạng thái giao hàng mới.
           </DialogContentText>
           
           <TextField
             autoFocus
             margin="dense"
-            label="Status ID"
+            label="Mã Trạng Thái"
             fullWidth
             variant="outlined"
             value={newStatusId}
@@ -541,7 +541,7 @@ const DeliveryStatusPage: React.FC = () => {
           
           <TextField
             margin="dense"
-            label="Status Name"
+            label="Tên Trạng Thái"
             fullWidth
             variant="outlined"
             value={newStatusName}
@@ -559,12 +559,12 @@ const DeliveryStatusPage: React.FC = () => {
                 color="primary"
               />
             }
-            label="Status Active"
+            label="Trạng Thái Hoạt Động"
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button onClick={handleCloseAddStatusDialog} color="inherit">
-            Cancel
+            Hủy
           </Button>
           <Button 
             onClick={handleAddNewStatus} 
@@ -572,7 +572,7 @@ const DeliveryStatusPage: React.FC = () => {
             color="primary"
             startIcon={<AddIcon />}
           >
-            Add Status
+            Thêm Trạng Thái
           </Button>
         </DialogActions>
       </Dialog>
