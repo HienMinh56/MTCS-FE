@@ -233,8 +233,8 @@ const DriverTable: React.FC<DriverTableProps> = ({
           >
             <TableHead>
               <TableRow>
-                <TableCell align="center" sx={{pr: 18}}>Họ tên</TableCell>
-                <TableCell align="center" sx={{pr: 18}}>Email</TableCell>
+                <TableCell align="center">Họ tên</TableCell>
+                <TableCell align="center">Email</TableCell>
                 <TableCell>Số điện thoại</TableCell>
                 <TableCell align="center">Tổng giờ tuần này</TableCell>
                 <TableCell align="center">Trạng thái</TableCell>
@@ -259,8 +259,8 @@ const DriverTable: React.FC<DriverTableProps> = ({
                     onClick={() => handleDriverClick(driver.driverId)}
                     sx={{ cursor: "pointer" }}
                   >
-                    <TableCell>{driver.fullName || "N/A"}</TableCell>
-                    <TableCell>{driver.email || "N/A"}</TableCell>
+                    <TableCell align="center">{driver.fullName || "N/A"}</TableCell>
+                    <TableCell align="center">{driver.email || "N/A"}</TableCell>
                     <TableCell>{driver.phoneNumber || "N/A"}</TableCell>
                     <TableCell align="center">
                       {driver.currentWeekHours !== null &&
