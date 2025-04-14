@@ -3,6 +3,7 @@ import { AppBar, Toolbar, Box, Button, useTheme, Tooltip } from "@mui/material";
 import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
 import StraightenIcon from "@mui/icons-material/Straighten";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import Login from "./Authentication/Login";
 import logo1 from "../assets/logo1.png";
 import { useAuth } from "../contexts/AuthContext";
@@ -55,6 +56,10 @@ const Header: React.FC = () => {
     navigate("/distance-calculator");
   };
 
+  const handleNavigateToTrackOrder = () => {
+    navigate("/tracking-order");
+  };
+
   return (
     <>
       <AppBar
@@ -72,7 +77,7 @@ const Header: React.FC = () => {
             px: { xs: 2, sm: 4, md: 6 },
           }}
         >
-          <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
+          <Box sx={{ display: "flex", justifyContent: "flex-start", gap: 2 }}>
             <Tooltip title="Tính khoảng cách và chi phí vận chuyển">
               <Button
                 variant="outlined"
@@ -88,6 +93,24 @@ const Header: React.FC = () => {
                 }}
               >
                 Tính khoảng cách
+              </Button>
+            </Tooltip>
+
+            <Tooltip title="Theo dõi đơn hàng của bạn">
+              <Button
+                variant="outlined"
+                startIcon={<LocalShippingIcon />}
+                onClick={handleNavigateToTrackOrder}
+                size="small"
+                color="primary"
+                sx={{
+                  textTransform: "none",
+                  borderRadius: 2,
+                  fontWeight: 500,
+                  display: { xs: "none", sm: "flex" },
+                }}
+              >
+                Theo dõi đơn hàng
               </Button>
             </Tooltip>
           </Box>
