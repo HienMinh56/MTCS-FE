@@ -276,14 +276,22 @@ export const updateOrder = async (orderData: {
   }
 };
 
-export const exportExcel = async (inputData: {
-  fromDate: string | null;
-  toDate: string | null;
-}) => {
+export const exportExcel = async (fromDateStr: string | null, toDateStr: string | null) => {
   try {
+    // Format dates from YYYY-MM-DD to DD/MM/YYYY format which the backend expects
+    const formatDateForApi = (dateStr: string | null): string | null => {
+      if (!dateStr) return null;
+      // Parse the input date string (expected format: YYYY-MM-DD)
+      const [year, month, day] = dateStr.split('-');
+      // Return in DD/MM/YYYY format
+      return `${day}/${month}/${year}`;
+    };
+
+    const formattedFromDate = formatDateForApi(fromDateStr);
+    const formattedToDate = formatDateForApi(toDateStr);
+    
     // Use params property for GET requests to send query parameters
-    const response = await axiosInstance.get("/api/order/export-excel", {
-      params: inputData,
+    const response = await axiosInstance.get(`/api/order/export-excel?fromDateStr=${formattedFromDate}&toDateStr=${formattedToDate}`, {
       responseType: 'blob', // Set response type to blob for file downloads
     });
     
