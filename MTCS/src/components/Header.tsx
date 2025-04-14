@@ -53,7 +53,7 @@ const Header: React.FC = () => {
   };
 
   const handleNavigateToCalculator = () => {
-    navigate("/distance-calculator");
+    window.open("/distance-calculator", "_blank");
   };
 
   const handleNavigateToTrackOrder = () => {

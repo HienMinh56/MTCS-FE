@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, IconButton } from "@mui/material";
+import { Button, IconButton, SxProps, Theme } from "@mui/material";
 import StraightenIcon from "@mui/icons-material/Straighten";
 import { useNavigate } from "react-router-dom";
 
@@ -16,6 +16,7 @@ interface DistanceCalculatorButtonProps {
   size?: "small" | "medium" | "large";
   fullWidth?: boolean;
   iconOnly?: boolean;
+  sx?: SxProps<Theme>;
 }
 
 const DistanceCalculatorButton: React.FC<DistanceCalculatorButtonProps> = ({
@@ -24,16 +25,17 @@ const DistanceCalculatorButton: React.FC<DistanceCalculatorButtonProps> = ({
   size = "medium",
   fullWidth = false,
   iconOnly = false,
+  sx,
 }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate("/distance-calculator");
+    window.open("/distance-calculator", "_blank");
   };
 
   if (iconOnly) {
     return (
-      <IconButton color={color} size={size} onClick={handleClick}>
+      <IconButton color={color} size={size} onClick={handleClick} sx={sx}>
         <StraightenIcon />
       </IconButton>
     );
@@ -47,6 +49,7 @@ const DistanceCalculatorButton: React.FC<DistanceCalculatorButtonProps> = ({
       fullWidth={fullWidth}
       startIcon={<StraightenIcon />}
       onClick={handleClick}
+      sx={sx}
     >
       Tính khoảng cách
     </Button>

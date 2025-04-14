@@ -26,6 +26,8 @@ import { formatTime } from "../utils/dateUtils";
 
 interface NotificationComponentProps {
   userId: string;
+  size?: "small" | "medium" | "large";
+  iconSize?: number;
 }
 
 interface ExpandableTextProps {
@@ -72,6 +74,8 @@ const ExpandableText: React.FC<ExpandableTextProps> = ({ text, maxLength }) => {
 
 const NotificationComponent: React.FC<NotificationComponentProps> = ({
   userId,
+  size = "medium",
+  iconSize,
 }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -151,10 +155,22 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
         aria-describedby={id}
         onClick={handleClick}
         color="inherit"
-        size="large"
+        size={size}
+        sx={{
+          "&:hover": {
+            transform: "translateY(-2px)",
+            transition: "all 0.3s ease",
+            backgroundColor: "rgba(255,255,255,0.25)",
+          },
+          transition: "all 0.3s ease",
+          borderRadius: 1.5,
+          p: 1.5,
+        }}
       >
         <Badge badgeContent={unreadCount} color="secondary">
-          <NotificationsIcon />
+          <NotificationsIcon
+            sx={iconSize ? { fontSize: iconSize } : undefined}
+          />
         </Badge>
       </IconButton>
 
