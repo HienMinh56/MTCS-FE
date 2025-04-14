@@ -492,8 +492,8 @@ const Customers = () => {
             >
               <TableHead>
                 <TableRow>
-                  <TableCell align="center" sx={{pr: 18}}>Công ty</TableCell>
-                  <TableCell align="center" sx={{pr: 18}}>Email</TableCell>
+                  <TableCell align="center">Công ty</TableCell>
+                  <TableCell align="center">Email</TableCell>
                   <TableCell>Số điện thoại</TableCell>
                   <TableCell align="center">Ngày tạo</TableCell>
                   <TableCell align="center">Số đơn hàng</TableCell>
@@ -524,8 +524,8 @@ const Customers = () => {
                         onClick={() => handleViewCustomerDetail(customer.customerId)}
                         sx={{ cursor: "pointer" }}
                       >
-                        <TableCell>{customer.companyName}</TableCell>
-                        <TableCell>{customer.email}</TableCell>
+                        <TableCell align="center">{customer.companyName}</TableCell>
+                        <TableCell align="center">{customer.email}</TableCell>
                         <TableCell>{customer.phoneNumber}</TableCell>
                         <TableCell align="center">
                           {customer.createdDate 
