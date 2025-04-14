@@ -41,6 +41,8 @@ import InfoIcon from "@mui/icons-material/Info";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import FolderIcon from '@mui/icons-material/Folder';
 import ContactsIcon from '@mui/icons-material/Contacts';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PaymentIcon from '@mui/icons-material/Payment';
 import {
   OrderDetails,
   ContainerType,
@@ -50,7 +52,7 @@ import {
   IsPay,
   OrderFile,
 } from "../types/order";
-import { getOrderDetails, updateOrder } from "../services/orderApi";
+import { getOrderDetails, updateOrder, updatePaymentStatus } from "../services/orderApi";
 import { getContracts, createContract } from "../services/contractApi";
 import { getTrip, manualCreateTrip } from "../services/tripApi";
 import { trip } from "../types/trip";
@@ -718,7 +720,7 @@ const OrderDetailPage: React.FC = () => {
       const onDutyTractors = extractTractors(onDutyResponse);
 
       // Kết hợp danh sách và loại bỏ trùng lặp dựa trên tractorId
-      const combinedTractors = [
+      let combinedTractors = [
         ...activeTractors,
         ...onDutyTractors.filter(
           (onDutyTractor) =>
@@ -728,6 +730,19 @@ const OrderDetailPage: React.FC = () => {
             )
         ),
       ];
+
+      // Lọc tractors dựa trên containerType của đơn hàng
+      if (orderDetails && orderDetails.containerType) {
+        if (orderDetails.containerType === ContainerType["Container Lạnh"]) {
+          // Nếu là container lạnh (type 2), chỉ lấy những tractor có containerType là 2
+          combinedTractors = combinedTractors.filter(
+            tractor => tractor.containerType === 2
+          );
+        } else if (orderDetails.containerType === ContainerType["Container Khô"]) {
+          // Nếu là container khô (type 1), lấy cả tractor loại 1 và loại 2
+          // Không cần lọc gì thêm vì đã lấy tất cả
+        }
+      }
 
       console.log("Combined tractors count:", combinedTractors.length);
       setTractors(combinedTractors);
@@ -863,6 +878,33 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+  const handleUpdatePaymentStatus = async () => {
+    if (!orderDetails || !orderId) return;
+
+    setIsSubmitting(true);
+    // Clear any existing error first
+    setError(null);
+    
+    try {
+      console.log("Updating payment status for order:", orderId);
+      const result = await updatePaymentStatus(orderId);
+      console.log("Payment status updated successfully:", result);
+
+      const statusText = orderDetails.isPay === IsPay.Yes ? "Chưa thanh toán" : "Đã thanh toán";
+      setUpdateSuccess(`Trạng thái thanh toán đã được cập nhật thành công: ${statusText}`);
+      fetchData();
+
+      setTimeout(() => {
+        setUpdateSuccess(null);
+      }, 5000);
+    } catch (err) {
+      console.error("Error updating payment status:", err);
+      setError("Không thể cập nhật trạng thái thanh toán. Vui lòng thử lại sau.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box
@@ -968,6 +1010,7 @@ const OrderDetailPage: React.FC = () => {
             label={getStatusDisplay(orderDetails.status).label}
             color={getStatusDisplay(orderDetails.status).color as any}
           />
+          {/* Show update info button only for Pending orders */}
           {orderDetails.status === OrderStatus.Pending && (
             <Button
               variant="outlined"
@@ -976,6 +1019,17 @@ const OrderDetailPage: React.FC = () => {
               onClick={handleOpenEditDialog}
             >
               Cập nhật thông tin
+            </Button>
+          )}
+          {/* Show payment status button for all orders except those already paid */}
+          {orderDetails.isPay !== IsPay.Yes && (
+            <Button
+              variant="outlined"
+              color={orderDetails.isPay === IsPay.Yes ? "success" : "warning"}
+              startIcon={orderDetails.isPay === IsPay.Yes ? <CheckCircleIcon /> : <PaymentIcon />}
+              onClick={handleUpdatePaymentStatus}
+            >
+              Câp nhật Thanh Toán
             </Button>
           )}
         </Box>

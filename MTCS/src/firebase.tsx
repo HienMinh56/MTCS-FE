@@ -11,6 +11,8 @@ import {
   Timestamp,
   getDocs,
   FirestoreError,
+  doc,
+  updateDoc,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -45,7 +47,7 @@ export interface Notification {
   Title: string; // Updated to match Firestore field name
   Body: string; // Updated to match Firestore field name
   Timestamp: Timestamp; // Add back Timestamp in the interface
-  read: boolean;
+  isRead: boolean;
   UserId?: string; // Updated to match Firestore field name
   data?: any;
 }
@@ -80,8 +82,8 @@ export const fetchUserNotifications = (
           notifications.push({
             id: doc.id,
             ...data,
-            // Set read status if not present in data
-            read: data.read !== undefined ? data.read : false,
+            // Set isRead status if not present in data
+            isRead: data.isRead !== undefined ? data.isRead : false,
           } as Notification);
         });
 
@@ -128,6 +130,18 @@ export const fetchUserNotifications = (
     console.error("Unexpected error in fetchUserNotifications:", err);
     callback([]);
     return () => {};
+  }
+};
+
+export const markNotificationAsRead = async (notificationId: string) => {
+  try {
+    await updateDoc(doc(firestore, "Notifications", notificationId), {
+      isRead: true,
+    });
+    return true;
+  } catch (error) {
+    console.error("Error marking notification as read:", error);
+    return false;
   }
 };
 

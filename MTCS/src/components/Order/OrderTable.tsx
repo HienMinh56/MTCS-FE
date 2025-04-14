@@ -97,8 +97,8 @@ const OrderManagement: React.FC = () => {
   
   // Export feature states
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [fromDate, setFromDate] = useState<dayjs.Dayjs | null>(null);
-  const [toDate, setToDate] = useState<dayjs.Dayjs | null>(null);
+  const [fromDateStr, setFromDate] = useState<dayjs.Dayjs | null>(null);
+  const [toDateStr, setToDate] = useState<dayjs.Dayjs | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
   
   // Payment filter state
@@ -357,12 +357,11 @@ const OrderManagement: React.FC = () => {
       setExportLoading(true);
       
       // Format dates as strings in YYYY-MM-DD format
-      const formattedData = {
-        fromDate: fromDate ? fromDate.format('YYYY-MM-DD') : null,
-        toDate: toDate ? toDate.format('YYYY-MM-DD') : null
-      };
+      const fromDateString = fromDateStr ? fromDateStr.format('YYYY-MM-DD') : null;
+      const toDateString = toDateStr ? toDateStr.format('YYYY-MM-DD') : null;
       
-      await exportExcel(formattedData);
+      // Call exportExcel with individual parameters, not as an object
+      await exportExcel(fromDateString, toDateString);
       
       // Close the modal after export completes
       handleCloseExportModal();
@@ -872,7 +871,7 @@ const OrderManagement: React.FC = () => {
                       sx={{ cursor: "pointer" }}
                     >
                       <TableCell align="center">{order.trackingCode}</TableCell>
-                      <TableCell align="center">{order.customerId}</TableCell>
+                      <TableCell align="center">{order.companyName}</TableCell>
                       <TableCell align="center">
                         {new Date(order.deliveryDate).toLocaleDateString(
                           "vi-VN"
@@ -978,7 +977,7 @@ const OrderManagement: React.FC = () => {
                   Từ ngày
                 </Typography>
                 <DatePicker
-                  value={fromDate}
+                  value={fromDateStr}
                   onChange={(newValue) => setFromDate(newValue)}
                   format="DD/MM/YYYY"
                   slotProps={{
@@ -994,7 +993,7 @@ const OrderManagement: React.FC = () => {
                   Đến ngày
                 </Typography>
                 <DatePicker
-                  value={toDate}
+                  value={toDateStr}
                   onChange={(newValue) => setToDate(newValue)}
                   format="DD/MM/YYYY"
                   slotProps={{
