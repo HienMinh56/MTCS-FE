@@ -75,7 +75,11 @@ const StaffMenu: React.FC = () => {
   };
 
   const handleNavigateToCalculator = () => {
-    navigate("/distance-calculator");
+    window.open("/distance-calculator", "_blank");
+  };
+
+  const handleNavigateToTrackOrder = () => {
+    window.open("/tracking-order", "_blank");
   };
 
   const menuItems = [
@@ -165,24 +169,48 @@ const StaffMenu: React.FC = () => {
             }}
           />
 
-          <Box sx={{ display: "flex", gap: 1 }}>
+          <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
             <Tooltip title="Công cụ tính khoảng cách">
               <IconButton
                 color="inherit"
                 onClick={handleNavigateToCalculator}
                 sx={{
-                  backgroundColor: "rgba(255,255,255,0.1)",
                   "&:hover": {
-                    backgroundColor: "rgba(255,255,255,0.2)",
+                    backgroundColor: "rgba(255,255,255,0.25)",
+                    transform: "translateY(-2px)",
                   },
-                  transition: "all 0.2s",
+                  transition: "all 0.3s ease",
+                  borderRadius: 1.5,
+                  p: 1.5,
+                  display: "flex",
+                  alignItems: "center",
                 }}
               >
-                <StraightenIcon />
+                <StraightenIcon sx={{ fontSize: 28 }} />
               </IconButton>
             </Tooltip>
 
-            <NotificationComponent userId={userId} />
+            <Tooltip title="Theo dõi đơn hàng">
+              <IconButton
+                color="inherit"
+                onClick={handleNavigateToTrackOrder}
+                sx={{
+                  "&:hover": {
+                    backgroundColor: "rgba(255,255,255,0.25)",
+                    transform: "translateY(-2px)",
+                  },
+                  transition: "all 0.3s ease",
+                  borderRadius: 1.5,
+                  p: 1.5,
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <LocalShippingIcon sx={{ fontSize: 28 }} />
+              </IconButton>
+            </Tooltip>
+
+            <NotificationComponent userId={userId} size="large" iconSize={28} />
 
             <IconButton
               size="large"
