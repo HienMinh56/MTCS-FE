@@ -19,6 +19,7 @@ import CustomerDetailPage from "./pages/CustomerDetailPage";
 import DistanceCalculatorPage from "./pages/DistanceCalculatorPage";
 import AdminFinanceDashboard from "./pages/AdminFinanceDashboard";
 import TrackingOrder from "./pages/TrackingOrder";
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 const HomeRoute = () => {
   const { isAuthenticated, user } = useAuth();
@@ -46,6 +47,11 @@ function App() {
               {/* Public route for order tracking - accessible to everyone */}
               <Route path="/tracking-order" element={<TrackingOrder />} />
 
+              <Route
+                  path="/distance-calculator"
+                  element={<DistanceCalculatorPage />}
+                />
+                
               <Route
                 element={<ProtectedRoute allowedRoles={["Staff", "Admin"]} />}
               >
