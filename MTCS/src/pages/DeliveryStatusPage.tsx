@@ -131,12 +131,20 @@ const DeliveryStatusPage: React.FC = () => {
   };
 
   const moveStatusUp = (index: number) => {
-    if (index <= 0) return; // Can't move first item up
+    // Filter only active statuses
+    const activeStatuses = statuses.filter(status => status.isActive === 1);
+    if (index <= 0 || activeStatuses.length <= 1) return; // Can't move first item up or if only one active item
+    
+    // Find the actual index in the full statuses array
+    const activeStatusId = activeStatuses[index].statusId;
+    const actualIndex = statuses.findIndex(s => s.statusId === activeStatusId);
+    const prevActiveStatusId = activeStatuses[index - 1].statusId;
+    const prevIndex = statuses.findIndex(s => s.statusId === prevActiveStatusId);
     
     setStatuses(prevStatuses => {
       const updatedStatuses = [...prevStatuses];
       // Swap items
-      [updatedStatuses[index - 1], updatedStatuses[index]] = [updatedStatuses[index], updatedStatuses[index - 1]];
+      [updatedStatuses[prevIndex], updatedStatuses[actualIndex]] = [updatedStatuses[actualIndex], updatedStatuses[prevIndex]];
       
       // Update statusIndex values to match new positions
       return updatedStatuses.map((status, idx) => ({
@@ -148,12 +156,20 @@ const DeliveryStatusPage: React.FC = () => {
   };
 
   const moveStatusDown = (index: number) => {
-    if (index >= statuses.length - 1) return; // Can't move last item down
+    // Filter only active statuses
+    const activeStatuses = statuses.filter(status => status.isActive === 1);
+    if (index >= activeStatuses.length - 1 || activeStatuses.length <= 1) return; // Can't move last item down or if only one active item
+    
+    // Find the actual index in the full statuses array
+    const activeStatusId = activeStatuses[index].statusId;
+    const actualIndex = statuses.findIndex(s => s.statusId === activeStatusId);
+    const nextActiveStatusId = activeStatuses[index + 1].statusId;
+    const nextIndex = statuses.findIndex(s => s.statusId === nextActiveStatusId);
     
     setStatuses(prevStatuses => {
       const updatedStatuses = [...prevStatuses];
       // Swap items
-      [updatedStatuses[index], updatedStatuses[index + 1]] = [updatedStatuses[index + 1], updatedStatuses[index]];
+      [updatedStatuses[actualIndex], updatedStatuses[nextIndex]] = [updatedStatuses[nextIndex], updatedStatuses[actualIndex]];
       
       // Update statusIndex values to match new positions
       return updatedStatuses.map((status, idx) => ({
