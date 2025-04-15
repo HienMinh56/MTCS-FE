@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BarChart } from "@mui/x-charts/BarChart";
 import {
   Box,
@@ -9,8 +9,7 @@ import {
   Grid,
   Divider,
   Stack,
-  Tooltip,
-  IconButton,
+  CircularProgress,
 } from "@mui/material";
 import {
   TrendingUp,
@@ -18,11 +17,22 @@ import {
   ShoppingCart,
   AttachMoney,
 } from "@mui/icons-material";
-import { AdminRevenueAnalytics } from "../../types/admin-finance";
+import {
+  AdminRevenueAnalytics,
+  AdminRevenuePeriodType,
+} from "../../types/admin-finance";
+import { getAdminRevenueAnalytics } from "../../services/adminFinanceApi";
 
 interface AdminRevenueChartProps {
   data: AdminRevenueAnalytics;
   title?: string;
+}
+
+interface MonthlyData {
+  month: string;
+  revenue: number;
+  loading: boolean;
+  error: string | null;
 }
 
 const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
@@ -30,17 +40,98 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
   title = "Biểu Đồ Doanh Thu",
 }) => {
   const theme = useTheme();
+  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const chartData =
-    data.totalRevenue > 0
-      ? [
-          Math.round(data.totalRevenue * 0.65),
-          Math.round(data.totalRevenue * 0.25),
-          Math.round(data.totalRevenue * 0.1),
-        ]
-      : [0, 0, 0];
+  useEffect(() => {
+    const fetchMonthlyData = async () => {
+      setLoading(true);
 
-  const xLabels = ["Vận Chuyển", "Dịch Vụ Bổ Sung", "Phí Khác"];
+      try {
+        const currentDate = new Date();
+        const monthNames: string[] = [];
+        const monthlyDataArray: MonthlyData[] = [];
+
+        for (let i = 3; i >= 0; i--) {
+          const month = new Date(
+            currentDate.getFullYear(),
+            currentDate.getMonth() - i,
+            1
+          );
+          const monthName = month.toLocaleString("vi-VN", { month: "long" });
+          monthNames.push(monthName);
+
+          monthlyDataArray.push({
+            month: monthName,
+            revenue: 0,
+            loading: true,
+            error: null,
+          });
+        }
+
+        setMonthlyData(monthlyDataArray);
+
+        // Fetch data for each month
+        const results = await Promise.all(
+          monthlyDataArray.map(async (_, index) => {
+            const monthIndex = currentDate.getMonth() - (3 - index);
+            const year = currentDate.getFullYear() - (monthIndex < 0 ? 1 : 0);
+            const adjustedMonthIndex =
+              monthIndex < 0 ? monthIndex + 12 : monthIndex;
+
+            const startDate = new Date(year, adjustedMonthIndex, 1);
+            const endDate = new Date(year, adjustedMonthIndex + 1, 0);
+
+            const startDateString = startDate.toISOString().split("T")[0];
+            const endDateString = endDate.toISOString().split("T")[0];
+
+            try {
+              const response = await getAdminRevenueAnalytics(
+                AdminRevenuePeriodType.Custom,
+                startDateString,
+                endDateString
+              );
+
+              if (response.success && response.data) {
+                return {
+                  month: monthNames[index],
+                  revenue: response.data.totalRevenue,
+                  loading: false,
+                  error: null,
+                };
+              } else {
+                return {
+                  month: monthNames[index],
+                  revenue: 0,
+                  loading: false,
+                  error: response.message || "Failed to fetch data",
+                };
+              }
+            } catch (err) {
+              console.error(
+                `Error fetching data for ${monthNames[index]}:`,
+                err
+              );
+              return {
+                month: monthNames[index],
+                revenue: 0,
+                loading: false,
+                error: "Error fetching data",
+              };
+            }
+          })
+        );
+
+        setMonthlyData(results);
+      } catch (error) {
+        console.error("Error fetching monthly data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMonthlyData();
+  }, []);
 
   return (
     <Card
@@ -246,30 +337,35 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
           justifyContent: "center",
         }}
       >
-        <BarChart
-          dataset={chartData.map((value, index) => ({
-            category: xLabels[index],
-            value: value,
-          }))}
-          series={[
-            {
-              dataKey: "value",
-              label: "Doanh Thu",
-              valueFormatter: (value) =>
-                value != null ? `${value.toLocaleString()}` : "0",
-            },
-          ]}
-          xAxis={[
-            {
-              scaleType: "band",
-              dataKey: "category",
-            },
-          ]}
-          height={250}
-          margin={{ left: 80, right: 20, top: 10, bottom: 30 }}
-          grid={{ horizontal: true }}
-          className="w-full"
-        />
+        {loading ? (
+          <CircularProgress />
+        ) : (
+          <BarChart
+            dataset={monthlyData.map((item) => ({
+              month: item.month,
+              value: item.revenue,
+            }))}
+            series={[
+              {
+                dataKey: "value",
+                label: "Doanh Thu",
+                valueFormatter: (value) =>
+                  value != null ? `${value.toLocaleString()}` : "0",
+                color: theme.palette.primary.main,
+              },
+            ]}
+            xAxis={[
+              {
+                scaleType: "band",
+                dataKey: "month",
+              },
+            ]}
+            height={250}
+            margin={{ left: 80, right: 20, top: 10, bottom: 30 }}
+            grid={{ horizontal: true }}
+            className="w-full"
+          />
+        )}
       </Box>
     </Card>
   );

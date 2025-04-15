@@ -39,6 +39,7 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
 }) => {
   const theme = useTheme();
   const [chartType, setChartType] = useState<ChartType>("pie");
+  const isProfit = data.netProfit > 0;
 
   const handleChartTypeChange = (
     _event: React.MouseEvent<HTMLElement>,
@@ -52,10 +53,20 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
   // Memoize chart data to prevent recalculations on every render
   const chartData = useMemo(
     () => [
-      { id: 0, value: data.netProfit, label: "Lợi Nhuận Ròng" },
-      { id: 1, value: data.totalFuelCost, label: "Chi Phí Nhiên Liệu" },
+      {
+        id: 0,
+        value: data.netProfit,
+        label: "Lợi Nhuận Ròng",
+        color: isProfit ? theme.palette.success.main : theme.palette.error.main,
+      },
+      {
+        id: 1,
+        value: data.totalFuelCost,
+        label: "Chi Phí Nhiên Liệu",
+        color: theme.palette.error.light,
+      },
     ],
-    [data.netProfit, data.totalFuelCost]
+    [data.netProfit, data.totalFuelCost, isProfit, theme]
   );
 
   const barChartData = useMemo(
@@ -66,8 +77,6 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
     ],
     [data.totalRevenue, data.totalFuelCost, data.netProfit]
   );
-
-  const isProfit = data.netProfit > 0;
 
   // Safe calculation to prevent division by zero
   const calculatePercentage = (value: number) => {
@@ -332,8 +341,12 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
                   innerRadius: 60,
                   paddingAngle: 2,
                   arcLabel: (item) => `${calculatePercentage(item.value)}%`,
-                  valueFormatter: (value) =>
-                    value != null ? `${value.toLocaleString()}` : "0",
+                  highlightScope: { faded: "global", highlighted: "item" },
+                  faded: {
+                    innerRadius: 30,
+                    additionalRadius: -30,
+                    color: "gray",
+                  },
                 },
               ]}
               height={250}
