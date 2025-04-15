@@ -234,9 +234,14 @@ const TrackingOrder: React.FC = () => {
       };
 
       fetchLocations();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error tracking order:", err);
-      setError("Unable to find order with this tracking code. Please check and try again.");
+      // Check for completed order error
+      if (err.message === "ORDER_COMPLETED") {
+        setError("Đơn hàng đã hoàn thành không thể tiến hành theo dõi.");
+      } else {
+        setError("Unable to find order with this tracking code. Please check and try again.");
+      }
       setTrackingData(null);
     } finally {
       setLoading(false);

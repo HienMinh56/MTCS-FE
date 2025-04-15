@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { PieChart } from "@mui/x-charts/PieChart";
 import {
   Box,
@@ -13,6 +13,7 @@ import {
   Tooltip,
   Chip,
   Stack,
+  IconButton,
 } from "@mui/material";
 import { AdminProfitAnalytics } from "../../types/admin-finance";
 import {
@@ -21,6 +22,7 @@ import {
   PieChart as PieChartIcon,
   BarChart as BarChartIcon,
   BusinessCenter,
+  AttachMoney,
 } from "@mui/icons-material";
 import { BarChart } from "@mui/x-charts/BarChart";
 
@@ -37,6 +39,7 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
 }) => {
   const theme = useTheme();
   const [chartType, setChartType] = useState<ChartType>("pie");
+  const isProfit = data.netProfit > 0;
 
   const handleChartTypeChange = (
     _event: React.MouseEvent<HTMLElement>,
@@ -47,18 +50,39 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
     }
   };
 
-  const chartData = [
-    { id: 0, value: data.netProfit, label: "Lợi Nhuận Ròng" },
-    { id: 1, value: data.totalFuelCost, label: "Chi Phí Nhiên Liệu" },
-  ];
+  // Memoize chart data to prevent recalculations on every render
+  const chartData = useMemo(
+    () => [
+      {
+        id: 0,
+        value: data.netProfit,
+        label: "Lợi Nhuận Ròng",
+        color: isProfit ? theme.palette.success.main : theme.palette.error.main,
+      },
+      {
+        id: 1,
+        value: data.totalFuelCost,
+        label: "Chi Phí Nhiên Liệu",
+        color: theme.palette.error.light,
+      },
+    ],
+    [data.netProfit, data.totalFuelCost, isProfit, theme]
+  );
 
-  const barChartData = [
-    { category: "Doanh Thu", value: data.totalRevenue },
-    { category: "Chi Phí Nhiên Liệu", value: data.totalFuelCost },
-    { category: "Lợi Nhuận Ròng", value: data.netProfit },
-  ];
+  const barChartData = useMemo(
+    () => [
+      { category: "Doanh Thu", value: data.totalRevenue },
+      { category: "Chi Phí Nhiên Liệu", value: data.totalFuelCost },
+      { category: "Lợi Nhuận Ròng", value: data.netProfit },
+    ],
+    [data.totalRevenue, data.totalFuelCost, data.netProfit]
+  );
 
-  const isProfit = data.netProfit > 0;
+  // Safe calculation to prevent division by zero
+  const calculatePercentage = (value: number) => {
+    const total = Math.abs(data.netProfit) + Math.abs(data.totalFuelCost);
+    return total === 0 ? 0 : Math.round((value / total) * 100);
+  };
 
   return (
     <Card
@@ -113,41 +137,64 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
           </Typography>
         </Box>
 
-        <ToggleButtonGroup
-          value={chartType}
-          exclusive
-          onChange={handleChartTypeChange}
-          size="small"
-          aria-label="loại biểu đồ"
-          className="bg-gray-50 rounded-lg"
-        >
-          <ToggleButton
-            value="pie"
-            aria-label="biểu đồ tròn"
-            className="rounded-l-lg"
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: alpha(theme.palette.info.main, 0.08),
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 1.5,
+              mr: 1,
+            }}
           >
-            <Tooltip title="Biểu Đồ Tròn">
-              <PieChartIcon fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-          <ToggleButton
-            value="bar"
-            aria-label="biểu đồ cột"
-            className="rounded-r-lg"
+            <AttachMoney
+              fontSize="small"
+              sx={{ mr: 0.5, color: "info.main" }}
+            />
+            <Typography variant="body2" fontWeight={500} color="info.main">
+              Đơn vị: VNĐ
+            </Typography>
+          </Box>
+
+          <ToggleButtonGroup
+            value={chartType}
+            exclusive
+            onChange={handleChartTypeChange}
+            size="small"
+            aria-label="loại biểu đồ"
+            className="bg-gray-50 rounded-lg"
           >
-            <Tooltip title="Biểu Đồ Cột">
-              <BarChartIcon fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-        </ToggleButtonGroup>
+            <ToggleButton
+              value="pie"
+              aria-label="biểu đồ tròn"
+              className="rounded-l-lg"
+            >
+              <Tooltip title="Biểu Đồ Tròn">
+                <PieChartIcon fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton
+              value="bar"
+              aria-label="biểu đồ cột"
+              className="rounded-r-lg"
+            >
+              <Tooltip title="Biểu Đồ Cột">
+                <BarChartIcon fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
       </Box>
 
       <Grid container sx={{ px: 3, py: 2 }}>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={4} sx={{ textAlign: "center" }}>
           <Stack
             direction="row"
             spacing={2}
             alignItems="center"
+            justifyContent="center"
             className="p-2"
           >
             <Box
@@ -174,17 +221,18 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
                 Doanh Thu Tổng
               </Typography>
               <Typography variant="h6" fontWeight="bold" className="text-base">
-                {data.totalRevenue.toLocaleString()} VNĐ
+                {data.totalRevenue.toLocaleString()}
               </Typography>
             </Box>
           </Stack>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={4} sx={{ textAlign: "center" }}>
           <Stack
             direction="row"
             spacing={2}
             alignItems="center"
+            justifyContent="center"
             className="p-2"
           >
             <Box
@@ -216,17 +264,18 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
                 color="error"
                 className="text-base"
               >
-                {data.totalFuelCost.toLocaleString()} VNĐ
+                {data.totalFuelCost.toLocaleString()}
               </Typography>
             </Box>
           </Stack>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={4} sx={{ textAlign: "center" }}>
           <Stack
             direction="row"
             spacing={2}
             alignItems="center"
+            justifyContent="center"
             className="p-2"
           >
             <Box
@@ -265,7 +314,7 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
                 color={isProfit ? "success" : "error"}
                 className="text-base"
               >
-                {data.netProfit.toLocaleString()} VNĐ
+                {data.netProfit.toLocaleString()}
               </Typography>
             </Box>
           </Stack>
@@ -291,11 +340,13 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
                   data: chartData,
                   innerRadius: 60,
                   paddingAngle: 2,
-                  arcLabel: (item) =>
-                    `${Math.round(
-                      (item.value / (data.netProfit + data.totalFuelCost)) * 100
-                    )}%`,
-                  valueFormatter: (value) => `${value.toLocaleString()} VNĐ`,
+                  arcLabel: (item) => `${calculatePercentage(item.value)}%`,
+                  highlightScope: { faded: "global", highlighted: "item" },
+                  faded: {
+                    innerRadius: 30,
+                    additionalRadius: -30,
+                    color: "gray",
+                  },
                 },
               ]}
               height={250}
@@ -326,7 +377,8 @@ const AdminProfitChart: React.FC<AdminProfitChartProps> = ({
             series={[
               {
                 dataKey: "value",
-                valueFormatter: (value) => `${value.toLocaleString()} VNĐ`,
+                valueFormatter: (value) =>
+                  value != null ? `${value.toLocaleString()}` : "0",
               },
             ]}
             height={250}

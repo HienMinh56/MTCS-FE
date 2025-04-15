@@ -25,6 +25,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  SelectChangeEvent,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
@@ -277,10 +278,8 @@ const DriverUpdate: React.FC<DriverUpdateProps> = ({
     setFileEditCustomDescription("");
   };
 
-  const handleEditDescriptionChange = (
-    e: React.ChangeEvent<{ value: unknown }>
-  ) => {
-    const value = e.target.value as string;
+  const handleEditDescriptionChange = (e: SelectChangeEvent) => {
+    const value = e.target.value;
     setFileEditData((prev) => ({
       ...prev,
       description: value,
