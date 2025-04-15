@@ -280,64 +280,62 @@ const OrderManagement: React.FC = () => {
   };
 
   const handleOrderCreationSuccess = () => {
-    // Close the dialog
+    // Đóng dialog tạo đơn hàng
     setCreateDialogOpen(false);
-
-    // Refresh all orders to update counts
-    const fetchAllOrders = async () => {
-      try {
-        const result = await getOrders(1, 1000);
-        if (Array.isArray(result)) {
-          setAllOrders(result);
-        } else if (result && result.orders && result.orders.items) {
-          setAllOrders(result.orders.items);
-        }
-      } catch (error) {
-        console.error("Error refreshing all orders:", error);
-      }
-    };
-
-    // Refresh filtered orders for the table
+    
+    // Đặt lại về trang đầu tiên
+    setPage(0);
+    
+    // Làm mới dữ liệu đơn hàng
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        const status =
-          tabValue === 0
-            ? undefined
-            : tabValue === 1
-            ? OrderStatus.Pending
-            : tabValue === 2
-            ? OrderStatus.Scheduled
-            : OrderStatus.Completed;
-
-        const result = await getOrders(
-          page + 1,
-          rowsPerPage,
-          searchTerm,
-          status
-        );
-
+        // Lấy tất cả đơn hàng cho counter cards
+        const allOrdersResult = await getOrders(1, 1000);
+        if (Array.isArray(allOrdersResult)) {
+          setAllOrders(allOrdersResult);
+        } else if (allOrdersResult && allOrdersResult.orders && allOrdersResult.orders.items) {
+          setAllOrders(allOrdersResult.orders.items);
+        }
+        
+        // Lấy dữ liệu đơn hàng theo tab hiện tại
+        let statusFilter: OrderStatus | undefined;
+        switch (tabValue) {
+          case 0: statusFilter = undefined; break;
+          case 1: statusFilter = OrderStatus.Pending; break;
+          case 2: statusFilter = OrderStatus.Scheduled; break;
+          case 3: statusFilter = OrderStatus.Delivering; break;
+          case 4: statusFilter = OrderStatus.Completed; break;
+          default: statusFilter = undefined;
+        }
+        
+        // Lấy dữ liệu đơn hàng từ API
+        const result = await getOrders(1, 1000, "", statusFilter, paymentFilter);
+        
+        let fetchedOrders: Order[] = [];
         if (Array.isArray(result)) {
-          setOrders(result);
+          fetchedOrders = result;
           setTotalOrders(result.length);
         } else if (result && result.orders) {
-          setOrders(result.orders.items || []);
+          fetchedOrders = result.orders.items || [];
           setTotalOrders(result.orders.totalCount || 0);
-        } else {
-          setOrders([]);
-          setTotalOrders(0);
         }
+        
+        // Cập nhật state với dữ liệu mới
+        setAllFetchedOrders(fetchedOrders);
+        setOrders(fetchedOrders);
+        setFilteredOrders(fetchedOrders);
+        setIsFiltering(false);
+        setSearchTerm(""); // Xóa bất kỳ tìm kiếm hiện tại
+        
       } catch (error) {
-        console.error("Error fetching orders:", error);
-        setOrders([]);
-        setTotalOrders(0);
+        console.error("Lỗi khi làm mới dữ liệu đơn hàng:", error);
       } finally {
         setLoading(false);
       }
     };
-
-    // Execute both fetch operations
-    fetchAllOrders();
+    
+    // Thực hiện fetch dữ liệu
     fetchOrders();
   };
   
