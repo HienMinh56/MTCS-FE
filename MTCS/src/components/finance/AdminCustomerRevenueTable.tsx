@@ -24,6 +24,7 @@ import {
   AttachMoney,
 } from "@mui/icons-material";
 import { AdminCustomerRevenue } from "../../types/admin-finance";
+import { useNavigate } from "react-router-dom";
 
 interface AdminCustomerRevenueTableProps {
   data: AdminCustomerRevenue[];
@@ -35,9 +36,17 @@ const AdminCustomerRevenueTable: React.FC<AdminCustomerRevenueTableProps> = ({
   title = "Doanh Thu Khách Hàng",
 }) => {
   const theme = useTheme();
+  const navigate = useNavigate();
 
   // Sắp xếp dữ liệu theo doanh thu giảm dần
   const sortedData = [...data].sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+  // Handle click on customer row to view orders
+  const handleCustomerClick = (customerId: string) => {
+    navigate(`/staff-menu/customers/${customerId}`, {
+      state: { activeTab: 1 }, // Use state to open the Orders tab by default
+    });
+  };
 
   return (
     <Card
@@ -150,6 +159,7 @@ const AdminCustomerRevenueTable: React.FC<AdminCustomerRevenueTableProps> = ({
                   className={`hover:bg-gray-50 transition-colors cursor-pointer ${
                     isTopThree ? "bg-blue-50/30" : ""
                   }`}
+                  onClick={() => handleCustomerClick(customer.customerId)}
                 >
                   <TableCell
                     sx={{

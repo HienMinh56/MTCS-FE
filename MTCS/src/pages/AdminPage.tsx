@@ -32,6 +32,7 @@ import {
   MenuOpen,
   ChevronLeft,
   Menu as MenuIcon,
+  Settings as SettingsIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -43,6 +44,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import "dayjs/locale/vi";
 import FinanceDashboard from "../components/finance/FinanceDashboard";
 import Customers from "../components/Customers";
+import SystemConfiguration from "../components/SystemConfiguration";
 
 // Placeholder component for the Price Table
 const PriceTable: React.FC = () => {
@@ -139,6 +141,12 @@ const AdminFinanceDashboard: React.FC = () => {
       text: "Bảng Giá",
       icon: <PriceChangeOutlined />,
       selected: activeSideTab === "pricing",
+    },
+    {
+      id: "system-config",
+      text: "Cấu Hình Hệ Thống",
+      icon: <SettingsIcon />,
+      selected: activeSideTab === "system-config",
     },
   ];
 
@@ -430,6 +438,7 @@ const AdminFinanceDashboard: React.FC = () => {
             {activeSideTab === "finance" && <FinanceDashboard />}
             {activeSideTab === "customers" && <Customers />}
             {activeSideTab === "pricing" && <PriceTable />}
+            {activeSideTab === "system-config" && <SystemConfiguration />}
           </Box>
         </LocalizationProvider>
       </Box>

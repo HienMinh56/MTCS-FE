@@ -186,7 +186,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
               sx={{ mr: 0.5, color: "info.main" }}
             />
             <Typography variant="body2" fontWeight={500} color="info.main">
-              Tất cả giá trị bằng VNĐ
+              Đơn vị: VNĐ
             </Typography>
           </Box>
 
