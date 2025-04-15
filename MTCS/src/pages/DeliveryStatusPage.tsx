@@ -93,8 +93,15 @@ const DeliveryStatusPage: React.FC = () => {
       const filteredData = data.filter((status: DeliveryStatus) => 
         !['canceled', 'delaying'].includes(status.statusId.toLowerCase())
       );
-      // Sort by statusIndex
-      const sortedData = [...filteredData].sort((a, b) => a.statusIndex - b.statusIndex);
+      
+      // Sort by active status first (active on top), then by statusIndex
+      const sortedData = [...filteredData].sort((a, b) => {
+        if (a.isActive !== b.isActive) {
+          return b.isActive - a.isActive; // Active statuses (1) first, inactive (0) later
+        }
+        return a.statusIndex - b.statusIndex; // Then sort by statusIndex
+      });
+      
       setStatuses(sortedData);
     } catch (error) {
       console.error('Error fetching delivery statuses:', error);
@@ -126,7 +133,14 @@ const DeliveryStatusPage: React.FC = () => {
         return status;
       });
       setModified(true);
-      return updatedStatuses;
+      
+      // Sắp xếp lại danh sách sau khi thay đổi trạng thái
+      return [...updatedStatuses].sort((a, b) => {
+        if (a.isActive !== b.isActive) {
+          return b.isActive - a.isActive; // Active statuses (1) first, inactive (0) later
+        }
+        return a.statusIndex - b.statusIndex; // Then sort by statusIndex
+      });
     });
   };
 
@@ -153,6 +167,16 @@ const DeliveryStatusPage: React.FC = () => {
       }));
     });
     setModified(true);
+    
+    // Sắp xếp lại danh sách sau khi thay đổi vị trí
+    setStatuses(prevStatuses => {
+      return [...prevStatuses].sort((a, b) => {
+        if (a.isActive !== b.isActive) {
+          return b.isActive - a.isActive; // Active statuses (1) first, inactive (0) later
+        }
+        return a.statusIndex - b.statusIndex; // Then sort by statusIndex
+      });
+    });
   };
 
   const moveStatusDown = (index: number) => {
@@ -178,6 +202,16 @@ const DeliveryStatusPage: React.FC = () => {
       }));
     });
     setModified(true);
+    
+    // Sắp xếp lại danh sách sau khi thay đổi vị trí
+    setStatuses(prevStatuses => {
+      return [...prevStatuses].sort((a, b) => {
+        if (a.isActive !== b.isActive) {
+          return b.isActive - a.isActive; // Active statuses (1) first, inactive (0) later
+        }
+        return a.statusIndex - b.statusIndex; // Then sort by statusIndex
+      });
+    });
   };
 
   const saveChanges = async () => {
@@ -194,6 +228,9 @@ const DeliveryStatusPage: React.FC = () => {
       const response = await updateDeliveryStatuses(payload);
       showAlert('Cập nhật trạng thái giao hàng thành công', 'success');
       setModified(false);
+      
+      // Reload data to ensure consistent display
+      await fetchStatusData();
     } catch (error) {
       console.error('Error updating delivery statuses:', error);
       showAlert('Không thể cập nhật trạng thái giao hàng', 'error');
@@ -370,9 +407,10 @@ const DeliveryStatusPage: React.FC = () => {
             <Table sx={{ minWidth: 650 }}>
               <TableHead>
                 <TableRow sx={{ backgroundColor: theme.palette.grey[100] }}>
-                  <TableCell width="40%" sx={{ fontWeight: 'bold' }}>Tên Trạng Thái</TableCell>
+                  <TableCell width="10%" sx={{ fontWeight: 'bold' }}>Index</TableCell>
+                  <TableCell width="35%" sx={{ fontWeight: 'bold' }}>Tên Trạng Thái</TableCell>
                   <TableCell align="center" width="20%" sx={{ fontWeight: 'bold' }}>Tình Trạng</TableCell>
-                  <TableCell align="center" width="40%" sx={{ fontWeight: 'bold' }}>Hành Động</TableCell>
+                  <TableCell align="center" width="35%" sx={{ fontWeight: 'bold' }}>Hành Động</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -383,6 +421,9 @@ const DeliveryStatusPage: React.FC = () => {
                     key={status.statusId}
                     sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { backgroundColor: theme.palette.grey[50] } }}
                   >
+                    <TableCell align="center">
+                      {status.statusIndex}
+                    </TableCell>
                     <TableCell component="th" scope="row">
                       {editModeId === status.statusId ? (
                         <TextField 
@@ -433,7 +474,7 @@ const DeliveryStatusPage: React.FC = () => {
                             <span> {/* Wrap with span to allow tooltip on disabled button */}
                               <IconButton 
                                 onClick={() => moveStatusUp(index)} 
-                                disabled={index === 0}
+                                disabled={index === 0 || status.isActive === 0}
                                 size="small"
                               >
                                 <ArrowUpwardIcon fontSize="small" />
@@ -445,7 +486,14 @@ const DeliveryStatusPage: React.FC = () => {
                             <span> {/* Wrap with span to allow tooltip on disabled button */}
                               <IconButton 
                                 onClick={() => moveStatusDown(index)} 
-                                disabled={index === statuses.length - 1}
+                                disabled={
+                                  status.isActive === 0 || 
+                                  index === statuses.filter(s => showInactive || s.isActive === 1).length - 1 ||
+                                  // Kiểm tra xem có phải là trạng thái active cuối cùng không
+                                  (status.isActive === 1 && 
+                                   !statuses.filter(s => s.isActive === 1)
+                                     .some((s, i, arr) => arr.indexOf(s) > statuses.indexOf(status)))
+                                }
                                 size="small"
                               >
                                 <ArrowDownwardIcon fontSize="small" />
