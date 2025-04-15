@@ -19,7 +19,7 @@ import CustomerDetailPage from "./pages/CustomerDetailPage";
 import DistanceCalculatorPage from "./pages/DistanceCalculatorPage";
 import AdminFinanceDashboard from "./pages/AdminFinanceDashboard";
 import TrackingOrder from "./pages/TrackingOrder";
-import { SpeedInsights } from "@vercel/speed-insights/react"
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 const HomeRoute = () => {
   const { isAuthenticated, user } = useAuth();
@@ -101,6 +101,7 @@ function App() {
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <SpeedInsights />
           </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>

@@ -54,9 +54,54 @@ const TripDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [deliveryStatuses, setDeliveryStatuses] = useState<{[key: string]: {statusName: string, color: string}} | null>(null);
+  const [statusesLoaded, setStatusesLoaded] = useState<boolean>(false);
+
+  // Fetch delivery statuses
+  useEffect(() => {
+    const fetchDeliveryStatuses = async () => {
+      try {
+        setLoading(true); // Show loading state while fetching both resources
+        const statusData = await getDeliveryStatus();
+        
+        // Convert to a lookup map for easier use
+        const statusMap: {[key: string]: {statusName: string, color: string}} = {};
+        
+        if (Array.isArray(statusData)) {
+          statusData.forEach((status) => {
+            // Use status.statusId as key and provide statusName with default color of "default"
+            // You can modify this to map different colors based on status if needed
+            statusMap[status.statusId] = {
+              statusName: status.statusName,
+              color: getStatusColor(status.statusId)
+            };
+          });
+        } else if (statusData && typeof statusData === 'object') {
+          // Handle if response is an object with a data property
+          const dataArray = statusData.data || [];
+          dataArray.forEach((status) => {
+            statusMap[status.statusId] = {
+              statusName: status.statusName,
+              color: getStatusColor(status.statusId)
+            };
+          });
+        }
+        
+        setDeliveryStatuses(statusMap);
+        setStatusesLoaded(true);
+      } catch (error) {
+        console.error("Failed to fetch delivery statuses:", error);
+        // Continue without delivery statuses - will fall back to hardcoded values
+        setStatusesLoaded(true);
+      }
+    };
+    
+    fetchDeliveryStatuses();
+  }, []);
 
   // Fetch trip details using getTripDetail
   useEffect(() => {
+    if (!statusesLoaded) return;
+
     const fetchTripDetails = async () => {
       if (!tripId) {
         setError("Trip ID is missing");
@@ -102,46 +147,7 @@ const TripDetailPage: React.FC = () => {
     };
 
     fetchTripDetails();
-  }, [tripId]);
-  
-  // Fetch delivery statuses
-  useEffect(() => {
-    const fetchDeliveryStatuses = async () => {
-      try {
-        const statusData = await getDeliveryStatus();
-        
-        // Convert to a lookup map for easier use
-        const statusMap: {[key: string]: {statusName: string, color: string}} = {};
-        
-        if (Array.isArray(statusData)) {
-          statusData.forEach((status) => {
-            // Use status.statusId as key and provide statusName with default color of "default"
-            // You can modify this to map different colors based on status if needed
-            statusMap[status.statusId] = {
-              statusName: status.statusName,
-              color: getStatusColor(status.statusId)
-            };
-          });
-        } else if (statusData && typeof statusData === 'object') {
-          // Handle if response is an object with a data property
-          const dataArray = statusData.data || [];
-          dataArray.forEach((status) => {
-            statusMap[status.statusId] = {
-              statusName: status.statusName,
-              color: getStatusColor(status.statusId)
-            };
-          });
-        }
-        
-        setDeliveryStatuses(statusMap);
-      } catch (error) {
-        console.error("Failed to fetch delivery statuses:", error);
-        // Continue without delivery statuses - will fall back to hardcoded values
-      }
-    };
-    
-    fetchDeliveryStatuses();
-  }, []);
+  }, [tripId, statusesLoaded]);  
   
   // Helper function to assign color based on status
   const getStatusColor = (statusId: string) => {
