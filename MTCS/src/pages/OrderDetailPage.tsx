@@ -30,6 +30,7 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Checkbox,
+  Snackbar,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
@@ -54,7 +55,7 @@ import {
 } from "../types/order";
 import { getOrderDetails, updateOrder, updatePaymentStatus } from "../services/orderApi";
 import { getContracts, createContract } from "../services/contractApi";
-import { getTrip, manualCreateTrip } from "../services/tripApi";
+import { getTrip, manualCreateTrip, autoScheduleTrip } from "../services/tripApi";
 import { trip } from "../types/trip";
 import { ContractFile } from "../types/contract";
 import { format } from "date-fns";
@@ -68,6 +69,7 @@ import { getTrailers } from "../services/trailerApi";
 import { Driver } from "../types/driver";
 import { Tractor } from "../types/tractor";
 import { Trailer } from "../types/trailer";
+import { getDeliveryStatus } from "../services/deliveryStatus";
 
 const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -88,6 +90,9 @@ const OrderDetailPage: React.FC = () => {
   const [statusUpdateOpen, setStatusUpdateOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<OrderStatus | "">("");
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+  const [autoScheduleLoading, setAutoScheduleLoading] = useState(false);
+  const [autoScheduleError, setAutoScheduleError] = useState<string | null>(null);
+  const [autoScheduleSuccess, setAutoScheduleSuccess] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState({
     note: "",
     price: 0,
@@ -106,7 +111,8 @@ const OrderDetailPage: React.FC = () => {
   const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
   const [fileNotes, setFileNotes] = useState<string[]>([]);
-
+  const [statusesLoaded, setStatusesLoaded] = useState<boolean>(false);
+  const [deliveryStatuses, setDeliveryStatuses] = useState<{[key: string]: {statusName: string, color: string}} | null>(null);
   const [openCreateTripDialog, setOpenCreateTripDialog] = useState(false);
   const [createTripData, setCreateTripData] = useState({
     orderId: "",
@@ -131,6 +137,25 @@ const OrderDetailPage: React.FC = () => {
   const [trailerMaxLoadWeight, setTrailerMaxLoadWeight] = useState<
     number | null
   >(null);
+  const [loadingSnackbar, setLoadingSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity?: "success" | "error" | "info" | "warning";
+    autoHideDuration?: number;
+  }>({
+    open: false,
+    message: "",
+    severity: "info",
+    autoHideDuration: 3000
+  });
+
+  // Close loading snackbar
+  const handleCloseLoadingSnackbar = () => {
+    setLoadingSnackbar({
+      ...loadingSnackbar,
+      open: false,
+    });
+  };
 
   const fetchData = async () => {
     try {
@@ -313,7 +338,7 @@ const OrderDetailPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate("/staff-menu/orders");
+    navigate(-1);
   };
 
   const handleOpenAddContractModal = () => {
@@ -584,37 +609,77 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+    // Fetch delivery statuses
+    useEffect(() => {
+      const fetchDeliveryStatuses = async () => {
+        try {
+          setLoading(true); // Show loading state while fetching both resources
+          const statusData = await getDeliveryStatus();
+          
+          // Convert to a lookup map for easier use
+          const statusMap: {[key: string]: {statusName: string, color: string}} = {};
+          
+          if (Array.isArray(statusData)) {
+            statusData.forEach((status) => {
+              // Use status.statusId as key and provide statusName with default color of "default"
+              // You can modify this to map different colors based on status if needed
+              statusMap[status.statusId] = {
+                statusName: status.statusName,
+                color: getStatusColor(status.statusId)
+              };
+            });
+          } else if (statusData && typeof statusData === 'object') {
+            // Handle if response is an object with a data property
+            const dataArray = statusData.data || [];
+            dataArray.forEach((status) => {
+              statusMap[status.statusId] = {
+                statusName: status.statusName,
+                color: getStatusColor(status.statusId)
+              };
+            });
+          }
+          
+          setDeliveryStatuses(statusMap);
+          setStatusesLoaded(true);
+        } catch (error) {
+          console.error("Failed to fetch delivery statuses:", error);
+          // Continue without delivery statuses - will fall back to hardcoded values
+          setStatusesLoaded(true);
+        }
+      };
+      
+      fetchDeliveryStatuses();
+    }, []);
+
+    // Helper function to assign color based on status
+  const getStatusColor = (statusId: string) => {
+    switch (statusId) {
+      case "not_started":
+        return "default";
+      case "going_to_port":
+      case "pick_up_container":
+      case "is_delivering":
+      case "at_delivery_point":
+      case "going_to_port/depot":
+        return "info";
+      case "completed":
+        return "success";
+      case "delaying":
+        return "warning";
+      default:
+        return "default";
+    }
+  };
+
   const getTripStatusDisplay = (status: string | null) => {
     if (!status) return { label: "Không xác định", color: "default" };
-
-    switch (status) {
-      case "completed":
-        return { label: "Hoàn thành", color: "success" };
-      case "delaying":
-        return { label: "Tạm dừng", color: "warning" };
-      case "going_to_port":
-        return { label: "Đang di chuyển đến cảng", color: "info" };
-      case "0":
-        return { label: "Chưa bắt đầu", color: "default" };
-      case "1":
-        return { label: "Đang di chuyển đến điểm lấy hàng", color: "info" };
-      case "2":
-        return { label: "Đã đến điểm lấy hàng", color: "info" };
-      case "3":
-        return { label: "Đang di chuyển đến điểm giao hàng", color: "info" };
-      case "4":
-        return { label: "Đã đến điểm giao hàng", color: "info" };
-      case "5":
-        return {
-          label: "Đang di chuyển đến điểm trả container",
-          color: "info",
-        };
-      case "6":
-        return { label: "Đã đến điểm trả container", color: "success" };
-      case "7":
-        return { label: "Hoàn thành", color: "success" };
-      default:
-        return { label: status, color: "default" };
+    
+    // Check if we have dynamic statuses from API and if this status exists in our map
+    if (deliveryStatuses && deliveryStatuses[status]) {
+      return { 
+        label: deliveryStatuses[status].statusName, 
+        color: deliveryStatuses[status].color 
+      };
     }
   };
 
@@ -875,6 +940,81 @@ const OrderDetailPage: React.FC = () => {
       setCreateTripError(errorMessage);
     } finally {
       setCreateTripLoading(false);
+    }
+  };
+
+  const handleAutoScheduleTrip = async () => {
+    setAutoScheduleLoading(true);
+    setAutoScheduleError(null);
+    setAutoScheduleSuccess(null);
+    
+    // Show loading notification when starting the process
+    setLoadingSnackbar({
+      open: true,
+      message: "Đang xếp chuyến tự động...",
+      severity: "info",
+      autoHideDuration: 3000
+    });
+
+    try {
+      if (!orderId) {
+        throw new Error("Không tìm thấy mã đơn hàng");
+      }
+
+      console.log("Auto scheduling trip for order:", orderId);
+      const result = await autoScheduleTrip(orderId);
+      console.log("Auto scheduling result:", result);
+
+      if (result.status == 1) {
+        // Use the message from API response for success message
+        setAutoScheduleSuccess("Đã tạo chuyến cho đơn hàng !!");
+      
+        // Show success notification
+        setLoadingSnackbar({
+          open: true,
+          message: result.message,
+          severity: "success",
+          autoHideDuration: 5000
+        });
+      
+        setTimeout(() => {
+          setAutoScheduleSuccess(null);
+        }, 5000);
+
+        fetchData(); // Refresh trip data
+      } else {
+        // Use the message from API response for success message
+        setAutoScheduleError("Không thể tạo chuyến cho đơn hàng vui lòng tạo thủ công !!");
+      
+        // Show success notification
+        setLoadingSnackbar({
+          open: true,
+          message: result.message,
+          severity: "error",
+          autoHideDuration: 5000
+        });
+      
+        setTimeout(() => {
+          setAutoScheduleSuccess(null);
+        }, 5000);
+      }
+      
+    } catch (error) {
+      console.error("Failed auto scheduling trip:", error);
+
+      const errorMessage = "Không thể xếp chuyến tự động. Vui lòng tạo thủ công.";
+      
+      setAutoScheduleError(errorMessage);
+    
+      // Show error notification
+      setLoadingSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: "error",
+        autoHideDuration: 6000
+      });
+    } finally {
+      setAutoScheduleLoading(false);
     }
   };
 
@@ -1688,6 +1828,18 @@ const OrderDetailPage: React.FC = () => {
               </Alert>
             )}
 
+            {autoScheduleSuccess && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {autoScheduleSuccess}
+              </Alert>
+            )}
+
+            {autoScheduleError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {autoScheduleError}
+              </Alert>
+            )}
+
             {tripLoading && (
               <Box display="flex" justifyContent="center" p={2}>
                 <CircularProgress size={24} />
@@ -1712,6 +1864,19 @@ const OrderDetailPage: React.FC = () => {
                   orderDetails.orderFiles.length > 0 &&
                   contractFiles &&
                   contractFiles.length > 0 ? (
+                    <Box display="flex" justifyContent="space-between">
+                    <Box display="flex" justifyContent="center" mt={2}>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<AddIcon />}
+                        onClick={handleAutoScheduleTrip}
+                        disabled={autoScheduleLoading}
+                      >
+                        {autoScheduleLoading ? "Đang xếp chuyến..." : "Hệ thống xếp chuyến"}
+                      </Button>
+                    </Box>
+
                     <Box display="flex" justifyContent="center" mt={2}>
                       <Button
                         variant="outlined"
@@ -1719,8 +1884,9 @@ const OrderDetailPage: React.FC = () => {
                         startIcon={<AddIcon />}
                         onClick={handleOpenCreateTripDialog}
                       >
-                        Tạo chuyến đi
+                        Tạo chuyến thủ công
                       </Button>
+                    </Box>
                     </Box>
                   ) : (
                     <Alert severity="warning" sx={{ mt: 2 }}>
@@ -2365,6 +2531,21 @@ const OrderDetailPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={loadingSnackbar.open}
+        autoHideDuration={loadingSnackbar.autoHideDuration}
+        onClose={handleCloseLoadingSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert 
+          severity={loadingSnackbar.severity} 
+          onClose={handleCloseLoadingSnackbar}
+          sx={{ width: "100%" }}
+        >
+          {loadingSnackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

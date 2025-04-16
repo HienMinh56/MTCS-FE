@@ -94,3 +94,29 @@ export const manualCreateTrip = async (tripData: {
     throw error;
   }
 };
+
+export const autoScheduleTrip = async (orderId: string | null) => {
+  try {
+    const formData = new FormData();
+    if (orderId) {
+      formData.append('orderId', orderId);
+    }
+    
+    const response = await axiosInstance.post("/api/trips/auto-schedule", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    
+    // Return the complete response object with status, message, and data
+    return response.data;
+  }
+  catch (error: any) {
+    console.error("Failed to auto schedule trip", error);
+    // Extract error message from the API response if available
+    if (error.response && error.response.data) {
+      throw error.response.data; // This will contain status, message, etc.
+    }
+    throw error;
+  }
+};
