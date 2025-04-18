@@ -27,6 +27,10 @@ import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { getDriverList } from "../services/DriverApi";
 
+interface FilterOptions {
+  status?: DriverStatus | null;
+}
+
 const Drivers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -35,7 +39,6 @@ const Drivers = () => {
     active: 0,
     onTrip: 0,
   });
-  // Thêm state mới để lưu tổng số lượng cố định cho mỗi trạng thái
   const [totalSummary, setTotalSummary] = useState({
     total: 0,
     active: 0,
@@ -44,9 +47,7 @@ const Drivers = () => {
   });
   const [openCreate, setOpenCreate] = useState(false);
   const [openFilter, setOpenFilter] = useState(false);
-  const [filterOptions, setFilterOptions] = useState<{
-    status?: DriverStatus;
-  }>({});
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({});
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
   const isManualRefreshRef = useRef(false);
   const [loadingTotalSummary, setLoadingTotalSummary] = useState(false);
@@ -68,19 +69,19 @@ const Drivers = () => {
     setSummary(newSummary);
   };
 
-  const handleApplyFilter = (filters: { status?: DriverStatus }) => {
+  const handleApplyFilter = (filters: FilterOptions) => {
     setFilterOptions(filters);
     setHasActiveFilters(Object.keys(filters).length > 0);
   };
 
-  // Handle card clicks to filter by status
   const handleCardClick = (status?: DriverStatus) => {
-    // If clicking the "all" card (total) or clicking the same filter again, clear filters
-    if (status === undefined || (filterOptions.status === status && hasActiveFilters)) {
+    if (
+      status === undefined ||
+      (filterOptions.status === status && hasActiveFilters)
+    ) {
       setFilterOptions({});
       setHasActiveFilters(false);
     } else {
-      // Apply the selected filter
       setFilterOptions({ status });
       setHasActiveFilters(true);
     }
@@ -94,38 +95,37 @@ const Drivers = () => {
 
   const handleCreateSuccess = () => {
     refreshTable();
-    fetchTotalSummary(); // Cập nhật tổng số sau khi tạo mới
+    fetchTotalSummary();
   };
 
-  // Hàm để lấy tổng số lượng tài xế cho mỗi trạng thái
   const fetchTotalSummary = async () => {
     setLoadingTotalSummary(true);
     try {
-      // Lấy tổng số tài xế
       const totalResponse = await getDriverList({
-        pageSize: 1, // Chỉ cần lấy 1 bản ghi để biết tổng số
+        pageSize: 1,
       });
-      
-      // Lấy số tài xế đang hoạt động
+
       const activeResponse = await getDriverList({
         pageSize: 1,
         status: DriverStatus.Active,
       });
-      
-      // Lấy số tài xế đang vận chuyển
+
       const onDutyResponse = await getDriverList({
         pageSize: 1,
         status: DriverStatus.OnDuty,
       });
-      
-      // Lấy số tài xế không hoạt động
+
       const inactiveResponse = await getDriverList({
         pageSize: 1,
         status: DriverStatus.Inactive,
       });
-      
-      if (totalResponse.success && activeResponse.success && 
-          onDutyResponse.success && inactiveResponse.success) {
+
+      if (
+        totalResponse.success &&
+        activeResponse.success &&
+        onDutyResponse.success &&
+        inactiveResponse.success
+      ) {
         setTotalSummary({
           total: totalResponse.data?.totalCount || 0,
           active: activeResponse.data?.totalCount || 0,
@@ -139,8 +139,7 @@ const Drivers = () => {
       setLoadingTotalSummary(false);
     }
   };
-  
-  // Lấy tổng số lượng tài xế khi trang được tải lần đầu hoặc khi có trigger cập nhật
+
   useEffect(() => {
     fetchTotalSummary();
   }, [refreshTrigger]);
@@ -149,23 +148,22 @@ const Drivers = () => {
     <Box
       sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}
     >
-      {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid item xs={12} sm={3} md={3}>
-          <Card 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
               height: "100%",
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: !hasActiveFilters ? '3px solid #1976d2' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom: !hasActiveFilters ? "3px solid #1976d2" : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              } 
+              },
             }}
-            onClick={() => handleCardClick()} 
+            onClick={() => handleCardClick()}
           >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -201,20 +199,23 @@ const Drivers = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={3} md={3}>
-          <Card 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
               height: "100%",
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: filterOptions.status === DriverStatus.Active ? '3px solid #4caf50' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom:
+                filterOptions.status === DriverStatus.Active
+                  ? "3px solid #4caf50"
+                  : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              } 
+              },
             }}
-            onClick={() => handleCardClick(DriverStatus.Active)} 
+            onClick={() => handleCardClick(DriverStatus.Active)}
           >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -250,20 +251,23 @@ const Drivers = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={3} md={3}>
-          <Card 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
               height: "100%",
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: filterOptions.status === DriverStatus.OnDuty ? '3px solid #1976d2' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom:
+                filterOptions.status === DriverStatus.OnDuty
+                  ? "3px solid #1976d2"
+                  : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              } 
+              },
             }}
-            onClick={() => handleCardClick(DriverStatus.OnDuty)} 
+            onClick={() => handleCardClick(DriverStatus.OnDuty)}
           >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -299,20 +303,23 @@ const Drivers = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={3} md={3}>
-          <Card 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
               height: "100%",
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: filterOptions.status === DriverStatus.Inactive ? '3px solid #f44336' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom:
+                filterOptions.status === DriverStatus.Inactive
+                  ? "3px solid #f44336"
+                  : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              } 
+              },
             }}
-            onClick={() => handleCardClick(DriverStatus.Inactive)} 
+            onClick={() => handleCardClick(DriverStatus.Inactive)}
           >
             <CardContent sx={{ py: 1.5, px: 2 }}>
               <Box
@@ -349,7 +356,6 @@ const Drivers = () => {
         </Grid>
       </Grid>
 
-      {/* Drivers Table Section */}
       <Paper
         elevation={1}
         sx={{

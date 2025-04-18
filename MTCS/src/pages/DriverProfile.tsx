@@ -614,15 +614,15 @@ const DriverProfile: React.FC = () => {
                         variant="h5"
                         fontWeight={600}
                         color={
-                          (driver.currentWeekWorkingTime || 0) > 40
+                          driver.currentWeekWorkingTime &&
+                          parseInt(
+                            driver.currentWeekWorkingTime.split(":")[0]
+                          ) > 40
                             ? "warning.dark"
                             : "text.primary"
                         }
                       >
-                        {driver.currentWeekWorkingTime || 0}
-                      </Typography>
-                      <Typography variant="body2" sx={{ ml: 1 }}>
-                        giờ
+                        {driver.currentWeekWorkingTime || "00:00"}
                       </Typography>
                     </Box>
                   </Box>
@@ -652,15 +652,13 @@ const DriverProfile: React.FC = () => {
                         variant="h5"
                         fontWeight={600}
                         color={
-                          (driver.dailyWorkingTime || 0) > 8
+                          driver.dailyWorkingTime &&
+                          parseInt(driver.dailyWorkingTime.split(":")[0]) > 8
                             ? "warning.dark"
                             : "text.primary"
                         }
                       >
-                        {driver.dailyWorkingTime || 0}
-                      </Typography>
-                      <Typography variant="body2" sx={{ ml: 1 }}>
-                        giờ
+                        {driver.dailyWorkingTime || "00:00"}
                       </Typography>
                     </Box>
                   </Box>

@@ -20,9 +20,9 @@ export interface Driver {
   dateOfBirth?: string | null;
   modifiedDate?: string | null;
   totalWorkingTime?: number;
-  currentWeekWorkingTime?: number;
+  currentWeekWorkingTime?: string;
   currentWeekHours?: number;
-  dailyWorkingTime?: number;
+  dailyWorkingTime?: string;
   totalOrder?: number;
   createdBy?: string | null;
   modifiedBy?: string | null;
