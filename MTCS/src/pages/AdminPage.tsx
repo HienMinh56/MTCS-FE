@@ -45,45 +45,7 @@ import "dayjs/locale/vi";
 import FinanceDashboard from "../components/finance/FinanceDashboard";
 import Customers from "../components/Customers";
 import SystemConfiguration from "../components/SystemConfiguration";
-
-// Placeholder component for the Price Table
-const PriceTable: React.FC = () => {
-  return (
-    <Box sx={{ my: 4 }}>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          mb: 4,
-          borderRadius: 2,
-          background:
-            "linear-gradient(45deg, rgba(1, 70, 199, 0.8), rgba(1, 70, 199, 0.9))",
-          color: "white",
-        }}
-      >
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
-          Bảng Giá Dịch Vụ
-        </Typography>
-      </Paper>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 4,
-          mb: 4,
-          borderRadius: 2,
-          border: "1px solid #e0e0e0",
-        }}
-      >
-        <Typography variant="h6" gutterBottom>
-          Nội dung bảng giá sẽ được cập nhật sớm
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Tính năng này đang trong quá trình phát triển. Vui lòng quay lại sau.
-        </Typography>
-      </Paper>
-    </Box>
-  );
-};
+import PriceTableComponent from "../components/PriceTableComponent";
 
 const AdminFinanceDashboard: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -437,7 +399,7 @@ const AdminFinanceDashboard: React.FC = () => {
           <Box sx={{ px: { xs: 2, sm: 3 }, py: 3, maxWidth: "100%" }}>
             {activeSideTab === "finance" && <FinanceDashboard />}
             {activeSideTab === "customers" && <Customers />}
-            {activeSideTab === "pricing" && <PriceTable />}
+            {activeSideTab === "pricing" && <PriceTableComponent />}
             {activeSideTab === "system-config" && <SystemConfiguration />}
           </Box>
         </LocalizationProvider>
