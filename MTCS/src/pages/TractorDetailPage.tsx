@@ -53,17 +53,22 @@ import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import EditIcon from "@mui/icons-material/Edit";
 import DirectionsIcon from "@mui/icons-material/Directions";
+import HistoryIcon from "@mui/icons-material/History";
 import TractorUpdate from "../components/Tractor/TractorUpdate";
+import TractorUseHistoryTable from "../components/Tractor/TractorUseHistoryTable";
 import {
   getTractorDetails,
   deactivateTractor,
   activateTractor,
+  getTractorUseHistory,
 } from "../services/tractorApi";
 import {
   TractorDetails as ITractorDetails,
   ContainerType,
   TractorStatus,
   TractorFileDTO,
+  PaginationParams,
+  TractorUseHistory,
 } from "../types/tractor";
 
 const FILE_CATEGORIES = ["Giấy Đăng ký", "Giấy Kiểm định", "Khác"];
@@ -125,6 +130,20 @@ const TractorDetailPage = () => {
     title: "",
   });
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [tractorUseHistory, setTractorUseHistory] = useState<{
+    items: TractorUseHistory[];
+    currentPage: number;
+    totalPages: number;
+    pageSize: number;
+    totalCount: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+  } | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyParams, setHistoryParams] = useState<PaginationParams>({
+    pageNumber: 1,
+    pageSize: 5,
+  });
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -154,6 +173,82 @@ const TractorDetailPage = () => {
 
     fetchDetails();
   }, [tractorId]);
+
+  useEffect(() => {
+    const fetchUseHistory = async () => {
+      if (!tractorId) return;
+      try {
+        setHistoryLoading(true);
+        const response = await getTractorUseHistory(tractorId);
+        if (response.success) {
+          setTractorUseHistory(response.data.tractorUseHistories);
+        } else {
+          setAlert({
+            open: true,
+            message: "Không thể tải lịch sử sử dụng đầu kéo",
+            severity: "error",
+          });
+        }
+      } catch (error) {
+        setAlert({
+          open: true,
+          message: "Đã có lỗi xảy ra khi tải lịch sử sử dụng đầu kéo",
+          severity: "error",
+        });
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    fetchUseHistory();
+  }, [tractorId]);
+
+  // Fetch tractor use history
+  const fetchTractorUseHistory = async () => {
+    if (!tractorId) return;
+    try {
+      setHistoryLoading(true);
+      const response = await getTractorUseHistory(tractorId, historyParams);
+      if (response.success) {
+        setTractorUseHistory(response.data.tractorUseHistories);
+      } else {
+        setAlert({
+          open: true,
+          message: "Không thể tải lịch sử sử dụng đầu kéo",
+          severity: "error",
+        });
+      }
+    } catch (error) {
+      setAlert({
+        open: true,
+        message: "Đã có lỗi xảy ra khi tải lịch sử sử dụng đầu kéo",
+        severity: "error",
+      });
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Handle page change for history data
+  const handleHistoryPageChange = (page: number) => {
+    setHistoryParams({
+      ...historyParams,
+      pageNumber: page,
+    });
+  };
+
+  // Handle page size change for history data
+  const handleHistoryPageSizeChange = (pageSize: number) => {
+    setHistoryParams({
+      ...historyParams,
+      pageSize: pageSize,
+    });
+  };
+
+  // Fetch history data when tractorId or historyParams changes
+  useEffect(() => {
+    fetchTractorUseHistory();
+  }, [tractorId, historyParams]);
 
   const handleActivateClick = () => {
     setActionType("activate");
@@ -1233,6 +1328,31 @@ const TractorDetailPage = () => {
                 )}
               </Paper>
             )}
+
+            {/* Tractor Use History */}
+            <Paper
+              elevation={3}
+              sx={{
+                p: { xs: 2, md: 3 },
+                borderRadius: 2,
+                mt: 3,
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+                <HistoryIcon color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Lịch sử sử dụng đầu kéo
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+
+              <TractorUseHistoryTable
+                historyData={tractorUseHistory}
+                loading={historyLoading}
+                onPageChange={handleHistoryPageChange}
+                onPageSizeChange={handleHistoryPageSizeChange}
+              />
+            </Paper>
           </>
         ) : (
           <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>

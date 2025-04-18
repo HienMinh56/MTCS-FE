@@ -19,6 +19,11 @@ export interface Tractor {
   containerType: ContainerType;
 }
 
+export interface PaginationParams {
+  pageNumber: number;
+  pageSize: number;
+}
+
 export interface PaginatedResult<T> {
   items: T[];
   totalCount: number;
@@ -85,5 +90,36 @@ export interface TractorDetailsResponse {
   success: boolean;
   data: TractorDetails;
   message: string;
+  errors: string[] | null;
+}
+
+export interface TractorUseHistory {
+  tripId: string;
+  driverId: string;
+  driverName: string;
+  trailerId: string;
+  trailerPlate: string;
+  startTime: string | null;
+  endTime: string | null;
+  status: string;
+  matchBy: string;
+  matchTime: string;
+}
+
+export interface TractorUseHistoryResponse {
+  success: boolean;
+  data: {
+    tractorUseHistories: {
+      currentPage: number;
+      totalPages: number;
+      pageSize: number;
+      totalCount: number;
+      hasPrevious: boolean;
+      hasNext: boolean;
+      items: TractorUseHistory[];
+    };
+  };
+  message: string;
+  messageVN: string;
   errors: string[] | null;
 }

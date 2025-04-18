@@ -3,6 +3,8 @@ import {
   TractorStatus,
   TractorResponse,
   TractorDetailsResponse,
+  TractorUseHistoryResponse,
+  PaginationParams,
 } from "../types/tractor";
 import axiosInstance from "../utils/axiosConfig";
 
@@ -97,17 +99,21 @@ export const getTractors = async (
     const response = await axiosInstance.get<TractorResponse>(
       `/api/Tractor?${params.toString()}`
     );
-    
-tractorCache.set(cacheKey, {
+
+    tractorCache.set(cacheKey, {
       data: response.data,
       timestamp: now,
     });
-    
+
     // Return the full response for maximum compatibility
     return response.data;
   } catch (error) {
     console.error("Error fetching tractors:", error);
-    return { success: false, data: { tractors: { items: [] } }, message: "Error fetching tractors" };
+    return {
+      success: false,
+      data: { tractors: { items: [] } },
+      message: "Error fetching tractors",
+    };
   }
 };
 
@@ -310,5 +316,40 @@ export const updateTractorFileDetails = async (
       return error.response.data;
     }
     throw error;
+  }
+};
+
+export const getTractorUseHistory = async (
+  tractorId: string,
+  paginationParams: PaginationParams = { pageNumber: 1, pageSize: 5 }
+) => {
+  try {
+    const params = new URLSearchParams();
+    params.append("pageNumber", paginationParams.pageNumber.toString());
+    params.append("pageSize", paginationParams.pageSize.toString());
+
+    const response = await axiosInstance.get<TractorUseHistoryResponse>(
+      `/api/Tractor/history/${tractorId}?${params.toString()}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching tractor use history:", error);
+    return {
+      success: false,
+      data: {
+        tractorUseHistories: {
+          items: [],
+          currentPage: 1,
+          totalPages: 0,
+          pageSize: 5,
+          totalCount: 0,
+          hasPrevious: false,
+          hasNext: false,
+        },
+      },
+      message: "Error fetching tractor use history",
+      messageVN: "Đã xảy ra lỗi khi tải lịch sử sử dụng đầu kéo",
+      errors: null,
+    };
   }
 };
