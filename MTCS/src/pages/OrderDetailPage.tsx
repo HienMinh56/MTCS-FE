@@ -995,27 +995,28 @@ const OrderDetailPage: React.FC = () => {
         });
       
         setTimeout(() => {
-          setAutoScheduleSuccess(null);
+          setAutoScheduleError(null);
         }, 5000);
       }
       
-    } catch (error) {
-      // console.error("Failed auto scheduling trip:", error);
-
-      const errorMessage = "Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!\nVui lòng tạo chuyến thủ công.";
+    } catch (error: string | null) {
       
-      setAutoScheduleError(errorMessage);
+      setAutoScheduleError(error);
     
       // Show error notification
       setLoadingSnackbar({
         open: true,
-        message: errorMessage,
+        message: `${error} Vui lòng tạo chuyến thủ công.`,
         severity: "error",
         autoHideDuration: 6000
       });
     } finally {
       setAutoScheduleLoading(false);
     }
+
+    setTimeout(() => {
+      setAutoScheduleError(null);
+    }, 5000);
   };
 
   const handleUpdatePaymentStatus = async () => {
