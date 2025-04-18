@@ -967,15 +967,15 @@ const OrderDetailPage: React.FC = () => {
 
       if (result.status == 1) {
         // Use the message from API response for success message
-        setAutoScheduleSuccess("Đã tạo chuyến cho đơn hàng !!");
+        setAutoScheduleSuccess("Đã tạo chuyến cho đơn hàng!");
       
         // Show success notification
-        setLoadingSnackbar({
-          open: true,
-          message: result.message,
-          severity: "success",
-          autoHideDuration: 5000
-        });
+        // setLoadingSnackbar({
+        //   open: true,
+        //   message: result.message,
+        //   severity: "success",
+        //   autoHideDuration: 5000
+        // });
       
         setTimeout(() => {
           setAutoScheduleSuccess(null);
@@ -984,38 +984,39 @@ const OrderDetailPage: React.FC = () => {
         fetchData(); // Refresh trip data
       } else {
         // Use the message from API response for success message
-        setAutoScheduleError("Không thể tạo chuyến cho đơn hàng vui lòng tạo thủ công !!");
+        setAutoScheduleError("Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!");
       
         // Show success notification
         setLoadingSnackbar({
           open: true,
-          message: result.message,
+          message: "Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!",
           severity: "error",
           autoHideDuration: 5000
         });
       
         setTimeout(() => {
-          setAutoScheduleSuccess(null);
+          setAutoScheduleError(null);
         }, 5000);
       }
       
-    } catch (error) {
-      console.error("Failed auto scheduling trip:", error);
-
-      const errorMessage = "Không thể xếp chuyến tự động. Vui lòng tạo thủ công.";
+    } catch (error: string | null) {
       
-      setAutoScheduleError(errorMessage);
+      setAutoScheduleError(error);
     
       // Show error notification
       setLoadingSnackbar({
         open: true,
-        message: errorMessage,
+        message: `${error} Vui lòng tạo chuyến thủ công.`,
         severity: "error",
         autoHideDuration: 6000
       });
     } finally {
       setAutoScheduleLoading(false);
     }
+
+    setTimeout(() => {
+      setAutoScheduleError(null);
+    }, 5000);
   };
 
   const handleUpdatePaymentStatus = async () => {
