@@ -23,6 +23,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
     open: false,
     message: "",
     severity: "success" as "success" | "error",
+    duration: 5000,
   });
 
   const onSubmit = async (data: OrderFormValues & { files?: File[], fileDescriptions?: string[], fileNotes?: string[] }) => {
@@ -74,47 +75,52 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
       console.log('===== ORDER CREATE RESPONSE =====');
       console.log('Response:', response);
 
-      // Set success state to true to prevent additional submissions
-      setIsSuccess(true);
+      if (response.status == 1) {
+        // Set success state to true to prevent additional submissions
+        setIsSuccess(true);
       
-      // Handle success
-      setSnackbar({
-        open: true,
-        message: "Tạo đơn hàng thành công!",
-        severity: "success",
-      });
+        // Handle success
+        setSnackbar({
+          open: true,
+          message: "Tạo đơn hàng thành công!",
+          severity: "success",
+          duration: 5000,
+        });
 
-      // Delay navigation to allow the toast to be visible
-      setTimeout(() => {
-        if (onSuccess) {
-          onSuccess();
-        }
-        if (onClose) {
-          onClose();
-        } else {
-          navigate("/staff-menu/orders");
-        }
-      }, 1500);
+        // Delay navigation to allow the toast to be visible
+        setTimeout(() => {
+          if (onSuccess) {
+            onSuccess();
+          }
+          if (onClose) {
+            onClose();
+          } else {
+            navigate("/staff-menu/orders");
+          }
+        }, 1500);
+      } else if (response.status == -1) {
+        // Set success state to true to prevent additional submissions
+        setIsSuccess(false);
+      
+        // Handle success
+        setSnackbar({
+          open: true,
+          message: `${response.message}`,
+          severity: "error",
+          duration: 5000,
+        });
+      }
+      
       
     } catch (error: any) {
       console.error("===== ORDER CREATE ERROR =====");
       console.error("Error details:", error);
 
-      let errorMessage = "Không thể tạo đơn hàng. Vui lòng thử lại.";
-
-      // Handle Axios error
-      if (axios.isAxiosError(error)) {
-        if (error.response?.data) {
-          errorMessage = formatApiError(error.response.data);
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
       setSnackbar({
         open: true,
-        message: errorMessage,
+        message: error,
         severity: "error",
+        duration: 5000,
       });
     } finally {
       setIsSubmitting(false);
