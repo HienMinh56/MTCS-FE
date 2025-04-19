@@ -52,6 +52,7 @@ export interface IncidentReports {
   incidentTime: string;
   location: string;
   type: number;
+  vehicleType: number;
   status: string;
   resolutionDetails: string | null;
   handledBy: string | null;
