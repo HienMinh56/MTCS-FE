@@ -31,9 +31,6 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import EditIcon from "@mui/icons-material/Edit";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -47,8 +44,8 @@ interface TabPanelProps {
   value: number;
 }
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
+function TabPanel(props: TabPanelProps & { sx?: any }) {
+  const { children, value, index, sx, ...other } = props;
 
   return (
     <div
@@ -56,9 +53,11 @@ function TabPanel(props: TabPanelProps) {
       hidden={value !== index}
       id={`incident-tabpanel-${index}`}
       aria-labelledby={`incident-tab-${index}`}
+      style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
       {...other}
+      sx={sx}
     >
-      {value === index && <Box>{children}</Box>}
+      {value === index && <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>{children}</Box>}
     </div>
   );
 }
@@ -386,7 +385,6 @@ const IncidentManagement = () => {
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
-  const navigate = useNavigate();
 
   // Fetch incident reports from API
   useEffect(() => {
@@ -681,6 +679,7 @@ const IncidentManagement = () => {
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
+          height: "calc(100vh - 250px)",
         }}
       >
         <Box sx={{ p: 2, pb: 1 }}>
@@ -770,7 +769,7 @@ const IncidentManagement = () => {
           </Box>
         </Box>
 
-        <Box sx={{ flexGrow: 1, overflow: "auto" }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: "hidden" }}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
               <CircularProgress />
@@ -778,11 +777,28 @@ const IncidentManagement = () => {
           ) : (
             incidentStatusOptions.map((status, index) => (
               <TabPanel key={index} value={tabValue} index={index}>
-                <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                <TableContainer sx={{ 
+                  flexGrow: 1, 
+                  overflow: "auto",
+                  position: "relative",
+                }}>
                   <Table
                     stickyHeader
                     size="small"
-                    sx={{ minWidth: 650 }}
+                    sx={{ 
+                      minWidth: 650,
+                      "& .MuiTableHead-root": {
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 2,
+                        backgroundColor: "background.paper",
+                      },
+                      "& .MuiTableCell-stickyHeader": {
+                        backgroundColor: "background.paper",
+                        boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.1)"
+                      }
+                    }}
                     aria-label="incidents table"
                   >
                     <TableHead>
@@ -874,6 +890,7 @@ const IncidentManagement = () => {
                   }
                   sx={{ borderTop: "1px solid rgba(224, 224, 224, 1)" }}
                 />
+                </Box>
               </TabPanel>
             ))
           )}
