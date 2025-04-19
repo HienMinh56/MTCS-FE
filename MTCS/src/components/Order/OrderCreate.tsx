@@ -84,7 +84,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
           open: true,
           message: "Tạo đơn hàng thành công!",
           severity: "success",
-          duration: 5000,
+          duration: 3000,
         });
 
         // Delay navigation to allow the toast to be visible
@@ -97,7 +97,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
           } else {
             navigate("/staff-menu/orders");
           }
-        }, 1500);
+        }, 4000);
       } else if (response.status == -1) {
         // Set success state to true to prevent additional submissions
         setIsSuccess(false);
@@ -107,7 +107,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
           open: true,
           message: `${response.message}`,
           severity: "error",
-          duration: 5000,
+          duration: 3000,
         });
       }
       
@@ -120,7 +120,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
         open: true,
         message: error,
         severity: "error",
-        duration: 5000,
+        duration: 3000,
       });
     } finally {
       setIsSubmitting(false);
