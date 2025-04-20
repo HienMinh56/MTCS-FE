@@ -25,16 +25,9 @@ import {
   DialogContent,
   DialogTitle,
   DialogActions,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -723,6 +716,7 @@ const OrderManagement: React.FC = () => {
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
+          height: "calc(100vh - 200px)",
         }}
       >
         <Box sx={{ p: 2, pb: 1 }}>
@@ -825,12 +819,24 @@ const OrderManagement: React.FC = () => {
           </Box>
         </Box>
 
-        <Box sx={{ flexGrow: 1, overflow: "auto" }}>
-          <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: "hidden" }}>
+          <TableContainer sx={{ flexGrow: 1, overflow: "auto", position: "relative", }}>
             <Table
               stickyHeader
               size="small"
-              sx={{ minWidth: 650 }}
+              sx={{ 
+                minWidth: 650,
+                "& .MuiTableHead-root": {
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 1, // Đảm bảo header nằm trên các nội dung khác
+                  backgroundColor: "background.paper", // Thêm màu nền cho header
+                },
+                "& .MuiTableCell-stickyHeader": {
+                  backgroundColor: "background.paper", // Phù hợp với theme
+                  boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.1)" // Thêm đổ bóng nhẹ
+                }
+              }}
               aria-label="orders table"
             >
               <TableHead>

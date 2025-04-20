@@ -338,7 +338,7 @@ const OrderDetailPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate(-1);
+    navigate("/staff-menu/orders");
   };
 
   const handleOpenAddContractModal = () => {
