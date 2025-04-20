@@ -41,6 +41,11 @@ export interface Trip {
   // Other properties can be added as needed
 }
 
+export interface Order {
+  orderId: string;
+  containerType: number;
+}
+
 export interface IncidentReports {
   reportId: string;
   tripId: string;
@@ -60,6 +65,7 @@ export interface IncidentReports {
   createdDate: string;
   incidentReportsFiles: IncidentReportFile[];
   trip: Trip;
+  order: Order;
 }
 
 interface IncidentReportsResponse extends ApiResponse {

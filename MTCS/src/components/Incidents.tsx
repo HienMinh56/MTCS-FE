@@ -101,7 +101,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
     setCreateTripSuccess(true);
     setTripReplaced(true); // Set flag to indicate trip has been replaced
     // Reset success message after 3 seconds
-    setTimeout(() => setCreateTripSuccess(false), 3000);
+    setTimeout(() => setCreateTripSuccess(false), 2000);
   };
   
   return (
@@ -158,7 +158,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/staff-menu/orders/${incident.trip.orderId}`);
+                          navigate(`/staff-menu/orders/${incident.trip.order.orderId}`);
                         }}
                       >
                         {incident.trackingCode}
@@ -379,7 +379,9 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
         open={openReplaceTripModal}
         onClose={() => setOpenReplaceTripModal(false)}
         tripId={incident.tripId}
+        orderId={incident.trip.order.orderId} // Thêm orderId để lọc tractor theo containerType
         onSuccess={handleReplaceTripSuccess}
+        vehicleType={incident.vehicleType}
       />
     </Dialog>
   );
