@@ -35,7 +35,13 @@ import {
   Settings as SettingsIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import {
+  useNavigate,
+  useLocation,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
 import logo1 from "../assets/logo1.png";
@@ -45,18 +51,32 @@ import "dayjs/locale/vi";
 import FinanceDashboard from "../components/finance/FinanceDashboard";
 import Customers from "../components/Customers";
 import SystemConfiguration from "../components/SystemConfiguration";
-import PriceTableComponent from "../components/PriceTableComponent";
+import PriceTableComponent from "../components/Price/PriceTable";
 
 const AdminFinanceDashboard: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [activeSideTab, setActiveSideTab] = useState<string>("finance");
   const [drawerOpen, setDrawerOpen] = useState(true);
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const userId = localStorage.getItem("userId") || "admin-user";
+
+  // Get active tab from URL
+  const getActiveTabFromUrl = () => {
+    const path = location.pathname.split("/").filter(Boolean);
+    return path.length > 1 ? path[1] : "finance";
+  };
+
+  const [activeSideTab, setActiveSideTab] = useState<string>(
+    getActiveTabFromUrl()
+  );
+
+  useEffect(() => {
+    setActiveSideTab(getActiveTabFromUrl());
+  }, [location.pathname]);
 
   // Profile menu handlers
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -81,8 +101,7 @@ const AdminFinanceDashboard: React.FC = () => {
   };
 
   const handleSideTabChange = (tab: string) => {
-    setActiveSideTab(tab);
-    // Additional logic to handle different sidebar tabs
+    navigate(`/admin/${tab}`);
   };
 
   const sidebarItems = [
@@ -91,24 +110,28 @@ const AdminFinanceDashboard: React.FC = () => {
       text: "Báo Cáo Tài Chính",
       icon: <BarChartOutlined />,
       selected: activeSideTab === "finance",
+      path: "/admin/finance",
     },
     {
       id: "customers",
       text: "Khách Hàng",
       icon: <PersonOutlined />,
       selected: activeSideTab === "customers",
+      path: "/admin/customers",
     },
     {
       id: "pricing",
       text: "Bảng Giá",
       icon: <PriceChangeOutlined />,
       selected: activeSideTab === "pricing",
+      path: "/admin/pricing",
     },
     {
       id: "system-config",
       text: "Cấu Hình Hệ Thống",
       icon: <SettingsIcon />,
       selected: activeSideTab === "system-config",
+      path: "/admin/system-config",
     },
   ];
 
@@ -397,10 +420,16 @@ const AdminFinanceDashboard: React.FC = () => {
       >
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="vi">
           <Box sx={{ px: { xs: 2, sm: 3 }, py: 3, maxWidth: "100%" }}>
-            {activeSideTab === "finance" && <FinanceDashboard />}
-            {activeSideTab === "customers" && <Customers />}
-            {activeSideTab === "pricing" && <PriceTableComponent />}
-            {activeSideTab === "system-config" && <SystemConfiguration />}
+            <Routes>
+              <Route path="/finance" element={<FinanceDashboard />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/pricing" element={<PriceTableComponent />} />
+              <Route path="/system-config" element={<SystemConfiguration />} />
+              <Route
+                path="/"
+                element={<Navigate to="/admin/finance" replace />}
+              />
+            </Routes>
           </Box>
         </LocalizationProvider>
       </Box>

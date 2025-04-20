@@ -88,10 +88,7 @@ function App() {
               </Route>
 
               <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
-                <Route
-                  path="/admin/finance"
-                  element={<AdminFinanceDashboard />}
-                />
+                <Route path="/admin/*" element={<AdminFinanceDashboard />} />
               </Route>
 
               <Route element={<ProtectedRoute />}>

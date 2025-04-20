@@ -15,6 +15,15 @@ export interface PriceTable {
   version: number;
 }
 
+export interface PriceChangeGroup {
+  containerSize: number;
+  containerType: number;
+  deliveryType: number;
+  minKm: number;
+  maxKm: number;
+  changes: PriceTable[];
+}
+
 export interface PriceTablesHistoryDTO {
   priceTables: PriceTable[];
   availableVersions: number[];
@@ -26,6 +35,28 @@ export interface PriceTablesHistoryDTO {
 export interface PriceTableResponse {
   success: boolean;
   data: PriceTablesHistoryDTO;
+  message: string;
+  messageVN: string;
+  errors: any;
+}
+
+export interface PriceChangesResponse {
+  success: boolean;
+  data: PriceChangeGroup[];
+  message: string;
+  messageVN: string;
+  errors: any;
+}
+
+export interface UpdatePriceTableRequest {
+  priceId: string;
+  minPricePerKm?: number;
+  maxPricePerKm?: number;
+}
+
+export interface ApiResponse {
+  success: boolean;
+  data: any;
   message: string;
   messageVN: string;
   errors: any;

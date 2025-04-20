@@ -24,20 +24,37 @@ import {
   Divider,
   useTheme,
   useMediaQuery,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  IconButton,
+  CircularProgress,
 } from "@mui/material";
 import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon,
   Info as InfoIcon,
+  Edit as EditIcon,
+  Check as CheckIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
-import { getPriceTables } from "../services/priceTableApi";
+import {
+  getPriceTables,
+  updatePriceTables,
+} from "../../services/priceTableApi";
 import {
   ContainerSizeMap,
   ContainerTypeMap,
   DeliveryTypeMap,
   PriceTable as IPriceTable,
   StatusMap,
-} from "../types/price-table";
+  UpdatePriceTableRequest,
+} from "../../types/price-table";
+import PriceChangesComponent from "./PriceChanges";
+import useAuth from "../../hooks/useAuth";
 
 type Order = "asc" | "desc";
 
@@ -105,8 +122,9 @@ const headCells: HeadCell[] = [
 
 const PriceTableComponent: React.FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
+  const { user } = useAuth();
 
   const [priceTables, setPriceTables] = useState<IPriceTable[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -121,6 +139,55 @@ const PriceTableComponent: React.FC = () => {
   const [selectedVersion, setSelectedVersion] = useState<number | undefined>(
     undefined
   );
+  const [showChanges, setShowChanges] = useState<boolean>(false);
+
+  const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
+  const [editingPrice, setEditingPrice] = useState<IPriceTable | null>(null);
+  const [updating, setUpdating] = useState<boolean>(false);
+  const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
+
+  const [validationErrors, setValidationErrors] = useState<{
+    minPrice?: string;
+    maxPrice?: string;
+  }>({});
+
+  const validatePriceUpdate = (minPrice: number, maxPrice: number): boolean => {
+    const errors: { minPrice?: string; maxPrice?: string } = {};
+
+    if (minPrice <= 0) {
+      errors.minPrice = "Giá tối thiểu phải lớn hơn 0";
+    }
+
+    if (maxPrice <= 0) {
+      errors.maxPrice = "Giá tối đa phải lớn hơn 0";
+    }
+
+    if (minPrice > maxPrice) {
+      errors.minPrice = "Giá tối thiểu phải nhỏ hơn giá tối đa";
+      errors.maxPrice = "Giá tối đa phải lớn hơn giá tối thiểu";
+    }
+
+    if (minPrice > 10000000) {
+      errors.minPrice = "Giá tối thiểu không được lớn hơn 10,000,000";
+    }
+
+    if (maxPrice > 10000000) {
+      errors.maxPrice = "Giá tối đa không được lớn hơn 10,000,000";
+    }
+
+    setValidationErrors(errors);
+
+    return Object.keys(errors).length === 0;
+  };
+
+  const isAdmin = useMemo(() => {
+    return (
+      user?.role === "Admin" ||
+      user?.role === "admin" ||
+      user?.role === "SuperAdmin" ||
+      user?.role === "superadmin"
+    );
+  }, [user?.role]);
 
   // Sorting
   const [order, setOrder] = useState<Order>("asc");
@@ -138,7 +205,6 @@ const PriceTableComponent: React.FC = () => {
         setActiveVersion(response.data.activeVersion);
         setError(null);
 
-        // If no version is selected, set it to the current version
         if (!selectedVersion) {
           setSelectedVersion(response.data.currentVersion);
         }
@@ -154,10 +220,17 @@ const PriceTableComponent: React.FC = () => {
 
   useEffect(() => {
     fetchPriceTables();
+  }, []);
+
+  useEffect(() => {
+    if (selectedVersion) {
+      fetchPriceTables();
+    }
   }, [selectedVersion]);
 
   const handleVersionChange = (event: SelectChangeEvent<number>) => {
-    setSelectedVersion(event.target.value as number);
+    const newVersion = event.target.value as number;
+    setSelectedVersion(newVersion);
   };
 
   const handleRequestSort = (property: string) => {
@@ -189,19 +262,15 @@ const PriceTableComponent: React.FC = () => {
     return 0;
   }
 
-  function getComparator<Key extends keyof any>(
+  function getComparator<T>(
     order: Order,
     orderByProperty: string
-  ): (
-    a: { [key in Key]: number | string },
-    b: { [key in Key]: number | string }
-  ) => number {
+  ): (a: T, b: T) => number {
     return order === "desc"
-      ? (a, b) => descendingComparator(a, b, orderByProperty as any)
-      : (a, b) => -descendingComparator(a, b, orderByProperty as any);
+      ? (a, b) => descendingComparator(a, b, orderByProperty as keyof T)
+      : (a, b) => -descendingComparator(a, b, orderByProperty as keyof T);
   }
 
-  // Group price tables by container size and sort them
   const groupedPriceTables = useMemo(() => {
     const sorted = [...priceTables].sort(getComparator(order, orderBy));
     const size20 = sorted.filter((price) => price.containerSize === 1);
@@ -209,6 +278,52 @@ const PriceTableComponent: React.FC = () => {
 
     return { size20, size40 };
   }, [priceTables, order, orderBy]);
+
+  const handleEditClick = (price: IPriceTable) => {
+    setEditingPrice(price);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditDialogClose = () => {
+    setEditDialogOpen(false);
+    setEditingPrice(null);
+  };
+
+  const handleUpdatePrice = async () => {
+    if (!editingPrice) return;
+
+    if (
+      !validatePriceUpdate(
+        editingPrice.minPricePerKm,
+        editingPrice.maxPricePerKm
+      )
+    ) {
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      const updateRequest: UpdatePriceTableRequest = {
+        priceId: editingPrice.priceId,
+        minPricePerKm: editingPrice.minPricePerKm,
+        maxPricePerKm: editingPrice.maxPricePerKm,
+      };
+
+      const response = await updatePriceTables(updateRequest);
+
+      if (response.success) {
+        fetchPriceTables();
+        handleEditDialogClose();
+        setConfirmOpen(false);
+      } else {
+        setError(response.messageVN || response.message);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Lỗi khi cập nhật giá");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   // Render loading skeletons
   const renderSkeletons = () => {
@@ -306,8 +421,42 @@ const PriceTableComponent: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
+          <Grid item>
+            <Button
+              variant={showChanges ? "contained" : "outlined"}
+              color="primary"
+              onClick={() => setShowChanges(!showChanges)}
+              size="medium"
+              startIcon={
+                showChanges ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />
+              }
+            >
+              {showChanges ? "Ẩn lịch sử chỉnh sửa" : "Lịch sử chỉnh sửa"}
+            </Button>
+          </Grid>
         </Grid>
       </Paper>
+
+      {/* Price Changes */}
+      {showChanges && selectedVersion && (
+        <Fade in={true}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 2, sm: 3 },
+              mb: 3,
+              borderRadius: 2,
+              border: "1px solid #e0e0e0",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+              },
+            }}
+          >
+            <PriceChangesComponent version={selectedVersion} />
+          </Paper>
+        </Fade>
+      )}
 
       {/* Container Size 20' */}
       <Fade in={true} style={{ transitionDelay: "150ms" }}>
@@ -346,8 +495,8 @@ const PriceTableComponent: React.FC = () => {
             </Alert>
           ) : (
             <>
-              <TableContainer sx={{ maxHeight: 400 }}>
-                <Table stickyHeader sx={{ minWidth: 700 }}>
+              <TableContainer>
+                <Table sx={{ minWidth: 700 }}>
                   <TableHead>
                     <TableRow>
                       {headCells.map((headCell) => (
@@ -425,6 +574,11 @@ const PriceTableComponent: React.FC = () => {
                         return (
                           <TableRow
                             key={price.priceId}
+                            onClick={() =>
+                              isAdmin &&
+                              price.status === 1 &&
+                              handleEditClick(price)
+                            }
                             sx={{
                               backgroundColor:
                                 index % 2 === 0
@@ -433,6 +587,10 @@ const PriceTableComponent: React.FC = () => {
                               "&:hover": {
                                 backgroundColor: "rgba(1, 70, 199, 0.05)",
                                 transition: "background-color 0.2s ease",
+                                cursor:
+                                  isAdmin && price.status === 1
+                                    ? "pointer"
+                                    : "default",
                               },
                               transition: "background-color 0.2s ease",
                             }}
@@ -566,8 +724,8 @@ const PriceTableComponent: React.FC = () => {
             </Alert>
           ) : (
             <>
-              <TableContainer sx={{ maxHeight: 400 }}>
-                <Table stickyHeader sx={{ minWidth: 700 }}>
+              <TableContainer>
+                <Table sx={{ minWidth: 700 }}>
                   <TableHead>
                     <TableRow>
                       {headCells.map((headCell) => (
@@ -645,6 +803,11 @@ const PriceTableComponent: React.FC = () => {
                         return (
                           <TableRow
                             key={price.priceId}
+                            onClick={() =>
+                              isAdmin &&
+                              price.status === 1 &&
+                              handleEditClick(price)
+                            }
                             sx={{
                               backgroundColor:
                                 index % 2 === 0
@@ -653,6 +816,10 @@ const PriceTableComponent: React.FC = () => {
                               "&:hover": {
                                 backgroundColor: "rgba(1, 70, 199, 0.05)",
                                 transition: "background-color 0.2s ease",
+                                cursor:
+                                  isAdmin && price.status === 1
+                                    ? "pointer"
+                                    : "default",
                               },
                               transition: "background-color 0.2s ease",
                             }}
@@ -732,7 +899,7 @@ const PriceTableComponent: React.FC = () => {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={headCells.length}
+                          colSpan={headCells.length + 1}
                           align="center"
                           sx={{ py: 4 }}
                         >
@@ -749,6 +916,153 @@ const PriceTableComponent: React.FC = () => {
           )}
         </Paper>
       </Fade>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onClose={handleEditDialogClose}>
+        <DialogTitle>Chỉnh sửa giá</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2, mb: 1 }}>
+            <Typography variant="subtitle1" fontWeight={500}>
+              Chi tiết giá
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {editingPrice && (
+                <>
+                  Container {ContainerSizeMap[editingPrice.containerSize]}
+                  {" • "}
+                  {ContainerTypeMap[editingPrice.containerType]}
+                  {" • "}
+                  {DeliveryTypeMap[editingPrice.deliveryType]}
+                  {" • "}
+                  {editingPrice.minKm} - {editingPrice.maxKm} km
+                </>
+              )}
+            </Typography>
+          </Box>
+          <Divider sx={{ my: 2 }} />
+          <TextField
+            label="Giá tối thiểu"
+            type="number"
+            fullWidth
+            margin="normal"
+            value={editingPrice?.minPricePerKm || ""}
+            onChange={(e) =>
+              setEditingPrice((prev) =>
+                prev ? { ...prev, minPricePerKm: +e.target.value } : null
+              )
+            }
+            InputProps={{
+              endAdornment: <Typography variant="body2">VND / km</Typography>,
+            }}
+            error={!!validationErrors.minPrice}
+            helperText={validationErrors.minPrice}
+          />
+          <TextField
+            label="Giá tối đa"
+            type="number"
+            fullWidth
+            margin="normal"
+            value={editingPrice?.maxPricePerKm || ""}
+            onChange={(e) =>
+              setEditingPrice((prev) =>
+                prev ? { ...prev, maxPricePerKm: +e.target.value } : null
+              )
+            }
+            InputProps={{
+              endAdornment: <Typography variant="body2">VND / km</Typography>,
+            }}
+            error={!!validationErrors.maxPrice}
+            helperText={validationErrors.maxPrice}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleEditDialogClose} color="inherit">
+            Hủy
+          </Button>
+          <Button
+            onClick={() => {
+              if (!editingPrice) return;
+
+              if (
+                validatePriceUpdate(
+                  editingPrice.minPricePerKm,
+                  editingPrice.maxPricePerKm
+                )
+              ) {
+                setConfirmOpen(true);
+              }
+            }}
+            color="primary"
+            variant="contained"
+          >
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmOpen}
+        onClose={() => !updating && setConfirmOpen(false)}
+      >
+        <DialogTitle>Xác nhận thay đổi giá</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            Bạn có chắc chắn muốn cập nhật giá này không? Hành động này sẽ thay
+            đổi giá vận chuyển cho các đơn hàng mới.
+          </Typography>
+
+          {editingPrice && (
+            <Box
+              sx={{
+                mt: 2,
+                bgcolor: "background.default",
+                p: 2,
+                borderRadius: 1,
+              }}
+            >
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Giá tối thiểu
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {formatCurrency(editingPrice.minPricePerKm)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Giá tối đa
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {formatCurrency(editingPrice.maxPricePerKm)}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmOpen(false)}
+            color="inherit"
+            disabled={updating}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleUpdatePrice}
+            color="primary"
+            variant="contained"
+            disabled={updating}
+            startIcon={
+              updating ? <CircularProgress size={20} /> : <CheckIcon />
+            }
+          >
+            {updating ? "Đang cập nhật" : "Xác nhận"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
