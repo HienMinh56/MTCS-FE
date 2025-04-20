@@ -52,6 +52,7 @@ import {
   PriceTable as IPriceTable,
   StatusMap,
   UpdatePriceTableRequest,
+  VersionInfo,
 } from "../../types/price-table";
 import PriceChangesComponent from "./PriceChanges";
 import useAuth from "../../hooks/useAuth";
@@ -151,6 +152,8 @@ const PriceTableComponent: React.FC = () => {
     maxPrice?: string;
   }>({});
 
+  const [versionsInfo, setVersionsInfo] = useState<VersionInfo[]>([]);
+
   const validatePriceUpdate = (minPrice: number, maxPrice: number): boolean => {
     const errors: { minPrice?: string; maxPrice?: string } = {};
 
@@ -200,11 +203,16 @@ const PriceTableComponent: React.FC = () => {
 
       if (response.success) {
         setPriceTables(response.data.priceTables);
-        setAvailableVersions(response.data.availableVersions);
+        setVersionsInfo(response.data.versionsInfo);
         setCurrentVersion(response.data.currentVersion);
         setActiveVersion(response.data.activeVersion);
         setError(null);
 
+        // Extract available versions from versionsInfo
+        const versions = response.data.versionsInfo.map((v) => v.version);
+        setAvailableVersions(versions);
+
+        // If no version is selected, set it to the current version
         if (!selectedVersion) {
           setSelectedVersion(response.data.currentVersion);
         }
@@ -382,46 +390,102 @@ const PriceTableComponent: React.FC = () => {
                 label="Phiên bản"
                 onChange={handleVersionChange}
               >
-                {availableVersions.map((version) => (
-                  <MenuItem
-                    key={version}
-                    value={version}
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <span>Phiên bản {version}</span>
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      {version === currentVersion && (
-                        <Typography
+                {availableVersions.map((version) => {
+                  const versionInfo = versionsInfo.find(
+                    (v) => v.version === version
+                  );
+                  const startDate = versionInfo?.startDate
+                    ? new Date(versionInfo.startDate).toLocaleDateString(
+                        "vi-VN"
+                      )
+                    : "Chưa xác định";
+                  const endDate = versionInfo?.endDate
+                    ? new Date(versionInfo.endDate).toLocaleDateString("vi-VN")
+                    : "";
+
+                  return (
+                    <MenuItem
+                      key={version}
+                      value={version}
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <span>Phiên bản {version}</span>
+                        <Box
                           component="span"
-                          variant="caption"
                           sx={{
                             fontSize: "0.75rem",
-                            color: "primary.main",
-                            fontWeight: 500,
+                            ml: 1,
+                            color: "text.secondary",
                           }}
                         >
-                          (Hiện tại)
-                        </Typography>
-                      )}
-                      {version === activeVersion && (
-                        <Chip
-                          label="Đang lưu hành"
-                          size="small"
-                          color="success"
-                          sx={{ height: 20, fontSize: "0.7rem" }}
-                        />
-                      )}
-                    </Box>
-                  </MenuItem>
-                ))}
+                          {startDate} {endDate && `- ${endDate}`}
+                        </Box>
+                      </Box>
+                      <Box sx={{ display: "flex", gap: 1 }}>
+                        {version === currentVersion && (
+                          <Typography
+                            component="span"
+                            variant="caption"
+                            sx={{
+                              fontSize: "0.75rem",
+                              color: "primary.main",
+                              fontWeight: 500,
+                            }}
+                          >
+                            (Hiện tại)
+                          </Typography>
+                        )}
+                        {version === activeVersion && (
+                          <Chip
+                            label="Đang lưu hành"
+                            size="small"
+                            color="success"
+                            sx={{ height: 20, fontSize: "0.7rem" }}
+                          />
+                        )}
+                      </Box>
+                    </MenuItem>
+                  );
+                })}
               </Select>
             </FormControl>
           </Grid>
           <Grid item>
+            {selectedVersion && (
+              <Box sx={{ textAlign: "right", mb: 1 }}>
+                {(() => {
+                  const versionInfo = versionsInfo.find(
+                    (v) => v.version === selectedVersion
+                  );
+                  if (versionInfo) {
+                    const startDate = versionInfo.startDate
+                      ? new Date(versionInfo.startDate).toLocaleDateString(
+                          "vi-VN"
+                        )
+                      : "Chưa xác định";
+                    const endDate = versionInfo.endDate
+                      ? new Date(versionInfo.endDate).toLocaleDateString(
+                          "vi-VN"
+                        )
+                      : "Hiện tại";
+                    return (
+                      <Typography variant="body2" color="text.secondary">
+                        <b>Phiên bản {selectedVersion}:</b> {startDate} -{" "}
+                        {endDate}
+                        {selectedVersion === activeVersion &&
+                          " (Đang lưu hành)"}
+                      </Typography>
+                    );
+                  }
+                  return null;
+                })()}
+              </Box>
+            )}
             <Button
               variant={showChanges ? "contained" : "outlined"}
               color="primary"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -7,6 +7,8 @@ import {
   Grid,
   Divider,
   Button,
+  Card,
+  CardContent,
   Chip,
   CircularProgress,
   Avatar,
@@ -19,24 +21,55 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
   Alert,
   Skeleton,
   Breadcrumbs,
   Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
   Snackbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Checkbox,
+  TablePagination,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
-  Visibility as VisibilityIcon,
-  Assignment as AssignmentIcon,
-  LocalShipping as LocalShippingIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
   Business as BusinessIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
+  Receipt as ReceiptIcon,
+  Assignment as AssignmentIcon,
+  LocalShipping as LocalShippingIcon,
+  CalendarToday as CalendarTodayIcon,
+  Visibility as VisibilityIcon,
+  Add as AddIcon,
+  Edit as EditOutlinedIcon,
+  AttachFile as AttachFileIcon,
+  Delete as DeleteOutlinedIcon,
+  Download as DownloadIcon,
 } from "@mui/icons-material";
-import { getCustomerById } from "../services/customerApi";
+import {
+  getCustomerById,
+  updateCustomer,
+  deleteCustomer,
+} from "../services/customerApi";
+import { updateContract } from "../services/contractApi";
 import { CustomerDetail } from "../types/customer";
+import { ContractFile } from "../types/contract";
+import AddContractFileModal from "../components/contract/AddContractFileModal";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -63,15 +96,64 @@ function TabPanel(props: TabPanelProps) {
 const CustomerDetailPage = () => {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [tabValue, setTabValue] = useState(0);
 
-  // Check if we have a tab specified in the location state (for direct navigation to Orders tab)
-  const initialTabValue =
-    location.state?.activeTab !== undefined ? location.state.activeTab : 0;
-  const [tabValue, setTabValue] = useState(initialTabValue);
+  // Edit form state
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    cusId: "",
+    companyName: "",
+    email: "",
+    phoneNumber: "",
+    taxNumber: "",
+    address: "",
+  });
+  const [formErrors, setFormErrors] = useState({
+    companyName: "",
+    email: "",
+    phoneNumber: "",
+    taxNumber: "",
+    address: "",
+  });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error" | "info" | "warning",
+  });
+
+  // Add state for delete confirmation dialog
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [deletingCustomer, setDeletingCustomer] = useState(false);
+
+  // Add state for contract file modal
+  const [openAddContractModal, setOpenAddContractModal] = useState(false);
+
+  // Add state for edit contract dialog
+  const [openEditContractDialog, setOpenEditContractDialog] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<any>(null);
+  const [editContractForm, setEditContractForm] = useState({
+    ContractId: "",
+    StartDate: "",
+    EndDate: "",
+    Status: 1,
+    FileIdsToRemove: [] as string[],
+    AddedFiles: null as File[] | null,
+  });
+  const [editContractErrors, setEditContractErrors] = useState({
+    StartDate: "",
+    EndDate: "",
+    Status: "",
+  });
+  const [editingContract, setEditingContract] = useState(false);
+
+  // File upload state
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [filesToRemove, setFilesToRemove] = useState<string[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Add state for orders pagination
   const [ordersPage, setOrdersPage] = useState(0);
@@ -81,12 +163,6 @@ const CustomerDetailPage = () => {
   const [contractsPage, setContractsPage] = useState(0);
   const [contractsRowsPerPage, setContractsRowsPerPage] = useState(5);
 
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success" as "success" | "error" | "info" | "warning",
-  });
-
   useEffect(() => {
     const fetchCustomerDetails = async () => {
       if (!customerId) return;
@@ -95,6 +171,15 @@ const CustomerDetailPage = () => {
       try {
         const customerData = await getCustomerById(customerId);
         setCustomer(customerData);
+        // Initialize form data with customer data
+        setFormData({
+          cusId: customerData.customerId,
+          companyName: customerData.companyName || "",
+          email: customerData.email || "",
+          phoneNumber: customerData.phoneNumber || "",
+          taxNumber: customerData.taxNumber || "",
+          address: customerData.address || "",
+        });
         setError(null);
       } catch (err) {
         console.error("Error fetching customer details:", err);
@@ -113,6 +198,232 @@ const CustomerDetailPage = () => {
 
   const handleBack = () => {
     navigate(-1);
+  };
+
+  const handleEdit = () => {
+    // Open edit dialog
+    setOpenEditDialog(true);
+  };
+
+  const handleDelete = () => {
+    setOpenDeleteDialog(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setOpenEditDialog(false);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setOpenDeleteDialog(false);
+  };
+
+  // Add handlers for contract modal
+  const handleOpenAddContractModal = () => {
+    setOpenAddContractModal(true);
+  };
+
+  const handleCloseAddContractModal = () => {
+    setOpenAddContractModal(false);
+  };
+
+  const handleContractAdded = async () => {
+    if (customerId) {
+      try {
+        // Reload customer data to get the updated contracts
+        const updatedCustomer = await getCustomerById(customerId);
+        setCustomer(updatedCustomer);
+
+        // Show success message
+        setSnackbar({
+          open: true,
+          message: "Hợp đồng đã được thêm thành công",
+          severity: "success",
+        });
+      } catch (error) {
+        console.error(
+          "Error refreshing customer data after adding contract:",
+          error
+        );
+        setSnackbar({
+          open: true,
+          message:
+            "Đã thêm hợp đồng nhưng không thể cập nhật dữ liệu. Vui lòng làm mới trang.",
+          severity: "warning",
+        });
+      }
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!customerId) return;
+
+    setDeletingCustomer(true);
+    try {
+      await deleteCustomer(customerId);
+
+      setSnackbar({
+        open: true,
+        message: "Xóa khách hàng thành công!",
+        severity: "success",
+      });
+
+      // Navigate back to customer list after successful deletion
+      setTimeout(() => {
+        navigate("/staff-menu/customers");
+      }, 1500);
+    } catch (error) {
+      console.error("Error deleting customer:", error);
+      setSnackbar({
+        open: true,
+        message: "Lỗi khi xóa khách hàng. Vui lòng thử lại sau.",
+        severity: "error",
+      });
+    } finally {
+      setDeletingCustomer(false);
+      handleCloseDeleteDialog();
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+
+    // Clear error when typing
+    if (formErrors[name as keyof typeof formErrors]) {
+      setFormErrors({
+        ...formErrors,
+        [name]: "",
+      });
+    }
+  };
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { ...formErrors };
+
+    // Validate company name
+    if (!formData.companyName.trim()) {
+      newErrors.companyName = "Tên công ty là bắt buộc";
+      isValid = false;
+    } else if (formData.companyName.trim().length < 2) {
+      newErrors.companyName = "Tên công ty phải có ít nhất 2 ký tự";
+      isValid = false;
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim()) {
+      newErrors.email = "Email là bắt buộc";
+      isValid = false;
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = "Email không hợp lệ";
+      isValid = false;
+    }
+
+    // Validate phone number
+    const phoneRegex = /^[0-9]+$/;
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = "Số điện thoại là bắt buộc";
+      isValid = false;
+    } else if (!phoneRegex.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = "Số điện thoại chỉ được chứa số";
+      isValid = false;
+    } else if (
+      formData.phoneNumber.length < 10 ||
+      formData.phoneNumber.length > 15
+    ) {
+      newErrors.phoneNumber = "Số điện thoại phải từ 10 đến 15 số";
+      isValid = false;
+    }
+
+    // Validate tax number
+    if (!formData.taxNumber.trim()) {
+      newErrors.taxNumber = "Mã số thuế là bắt buộc";
+      isValid = false;
+    } else if (!phoneRegex.test(formData.taxNumber)) {
+      newErrors.taxNumber = "Mã số thuế chỉ được chứa số";
+      isValid = false;
+    } else if (formData.taxNumber.length < 10) {
+      newErrors.taxNumber = "Mã số thuế phải có ít nhất 10 số";
+      isValid = false;
+    }
+
+    // Validate address
+    if (!formData.address.trim()) {
+      newErrors.address = "Địa chỉ là bắt buộc";
+      isValid = false;
+    } else if (formData.address.trim().length < 5) {
+      newErrors.address = "Địa chỉ phải có ít nhất 5 ký tự";
+      isValid = false;
+    }
+
+    setFormErrors(newErrors);
+    return isValid;
+  };
+
+  const handleUpdateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      console.log("Submitting form data:", formData);
+
+      await updateCustomer(formData);
+
+      // Close dialog and show success message
+      handleCloseEditDialog();
+      setSnackbar({
+        open: true,
+        message: "Cập nhật thông tin khách hàng thành công!",
+        severity: "success",
+      });
+
+      // Reload customer data
+      if (customerId) {
+        const updatedCustomer = await getCustomerById(customerId);
+        setCustomer(updatedCustomer);
+      }
+    } catch (error: any) {
+      console.error("Error updating customer:", error);
+
+      // Handle specific validation errors from backend
+      const errorMessage =
+        error.message || "Lỗi khi cập nhật thông tin. Vui lòng thử lại sau.";
+
+      // Set specific field errors based on backend validation messages
+      if (error.message?.includes("Email already exists")) {
+        setFormErrors((prev) => ({
+          ...prev,
+          email: "Email đã tồn tại trong hệ thống",
+        }));
+      } else if (error.message?.includes("Phone number already exists")) {
+        setFormErrors((prev) => ({
+          ...prev,
+          phoneNumber: "Số điện thoại đã tồn tại trong hệ thống",
+        }));
+      } else if (error.message?.includes("Tax number already exists")) {
+        setFormErrors((prev) => ({
+          ...prev,
+          taxNumber: "Mã số thuế đã tồn tại trong hệ thống",
+        }));
+      }
+
+      // Show general error message in snackbar
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCloseSnackbar = () => {
@@ -134,6 +445,239 @@ const CustomerDetailPage = () => {
   const handleViewOrderDetail = (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation(); // Prevent event bubbling
     navigate(`/staff-menu/orders/${orderId}`);
+  };
+
+  // Replace the contract handler with a function to download file from Firebase URL
+  const handleViewContractFile = (e: React.MouseEvent, contract: any) => {
+    e.stopPropagation(); // Prevent event bubbling
+
+    // Check if contract is an object and has contractFiles
+    if (
+      typeof contract === "object" &&
+      contract !== null &&
+      contract.contractFiles &&
+      contract.contractFiles.length > 0
+    ) {
+      // Get the file URL from the first file in the contract
+      const fileUrl = contract.contractFiles[0].fileUrl;
+      const fileName =
+        contract.contractFiles[0].fileName ||
+        `Contract_${contract.contractId}.pdf`;
+
+      if (fileUrl) {
+        // Create a temporary anchor element to trigger the download
+        const link = document.createElement("a");
+        link.href = fileUrl;
+        link.target = "_blank"; // Open in a new tab first
+        link.download = fileName; // Suggest a filename for the download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Show success message
+        setSnackbar({
+          open: true,
+          message: "Đang tải file hợp đồng...",
+          severity: "info",
+        });
+      } else {
+        // Show snackbar if no file URL is available
+        setSnackbar({
+          open: true,
+          message: "Không tìm thấy URL file hợp đồng",
+          severity: "error",
+        });
+      }
+    } else {
+      // Show snackbar if no contract files are available
+      setSnackbar({
+        open: true,
+        message: "Không có file hợp đồng để tải",
+        severity: "info",
+      });
+    }
+  };
+
+  const handleEditContractClick = (contract: any) => {
+    setSelectedContract(contract);
+
+    // Format dates for input type="datetime-local" (YYYY-MM-DDThh:mm)
+    const formatDateForInput = (dateString: string | null) => {
+      if (!dateString) return "";
+      // Make sure the date is treated as UTC to prevent timezone offsets
+      const date = new Date(dateString);
+      return date.toISOString().slice(0, 16);
+    };
+
+    // Ensure the contract status is correctly retrieved
+    // Default to 1 (active) if status is undefined/null, otherwise use the actual status
+    const contractStatus =
+      contract.status !== undefined && contract.status !== null
+        ? Number(contract.status)
+        : 1;
+
+    console.log("Contract status from API:", contract.status);
+    console.log("Parsed contract status:", contractStatus);
+
+    setEditContractForm({
+      ContractId: contract.contractId,
+      StartDate: formatDateForInput(contract.startDate),
+      EndDate: formatDateForInput(contract.endDate),
+      Status: contractStatus,
+      FileIdsToRemove: [],
+      AddedFiles: null,
+    });
+
+    // Reset file-related states
+    setFilesToRemove([]);
+    setSelectedFiles([]);
+
+    setOpenEditContractDialog(true);
+  };
+
+  const handleCloseEditContractDialog = () => {
+    setOpenEditContractDialog(false);
+    setSelectedContract(null);
+    setEditContractErrors({
+      StartDate: "",
+      EndDate: "",
+      Status: "",
+    });
+  };
+
+  const handleContractInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setEditContractForm({
+      ...editContractForm,
+      [name]: value,
+    });
+
+    // Clear error when typing
+    if (editContractErrors[name as keyof typeof editContractErrors]) {
+      setEditContractErrors({
+        ...editContractErrors,
+        [name]: "",
+      });
+    }
+  };
+
+  const handleContractSelectChange = (
+    e: React.ChangeEvent<{ name?: string; value: unknown }>
+  ) => {
+    const name = e.target.name as string;
+    const value = e.target.value as number;
+
+    console.log(`Setting ${name} to:`, value);
+
+    setEditContractForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      setSelectedFiles([...selectedFiles, ...filesArray]);
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    const updatedFiles = [...selectedFiles];
+    updatedFiles.splice(index, 1);
+    setSelectedFiles(updatedFiles);
+  };
+
+  const handleToggleRemoveExistingFile = (fileId: string) => {
+    if (filesToRemove.includes(fileId)) {
+      setFilesToRemove(filesToRemove.filter((id) => id !== fileId));
+    } else {
+      setFilesToRemove([...filesToRemove, fileId]);
+    }
+  };
+
+  const handleNewFileDescriptionChange = (index: number, value: string) => {
+    const updatedFiles = [...selectedFiles];
+    (updatedFiles[index] as any).description = value;
+    setSelectedFiles(updatedFiles);
+  };
+
+  const handleNewFileNoteChange = (index: number, value: string) => {
+    const updatedFiles = [...selectedFiles];
+    (updatedFiles[index] as any).note = value;
+    setSelectedFiles(updatedFiles);
+  };
+
+  const validateContractForm = () => {
+    let isValid = true;
+    const newErrors = { ...editContractErrors };
+
+    if (!editContractForm.StartDate) {
+      newErrors.StartDate = "Ngày bắt đầu là bắt buộc";
+      isValid = false;
+    }
+
+    if (!editContractForm.EndDate) {
+      newErrors.EndDate = "Ngày kết thúc là bắt buộc";
+      isValid = false;
+    } else if (
+      new Date(editContractForm.StartDate) > new Date(editContractForm.EndDate)
+    ) {
+      newErrors.EndDate = "Ngày kết thúc phải sau ngày bắt đầu";
+      isValid = false;
+    }
+
+    setEditContractErrors(newErrors);
+    return isValid;
+  };
+
+  const handleUpdateContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateContractForm()) {
+      return;
+    }
+
+    setEditingContract(true);
+    try {
+      const updateData = {
+        ContractId: editContractForm.ContractId,
+        StartDate: new Date(editContractForm.StartDate).toISOString(),
+        EndDate: new Date(editContractForm.EndDate).toISOString(),
+        Status: editContractForm.Status,
+        FileIdsToRemove: filesToRemove.length > 0 ? filesToRemove : null,
+        AddedFiles: selectedFiles.length > 0 ? selectedFiles : null,
+      };
+
+      console.log("Sending contract update data:", updateData);
+
+      await updateContract(updateData);
+
+      handleCloseEditContractDialog();
+      setSnackbar({
+        open: true,
+        message: "Cập nhật hợp đồng thành công!",
+        severity: "success",
+      });
+
+      if (customerId) {
+        const updatedCustomer = await getCustomerById(customerId);
+        setCustomer(updatedCustomer);
+      }
+    } catch (error: any) {
+      console.error("Error updating contract:", error);
+
+      setSnackbar({
+        open: true,
+        message:
+          error.message || "Lỗi khi cập nhật hợp đồng. Vui lòng thử lại sau.",
+        severity: "error",
+      });
+    } finally {
+      setEditingContract(false);
+    }
   };
 
   const handleOrdersChangePage = (event: unknown, newPage: number) => {
@@ -169,9 +713,18 @@ const CustomerDetailPage = () => {
         }}
       >
         <Typography variant="h6">Danh sách hợp đồng</Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          size="small"
+          onClick={handleOpenAddContractModal}
+        >
+          Thêm hợp đồng
+        </Button>
       </Box>
 
-      {customer?.contracts && customer.contracts.length > 0 ? (
+      {customer.contracts && customer.contracts.length > 0 ? (
         <Box sx={{ flexGrow: 1, overflow: "auto" }}>
           <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
             <Table size="small" stickyHeader>
@@ -181,6 +734,7 @@ const CustomerDetailPage = () => {
                   <TableCell>Ngày bắt đầu</TableCell>
                   <TableCell>Ngày kết thúc</TableCell>
                   <TableCell>Trạng thái</TableCell>
+                  <TableCell align="center">Thao tác</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -219,6 +773,12 @@ const CustomerDetailPage = () => {
                             : "Không hoạt động"
                           : "-";
 
+                      const hasFiles =
+                        typeof contract === "object" &&
+                        contract !== null &&
+                        contract.contractFiles &&
+                        contract.contractFiles.length > 0;
+
                       return (
                         <TableRow key={index} hover>
                           <TableCell>{contractId}</TableCell>
@@ -233,6 +793,32 @@ const CustomerDetailPage = () => {
                               size="small"
                             />
                           </TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              size="small"
+                              onClick={(e) =>
+                                handleViewContractFile(e, contract)
+                              }
+                              disabled={!hasFiles}
+                              title={
+                                hasFiles
+                                  ? "Xem file hợp đồng"
+                                  : "Không có file hợp đồng"
+                              }
+                              color={hasFiles ? "primary" : "default"}
+                              sx={{ mr: 1 }}
+                            >
+                              <DownloadIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEditContractClick(contract)}
+                              title="Chỉnh sửa hợp đồng"
+                              color="info"
+                            >
+                              <EditOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -242,7 +828,7 @@ const CustomerDetailPage = () => {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={customer?.contracts?.length || 0}
+            count={customer.contracts.length}
             rowsPerPage={contractsRowsPerPage}
             page={contractsPage}
             onPageChange={handleContractsChangePage}
@@ -273,7 +859,7 @@ const CustomerDetailPage = () => {
         <Typography variant="h6">Danh sách đơn hàng</Typography>
       </Box>
 
-      {customer?.orders && customer.orders.length > 0 ? (
+      {customer.orders && customer.orders.length > 0 ? (
         <Box sx={{ flexGrow: 1, overflow: "auto" }}>
           <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
             <Table size="small" stickyHeader>
@@ -298,12 +884,6 @@ const CustomerDetailPage = () => {
                         typeof order === "object" && order !== null
                           ? order.orderId
                           : order;
-                      const trackingCode =
-                        typeof order === "object" &&
-                        order !== null &&
-                        order.trackingCode
-                          ? order.trackingCode
-                          : "N/A";
                       const createdDate =
                         typeof order === "object" &&
                         order !== null &&
@@ -324,7 +904,7 @@ const CustomerDetailPage = () => {
                           : "-";
                       return (
                         <TableRow key={index} hover>
-                          <TableCell>{trackingCode}</TableCell>
+                          <TableCell>{orderId}</TableCell>
                           <TableCell>{createdDate}</TableCell>
                           <TableCell align="right">{price}</TableCell>
                           <TableCell>{status}</TableCell>
@@ -346,7 +926,7 @@ const CustomerDetailPage = () => {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={customer?.orders?.length || 0}
+            count={customer.orders.length}
             rowsPerPage={ordersRowsPerPage}
             page={ordersPage}
             onPageChange={handleOrdersChangePage}
@@ -464,6 +1044,26 @@ const CustomerDetailPage = () => {
         <Typography variant="h5" component="h1" fontWeight="500">
           Chi tiết khách hàng
         </Typography>
+        <Box>
+          <Button
+            variant="outlined"
+            startIcon={<EditIcon />}
+            onClick={handleEdit}
+            sx={{ mr: 1 }}
+          >
+            Chỉnh sửa
+          </Button>
+          {/* Commented out delete button
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={handleDelete}
+          >
+            Xóa
+          </Button>
+          */}
+        </Box>
       </Box>
 
       {/* Main Content */}
@@ -725,6 +1325,56 @@ const CustomerDetailPage = () => {
                       </Grid>
                     </Paper>
                   </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Card sx={{ height: "100%" }}>
+                      <CardContent>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mb: 2 }}
+                        >
+                          <AssignmentIcon color="primary" sx={{ mr: 1 }} />
+                          <Typography variant="h6">
+                            Hợp đồng gần nhất
+                          </Typography>
+                        </Box>
+                        {customer.contracts && customer.contracts.length > 0 ? (
+                          <Typography>
+                            {/* Display latest contract information */}
+                            Có {customer.contracts.length} hợp đồng
+                          </Typography>
+                        ) : (
+                          <Typography color="text.secondary">
+                            Chưa có hợp đồng nào
+                          </Typography>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Card sx={{ height: "100%" }}>
+                      <CardContent>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mb: 2 }}
+                        >
+                          <LocalShippingIcon color="primary" sx={{ mr: 1 }} />
+                          <Typography variant="h6">
+                            Đơn hàng gần nhất
+                          </Typography>
+                        </Box>
+                        {customer.orders && customer.orders.length > 0 ? (
+                          <Typography>
+                            {/* Display latest order information */}
+                            Có {customer.orders.length} đơn hàng
+                          </Typography>
+                        ) : (
+                          <Typography color="text.secondary">
+                            Chưa có đơn hàng nào
+                          </Typography>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 </Grid>
               </TabPanel>
 
@@ -737,6 +1387,428 @@ const CustomerDetailPage = () => {
           </Grid>
         </Grid>
       </Paper>
+
+      {/* Edit Customer Dialog */}
+      <Dialog
+        open={openEditDialog}
+        onClose={handleCloseEditDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Chỉnh sửa thông tin khách hàng</DialogTitle>
+        <form onSubmit={handleUpdateCustomer}>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  name="companyName"
+                  label="Tên công ty"
+                  fullWidth
+                  required
+                  value={formData.companyName}
+                  onChange={handleInputChange}
+                  error={!!formErrors.companyName}
+                  helperText={formErrors.companyName}
+                  margin="dense"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="email"
+                  label="Email"
+                  type="email"
+                  fullWidth
+                  required
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  error={!!formErrors.email}
+                  helperText={formErrors.email}
+                  margin="dense"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="phoneNumber"
+                  label="Số điện thoại"
+                  fullWidth
+                  required
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                  error={!!formErrors.phoneNumber}
+                  helperText={formErrors.phoneNumber}
+                  margin="dense"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="taxNumber"
+                  label="Mã số thuế"
+                  fullWidth
+                  required
+                  value={formData.taxNumber}
+                  onChange={handleInputChange}
+                  error={!!formErrors.taxNumber}
+                  helperText={formErrors.taxNumber}
+                  margin="dense"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="address"
+                  label="Địa chỉ"
+                  fullWidth
+                  required
+                  multiline
+                  rows={2}
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  error={!!formErrors.address}
+                  helperText={formErrors.address}
+                  margin="dense"
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={handleCloseEditDialog} variant="outlined">
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
+              startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
+            >
+              {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={handleCloseDeleteDialog}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          Xác nhận xóa khách hàng
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" id="delete-dialog-description">
+            Bạn có chắc chắn muốn xóa khách hàng{" "}
+            <strong>{customer?.companyName}</strong>? Hành động này không thể
+            hoàn tác.
+          </Typography>
+          {customer?.orders && customer.orders.length > 0 && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Khách hàng này có {customer.orders.length} đơn hàng. Xóa khách
+              hàng có thể ảnh hưởng đến các đơn hàng liên quan.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseDeleteDialog} variant="outlined">
+            Hủy
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            variant="contained"
+            color="error"
+            disabled={deletingCustomer}
+            startIcon={deletingCustomer ? <CircularProgress size={20} /> : null}
+          >
+            {deletingCustomer ? "Đang xóa..." : "Xóa khách hàng"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Contract File Modal */}
+      {customerId && (
+        <AddContractFileModal
+          open={openAddContractModal}
+          onClose={handleCloseAddContractModal}
+          onSuccess={handleContractAdded}
+          customerId={customerId}
+          orderId=""
+        />
+      )}
+
+      {/* Add Edit Contract Dialog */}
+      <Dialog
+        open={openEditContractDialog}
+        onClose={handleCloseEditContractDialog}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: { borderRadius: 2, maxHeight: "90vh" },
+        }}
+      >
+        <DialogTitle>Chỉnh sửa hợp đồng</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="StartDate"
+                  label="Ngày bắt đầu"
+                  type="datetime-local"
+                  fullWidth
+                  required
+                  value={editContractForm.StartDate}
+                  onChange={handleContractInputChange}
+                  error={!!editContractErrors.StartDate}
+                  helperText={editContractErrors.StartDate}
+                  margin="dense"
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="EndDate"
+                  label="Ngày kết thúc"
+                  type="datetime-local"
+                  fullWidth
+                  required
+                  value={editContractForm.EndDate}
+                  onChange={handleContractInputChange}
+                  error={!!editContractErrors.EndDate}
+                  helperText={editContractErrors.EndDate}
+                  margin="dense"
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth margin="dense">
+                  <InputLabel id="status-label">Trạng thái</InputLabel>
+                  <Select
+                    labelId="status-label"
+                    id="status-select"
+                    name="Status"
+                    value={editContractForm.Status}
+                    label="Trạng thái"
+                    onChange={(e) =>
+                      handleContractSelectChange(
+                        e as React.ChangeEvent<{
+                          name?: string;
+                          value: unknown;
+                        }>
+                      )
+                    }
+                    error={!!editContractErrors.Status}
+                  >
+                    <MenuItem value={1}>Hoạt động</MenuItem>
+                    <MenuItem value={0}>Không hoạt động</MenuItem>
+                  </Select>
+                  {editContractErrors.Status && (
+                    <FormHelperText error>
+                      {editContractErrors.Status}
+                    </FormHelperText>
+                  )}
+                </FormControl>
+              </Grid>
+
+              {/* File management section */}
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Quản lý file hợp đồng
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+
+                {/* Existing files list with checkboxes for deletion */}
+                {selectedContract &&
+                selectedContract.contractFiles &&
+                selectedContract.contractFiles.length > 0 ? (
+                  <Box mb={3}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      File hợp đồng hiện có
+                    </Typography>
+                    <List>
+                      {selectedContract.contractFiles.map(
+                        (file: any, index: number) => {
+                          // Check if file is marked for removal
+                          const isMarkedForRemoval = filesToRemove.includes(
+                            file.fileId
+                          );
+
+                          return (
+                            <Box
+                              key={file.fileId}
+                              sx={{
+                                mb: 2,
+                                p: 2,
+                                border: "1px solid rgba(0, 0, 0, 0.12)",
+                                borderRadius: 1,
+                                bgcolor: isMarkedForRemoval
+                                  ? "rgba(0, 0, 0, 0.04)"
+                                  : "transparent",
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <Box>
+                                  <Typography variant="body2">
+                                    {file.fileName || `File ${index + 1}`}
+                                  </Typography>
+                                  {isMarkedForRemoval && (
+                                    <Typography variant="caption" color="error">
+                                      Đánh dấu để xóa
+                                    </Typography>
+                                  )}
+                                </Box>
+                                <Box>
+                                  <IconButton
+                                    size="small"
+                                    href={file.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <AttachFileIcon fontSize="small" />
+                                  </IconButton>
+                                  <Checkbox
+                                    size="small"
+                                    onChange={() =>
+                                      handleToggleRemoveExistingFile(
+                                        file.fileId
+                                      )
+                                    }
+                                    checked={isMarkedForRemoval}
+                                    color="error"
+                                  />
+                                </Box>
+                              </Box>
+                            </Box>
+                          );
+                        }
+                      )}
+                    </List>
+                  </Box>
+                ) : (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 2 }}
+                  >
+                    Không có file hợp đồng hiện tại
+                  </Typography>
+                )}
+
+                {/* Upload new files section */}
+                <Box mt={3}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Thêm file mới
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    startIcon={<AttachFileIcon />}
+                    sx={{ mb: 2 }}
+                  >
+                    Chọn file
+                    <input
+                      type="file"
+                      hidden
+                      multiple
+                      onChange={handleFileChange}
+                      ref={fileInputRef}
+                    />
+                  </Button>
+
+                  {/* Show new files that will be added with descriptions/notes */}
+                  {selectedFiles.length > 0 && (
+                    <Box sx={{ mt: 2 }}>
+                      <List>
+                        {selectedFiles.map((file, index) => (
+                          <Box
+                            key={index}
+                            sx={{
+                              mb: 2,
+                              p: 2,
+                              border: "1px solid rgba(0, 0, 0, 0.12)",
+                              borderRadius: 1,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                mb: 1,
+                              }}
+                            >
+                              <Typography variant="body2">
+                                {file.name}
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleRemoveFile(index)}
+                              >
+                                <DeleteOutlinedIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                            <TextField
+                              label="Mô tả file"
+                              fullWidth
+                              multiline
+                              rows={2}
+                              value={(file as any).description || ""}
+                              onChange={(e) =>
+                                handleNewFileDescriptionChange(
+                                  index,
+                                  e.target.value
+                                )
+                              }
+                              margin="dense"
+                              size="small"
+                            />
+                            <TextField
+                              label="Ghi chú"
+                              fullWidth
+                              multiline
+                              rows={2}
+                              value={(file as any).note || ""}
+                              onChange={(e) =>
+                                handleNewFileNoteChange(index, e.target.value)
+                              }
+                              margin="dense"
+                              size="small"
+                            />
+                          </Box>
+                        ))}
+                      </List>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseEditContractDialog} variant="outlined">
+            Hủy
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={editingContract}
+            startIcon={editingContract ? <CircularProgress size={20} /> : null}
+            onClick={handleUpdateContract}
+          >
+            {editingContract ? "Đang cập nhật..." : "Cập nhật hợp đồng"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar for notifications */}
       <Snackbar
