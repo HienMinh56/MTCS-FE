@@ -842,7 +842,9 @@ const IncidentManagement = () => {
                                 {incident.type === 1 
                                   ? "Có thể sửa" 
                                   : incident.type === 2 
-                                  ? "Cần hỗ trợ" 
+                                  ? "Cần hỗ trợ"
+                                  : incident.type === 3 
+                                  ? "Không thể sửa" 
                                   : incident.type}
                               </TableCell>
                               <TableCell align="center">
