@@ -25,6 +25,14 @@ import {
   Avatar,
   IconButton,
   Tooltip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  TextField,
+  Snackbar,
+  SnackbarContent,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DirectionsIcon from "@mui/icons-material/Directions";
@@ -39,11 +47,12 @@ import ReportIcon from "@mui/icons-material/Report";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import GasMeterIcon from "@mui/icons-material/GasMeter";
+import CancelIcon from "@mui/icons-material/Cancel";
 
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { tripDetail, tripStatusHistory } from "../types/trip";
-import { getTripDetail } from "../services/tripApi"; // Import getTripDetail
+import { getTripDetail, CancelTrip } from "../services/tripApi"; // Import getTripDetail and CancelTrip
 import { getDeliveryStatus } from "../services/deliveryStatus";
 
 const TripDetailPage: React.FC = () => {
@@ -55,6 +64,95 @@ const TripDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deliveryStatuses, setDeliveryStatuses] = useState<{[key: string]: {statusName: string, color: string}} | null>(null);
   const [statusesLoaded, setStatusesLoaded] = useState<boolean>(false);
+  
+  // Add states for cancel trip functionality
+  const [cancelModalOpen, setCancelModalOpen] = useState<boolean>(false);
+  const [confirmCancelModalOpen, setConfirmCancelModalOpen] = useState<boolean>(false);
+  const [cancelNote, setCancelNote] = useState<string>("");
+  const [noteError, setNoteError] = useState<string>("");
+  const [cancelLoading, setCancelLoading] = useState<boolean>(false);
+  const [cancelSuccess, setCancelSuccess] = useState<boolean>(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  // Add validation function for note
+  const validateNote = (note: string): string => {
+    const trimmedNote = note.trim();
+    
+    // Check if note is empty
+    if (!trimmedNote) {
+      return "Vui lòng nhập lý do hủy chuyến";
+    }
+    
+    // Check if note starts and ends with letters
+    if (!/^[a-zA-Z\u00C0-\u1EF9].*[a-zA-Z\u00C0-\u1EF9]$/u.test(trimmedNote)) {
+      return "Lý do phải bắt đầu và kết thúc bằng chữ cái";
+    }
+    
+    // Check for multiple spaces between words
+    if (/\s{2,}/.test(trimmedNote)) {
+      return "Lý do không được chứa nhiều hơn một dấu cách giữa các từ";
+    }
+    
+    return "";
+  };
+
+  // Handle note change with validation
+  const handleNoteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCancelNote(value);
+    setNoteError(validateNote(value));
+  };
+
+  // Handle first modal submission
+  const handleCancelSubmit = () => {
+    const error = validateNote(cancelNote);
+    setNoteError(error);
+    
+    if (!error) {
+      setCancelModalOpen(false);
+      setConfirmCancelModalOpen(true);
+    }
+  };
+
+  // Handle final confirmation and API call
+  const handleConfirmCancel = async () => {
+    if (!tripId) return;
+    
+    setCancelLoading(true);
+    setCancelError(null);
+    
+    try {
+      const result = await CancelTrip({
+        tripId,
+        note: cancelNote.trim()
+      });
+      
+      setCancelSuccess(true);
+      setConfirmCancelModalOpen(false);
+      
+      // Reload the data after a short delay to show the updated trip status
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error("Error cancelling trip:", error);
+      setCancelError(error.message || "Có lỗi xảy ra khi hủy chuyến");
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  // Close modals and reset form
+  const handleCancelModalClose = () => {
+    setCancelModalOpen(false);
+    setCancelNote("");
+    setNoteError("");
+  };
+
+  const handleConfirmModalClose = () => {
+    setConfirmCancelModalOpen(false);
+  };
 
   // Fetch delivery statuses
   useEffect(() => {
@@ -162,6 +260,8 @@ const TripDetailPage: React.FC = () => {
         return "info";
       case "completed":
         return "success";
+      case "canceled":
+        return "error";  // Sử dụng màu đỏ (error) cho trạng thái hủy
       case "delaying":
         return "warning";
       default:
@@ -204,6 +304,24 @@ const TripDetailPage: React.FC = () => {
     }
   };
 
+  // Check if trip is canceled (either by main status or in history)
+  const isTripcanceled = () => {
+    // Check main trip status
+    if (tripData?.status === "canceled") {
+      return true;
+    }
+    
+    // Check if there's any canceled status in history
+    if (tripData?.tripStatusHistories && tripData.tripStatusHistories.length > 0) {
+      return tripData.tripStatusHistories.some(history => 
+        history.statusId === "canceled" || 
+        getTripStatusDisplay(history.statusId)?.label === "Đã hủy chuyến"
+      );
+    }
+    
+    return false;
+  };
+
   // Get icon for each status step
   const getStatusIcon = (statusId: string | null) => {
     switch (statusId) {
@@ -225,7 +343,7 @@ const TripDetailPage: React.FC = () => {
       case "completed":
         return <CheckCircleIcon />;
       case "delaying":
-        return <ReportIcon color="warning" />;
+        return <ReportIcon color="white" />;
       default:
         return <DirectionsIcon />;
     }
@@ -1135,10 +1253,106 @@ const TripDetailPage: React.FC = () => {
                   Xem thông tin tài xế
                 </Button>
               )}
+              
+              {/* Cancel Trip Button */}
+              {!isTripcanceled() && tripData.status !== "completed" && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  fullWidth
+                  startIcon={<CancelIcon />}
+                  onClick={() => setCancelModalOpen(true)}
+                >
+                  Hủy chuyến
+                </Button>
+              )}
             </Box>
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Cancel Trip Modal */}
+      <Dialog 
+        open={cancelModalOpen} 
+        onClose={handleCancelModalClose}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Hủy chuyến</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Vui lòng nhập lý do hủy chuyến.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Lý do hủy chuyến"
+            fullWidth
+            value={cancelNote}
+            onChange={handleNoteChange}
+            error={!!noteError}
+            helperText={noteError}
+            multiline
+            rows={5}
+            variant="outlined"
+            sx={{ 
+              '& .MuiOutlinedInput-root': {
+                fontSize: '1.1rem',
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelModalClose} color="primary">
+            Đóng
+          </Button>
+          <Button onClick={handleCancelSubmit} color="error" disabled={!!noteError}>
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirm Cancel Modal */}
+      <Dialog open={confirmCancelModalOpen} onClose={handleConfirmModalClose}>
+        <DialogTitle>Xác nhận hủy chuyến</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Bạn có chắc chắn muốn hủy chuyến này? Hành động này không thể hoàn tác.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleConfirmModalClose} color="primary">
+            Đóng
+          </Button>
+          <Button onClick={handleConfirmCancel} color="error" disabled={cancelLoading}>
+            {cancelLoading ? "Đang xử lý..." : "Hủy chuyến"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Cancel Success Snackbar */}
+      <Snackbar
+        open={cancelSuccess}
+        autoHideDuration={3000}
+        onClose={() => setCancelSuccess(false)}
+      >
+        <SnackbarContent
+          message="Chuyến đi đã được hủy thành công."
+          sx={{ backgroundColor: "success.main", color: "white" }}
+        />
+      </Snackbar>
+
+      {/* Cancel Error Snackbar */}
+      <Snackbar
+        open={!!cancelError}
+        autoHideDuration={3000}
+        onClose={() => setCancelError(null)}
+      >
+        <SnackbarContent
+          message={cancelError}
+          sx={{ backgroundColor: "error.main", color: "white" }}
+        />
+      </Snackbar>
     </Box>
   );
 };

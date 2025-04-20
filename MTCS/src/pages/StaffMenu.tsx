@@ -27,12 +27,14 @@ import WarningIcon from "@mui/icons-material/Warning";
 import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import PersonIcon from "@mui/icons-material/Person";
 import StraightenIcon from "@mui/icons-material/Straighten";
+import RouteIcon from "@mui/icons-material/Route";
 import OrderManagement from "../components/Order/OrderTable";
 import IncidentManagement from "../components/Incidents";
 import Drivers from "./Drivers";
 import Tractors from "./Tractors";
 import Trailers from "./Trailers";
 import Customers from "../components/Customers";
+import TripTable from "../components/Trip/TripTable";
 import DeliveryStatusPage from "./DeliveryStatusPage"; // Import DeliveryStatusPage
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
@@ -91,6 +93,12 @@ const StaffMenu: React.FC = () => {
       selected: activeTab === "orders",
     },
     {
+      id: "trips",
+      text: "Chuyến hàng",
+      icon: <RouteIcon />,
+      selected: activeTab === "trips",
+    },
+    {
       id: "incidents",
       text: "Sự cố",
       icon: <WarningIcon />,
@@ -132,6 +140,8 @@ const StaffMenu: React.FC = () => {
     switch (activeTab) {
       case "orders":
         return <OrderManagement />;
+      case "trips":
+        return <TripTable />;
       case "incidents":
         return <IncidentManagement />;
       case "customers":
@@ -408,6 +418,7 @@ const StaffMenu: React.FC = () => {
       >
         <Routes>
           <Route path="/orders" element={<OrderManagement />} />
+          <Route path="/trips" element={<TripTable />} />
           <Route path="/incidents" element={<IncidentManagement />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/drivers" element={<Drivers />} />
