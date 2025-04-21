@@ -28,6 +28,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import PersonIcon from "@mui/icons-material/Person";
 import PendingIcon from "@mui/icons-material/Pending"; // Import icon for not started
+import DirectionsIcon from "@mui/icons-material/Directions"; // Import icon for going to port
 import { getAllTrip } from "../../services/tripApi";
 import { getDeliveryStatus } from "../../services/deliveryStatus";
 import { trip } from "../../types/trip";
@@ -174,6 +175,7 @@ const TripTable: React.FC = () => {
     if (!allTrips.length) return;
 
     let statusFilter: string | undefined;
+    let isOngoingFilter = false;
     
     switch (tabValue) {
       case 0: // All trips
@@ -188,6 +190,12 @@ const TripTable: React.FC = () => {
       case 3: // not_started
         statusFilter = "not_started";
         break;
+      case 4: // delaying
+        statusFilter = "delaying";
+        break;
+      case 5: // onGoing (composite filter)
+        isOngoingFilter = true;
+        break;
       default:
         statusFilter = undefined;
     }
@@ -200,6 +208,17 @@ const TripTable: React.FC = () => {
         trip.status && (
           trip.status.toLowerCase() === statusFilter.toLowerCase() || 
           trip.status === statusFilter
+        )
+      );
+    } else if (isOngoingFilter) {
+      // Special handling for "onGoing" filter - any of these statuses
+      filtered = filtered.filter(trip => 
+        trip.status && (
+          trip.status.toLowerCase() === "at_delivery_point" ||
+          trip.status.toLowerCase() === "going_to_port" ||
+          trip.status.toLowerCase() === "going_to_port/depot" ||
+          trip.status.toLowerCase() === "is_delivering" ||
+          trip.status.toLowerCase() === "pick_up_container"
         )
       );
     }
@@ -236,8 +255,18 @@ const TripTable: React.FC = () => {
         trip.status && trip.status.toLowerCase() === "completed").length,
       canceled: allTrips.filter(trip => 
         trip.status && trip.status.toLowerCase() === "canceled").length,
+      delaying: allTrips.filter(trip => 
+        trip.status && trip.status.toLowerCase() === "delaying").length,
       notStarted: allTrips.filter(trip => 
         trip.status && trip.status.toLowerCase() === "not_started").length,
+      onGoing: allTrips.filter(trip => 
+        trip.status && (
+          trip.status.toLowerCase() === "at_delivery_point" ||
+          trip.status.toLowerCase() === "going_to_port" ||
+          trip.status.toLowerCase() === "going_to_port/depot" ||
+          trip.status.toLowerCase() === "is_delivering" ||
+          trip.status.toLowerCase() === "pick_up_container"
+        )).length,
     };
   }, [allTrips]);
 
@@ -284,6 +313,8 @@ const TripTable: React.FC = () => {
         return { label: "Đã hủy", color: "error" };
       case "not_started":
         return { label: "Chưa bắt đầu", color: "default" };
+      case "going_to_port":
+        return { label: "Đang đến cảng", color: "info" };
       default:
         return { label: status || "Không xác định", color: "default" };
     }
@@ -295,12 +326,14 @@ const TripTable: React.FC = () => {
     return status.toLowerCase() === "canceled";
   };
 
-  // Trip status options with Vietnamese labels - chỉ giữ lại tất cả, hoàn thành, đã hủy và chưa bắt đầu
+  // Trip status options with Vietnamese labels
   const tripStatusOptions = [
     { value: "all", label: "Tất cả", color: "default" },
     { value: "Completed", label: "Hoàn thành", color: "success" },
     { value: "Canceled", label: "Đã hủy", color: "error" },
     { value: "not_started", label: "Chưa bắt đầu", color: "default" },
+    { value: "delaying", label: "Đang bị trễ", color: "warning" },
+    { value: "onGoing", label: "Đang vận chuyển", color: "info" },
   ];
 
   // Get current trips for display with pagination
@@ -322,9 +355,9 @@ const TripTable: React.FC = () => {
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      {/* Summary Cards - chỉ giữ lại tổng số, hoàn thành, đã hủy và chưa bắt đầu */}
+      {/* Summary Cards - all in one row */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={3} md={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card 
             elevation={1} 
             sx={{ 
@@ -373,7 +406,7 @@ const TripTable: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={3} md={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card 
             elevation={1} 
             sx={{ 
@@ -422,7 +455,7 @@ const TripTable: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={3} md={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card 
             elevation={1} 
             sx={{ 
@@ -471,7 +504,7 @@ const TripTable: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={3} md={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card 
             elevation={1} 
             sx={{ 
@@ -515,6 +548,104 @@ const TripTable: React.FC = () => {
                   }}
                 >
                   <PendingIcon color="action" />
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <Card 
+            elevation={1} 
+            sx={{ 
+              borderRadius: 2, 
+              height: "100%",
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              borderBottom: tabValue === 4 ? '3px solid #ff9800' : 'none',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: 3,
+              } 
+            }}
+            onClick={() => handleCardClick(4)}
+          >
+            <CardContent sx={{ py: 1.5, px: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Box>
+                  <Typography
+                    color="text.secondary"
+                    variant="body2"
+                    gutterBottom
+                  >
+                    Đang bị trễ
+                  </Typography>
+                  <Typography variant="h5" component="div">
+                    {loading ? <CircularProgress size={20} /> : tripCounts.delaying}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    backgroundColor: "rgba(255, 152, 0, 0.08)",
+                    p: 1,
+                    borderRadius: "50%",
+                  }}
+                >
+                  <PendingIcon color="warning" />
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <Card 
+            elevation={1} 
+            sx={{ 
+              borderRadius: 2, 
+              height: "100%",
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              borderBottom: tabValue === 5 ? '3px solid #2196f3' : 'none',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: 3,
+              } 
+            }}
+            onClick={() => handleCardClick(5)}
+          >
+            <CardContent sx={{ py: 1.5, px: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Box>
+                  <Typography
+                    color="text.secondary"
+                    variant="body2"
+                    gutterBottom
+                  >
+                    Đang vận chuyển
+                  </Typography>
+                  <Typography variant="h5" component="div">
+                    {loading ? <CircularProgress size={20} /> : tripCounts.onGoing}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    backgroundColor: "rgba(33, 150, 243, 0.08)",
+                    p: 1,
+                    borderRadius: "50%",
+                  }}
+                >
+                  <DirectionsIcon color="info" />
                 </Box>
               </Box>
             </CardContent>
