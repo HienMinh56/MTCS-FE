@@ -559,15 +559,6 @@ const TripDetailPage: React.FC = () => {
               <Grid item xs={12} md={6}>
                 <Box mb={2}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Ghép bởi
-                  </Typography>
-                  <Typography variant="body1">{tripData.matchBy}</Typography>
-                </Box>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <Box mb={2}>
-                  <Typography variant="subtitle2" color="text.secondary">
                     Thời gian ghép nối
                   </Typography>
                   <Box display="flex" alignItems="center">
@@ -592,6 +583,16 @@ const TripDetailPage: React.FC = () => {
                   </Typography>
                 </Box>
               </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Người ghép
+                  </Typography>
+                  <Typography variant="body1">{tripData.matchBy}</Typography>
+                </Box>
+              </Grid>              
+              
             </Grid>
           </Paper>
 

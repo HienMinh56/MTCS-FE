@@ -1360,19 +1360,19 @@ const OrderDetailPage: React.FC = () => {
 
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Ngày tạo
+                    Ước lượng thời gian tài xế chạy
                   </Typography>
                   <Typography variant="body1" gutterBottom>
-                    {formatDate(orderDetails.createdDate)}
+                    {orderDetails.completionTime || "N/A"}
                   </Typography>
                 </Grid>
 
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Ước lượng thời gian tài xế chạy
+                    Ngày tạo
                   </Typography>
                   <Typography variant="body1" gutterBottom>
-                    {orderDetails.completionTime || "N/A"}
+                    {formatDateTime(orderDetails.createdDate)}
                   </Typography>
                 </Grid>
 
@@ -1384,6 +1384,24 @@ const OrderDetailPage: React.FC = () => {
                     {orderDetails.createdBy || "N/A"}
                   </Typography>
                 </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Ngày chỉnh sửa
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {formatDateTime(orderDetails.modifiedDate)}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Người chỉnh sửa
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {(orderDetails.modifiedBy) || "N/A"}
+                  </Typography>
+                </Grid>                
 
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">
