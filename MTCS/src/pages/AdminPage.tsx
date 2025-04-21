@@ -34,6 +34,8 @@ import {
   Menu as MenuIcon,
   Settings as SettingsIcon,
 } from "@mui/icons-material";
+import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import { useAuth } from "../contexts/AuthContext";
 import {
   useNavigate,
@@ -44,6 +46,7 @@ import {
 } from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
+import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import logo1 from "../assets/logo1.png";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -52,6 +55,9 @@ import FinanceDashboard from "../components/finance/FinanceDashboard";
 import Customers from "../components/Customers";
 import SystemConfiguration from "../components/SystemConfiguration";
 import PriceTableComponent from "../components/Price/PriceTable";
+import Drivers from "./Drivers";
+import Tractors from "./Tractors";
+import Trailers from "./Trailers";
 
 const AdminFinanceDashboard: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -118,6 +124,27 @@ const AdminFinanceDashboard: React.FC = () => {
       icon: <PersonOutlined />,
       selected: activeSideTab === "customers",
       path: "/admin/customers",
+    },
+    {
+      id: "drivers",
+      text: "Tài xế",
+      icon: <PeopleAltIcon />,
+      selected: activeSideTab === "drivers",
+      path: "/admin/drivers",
+    },
+    {
+      id: "tractors",
+      text: "Đầu kéo",
+      icon: <LocalShippingIcon />,
+      selected: activeSideTab === "tractors",
+      path: "/admin/tractors",
+    },
+    {
+      id: "trailers",
+      text: "Rơ-moóc",
+      icon: <DirectionsCarFilledIcon />,
+      selected: activeSideTab === "trailers",
+      path: "/admin/trailers",
     },
     {
       id: "pricing",
@@ -423,6 +450,9 @@ const AdminFinanceDashboard: React.FC = () => {
             <Routes>
               <Route path="/finance" element={<FinanceDashboard />} />
               <Route path="/customers" element={<Customers />} />
+              <Route path="/drivers" element={<Drivers />} />
+              <Route path="/tractors" element={<Tractors />} />
+              <Route path="/trailers" element={<Trailers />} />
               <Route path="/pricing" element={<PriceTableComponent />} />
               <Route path="/system-config" element={<SystemConfiguration />} />
               <Route

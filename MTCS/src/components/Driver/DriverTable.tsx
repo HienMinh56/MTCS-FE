@@ -35,6 +35,7 @@ interface DriverTableProps {
   }) => void;
   refreshTrigger?: number;
   onStatusClick?: (status: DriverStatus) => void; // New prop for status click handling
+  isAdmin?: boolean; // Added isAdmin prop
 }
 
 const DriverTable: React.FC<DriverTableProps> = ({
@@ -42,6 +43,7 @@ const DriverTable: React.FC<DriverTableProps> = ({
   statusFilter = null,
   onUpdateSummary,
   refreshTrigger = 0,
+  isAdmin = false, // Default to false
 }) => {
   const navigate = useNavigate();
   const [drivers, setDrivers] = useState<Driver[]>([]);
