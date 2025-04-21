@@ -156,6 +156,9 @@ const SystemConfiguration: React.FC = () => {
       "40'_Reefer_Weight": "Khối lượng container lạnh 40'",
       Daily_Driver_WorkTime: "Thời gian làm việc trong ngày của tài xế",
       Weekly_Driver_WorkTime: "Thời gian làm việc trong tuần của tài xế",
+      Total_orders_per_day: "Số đơn tối đa trong ngày",
+      Maintenance_Due_Alert: "Hạn cảnh báo bảo trì",
+      Registration_Expiry_Alert: "Hạn cảnh báo đăng kiểm",
     };
 
     return labels[key] || key;
