@@ -364,7 +364,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
                 variant="outlined"
                 size="small"
                 fullWidth
-                value={tractorMaxLoadWeight !== null ? `${tractorMaxLoadWeight} kg` : ''}
+                value={tractorMaxLoadWeight !== null ? `${tractorMaxLoadWeight} Tấn` : ''}
                 InputProps={{ readOnly: true }}
                 sx={{
                   '& .MuiInputBase-input': {
@@ -407,7 +407,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
                     variant="outlined"
                     size="small"
                     fullWidth
-                    value={trailerMaxLoadWeight !== null ? `${trailerMaxLoadWeight} kg` : ''}
+                    value={trailerMaxLoadWeight !== null ? `${trailerMaxLoadWeight} Tấn` : ''}
                     InputProps={{ readOnly: true }}
                     sx={{
                       '& .MuiInputBase-input': {

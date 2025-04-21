@@ -559,15 +559,6 @@ const TripDetailPage: React.FC = () => {
               <Grid item xs={12} md={6}>
                 <Box mb={2}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Ghép bởi
-                  </Typography>
-                  <Typography variant="body1">{tripData.matchBy}</Typography>
-                </Box>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <Box mb={2}>
-                  <Typography variant="subtitle2" color="text.secondary">
                     Thời gian ghép nối
                   </Typography>
                   <Box display="flex" alignItems="center">
@@ -592,6 +583,16 @@ const TripDetailPage: React.FC = () => {
                   </Typography>
                 </Box>
               </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Người ghép
+                  </Typography>
+                  <Typography variant="body1">{tripData.matchBy}</Typography>
+                </Box>
+              </Grid>              
+              
             </Grid>
           </Paper>
 
@@ -708,6 +709,7 @@ const TripDetailPage: React.FC = () => {
                         <TableRow>
                           <TableCell>Thời gian</TableCell>
                           <TableCell align="center">Ghi chú</TableCell>
+                          <TableCell align="center">Ảnh</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -718,6 +720,50 @@ const TripDetailPage: React.FC = () => {
                             </TableCell>
                             <TableCell align="center">
                               {report.notes || "N/A"}
+                            </TableCell>
+                            <TableCell
+                              align="center"
+                              sx={{
+                                textAlign: "center",
+                                verticalAlign: "middle",
+                              }}
+                            >
+                              {report.deliveryReportsFiles &&
+                              Array.isArray(report.deliveryReportsFiles) &&
+                              report.deliveryReportsFiles.length > 0 ? (
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    gap: 1,
+                                    flexWrap: "wrap",
+                                    justifyContent: "center", // Center the image container horizontally
+                                    alignItems: "center", // Center items vertically
+                                  }}
+                                >
+                                  {report.deliveryReportsFiles.map(
+                                    (file: any, fileIndex: number) => (
+                                      <Box
+                                        key={fileIndex}
+                                        component="img"
+                                        src={file.fileUrl}
+                                        alt="Ảnh biên bản"
+                                        sx={{
+                                          width: 80,
+                                          height: 60,
+                                          objectFit: "cover",
+                                          cursor: "pointer",
+                                          borderRadius: 1,
+                                        }}
+                                        onClick={() =>
+                                          window.open(file.fileUrl, "_blank")
+                                        }
+                                      />
+                                    )
+                                  )}
+                                </Box>
+                              ) : (
+                                "Không có hoá đơn"
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}

@@ -18,7 +18,7 @@ interface OrderCreateProps {
 const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false); // Add state to track successful submission
+  const [isSuccess, setIsSuccess] = useState(false); // State to track successful submission
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -76,7 +76,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
       console.log('Response:', response);
 
       if (response.status == 1) {
-        // Set success state to true to prevent additional submissions
+        // Set success state to true to prevent additional submissions and disable the form
         setIsSuccess(true);
       
         // Handle success
@@ -99,10 +99,10 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
           }
         }, 4000);
       } else if (response.status == -1) {
-        // Set success state to true to prevent additional submissions
+        // Keep isSuccess as false to allow retrying
         setIsSuccess(false);
       
-        // Handle success
+        // Show error message
         setSnackbar({
           open: true,
           message: `${response.message}`,

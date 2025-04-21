@@ -205,7 +205,8 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                     <Typography variant="caption" color="text.secondary">Loại</Typography>
                     <Typography variant="body1">
                       {incident.type === 1 ? "Có thể sửa" : 
-                       incident.type === 2 ? "Cần hỗ trợ" : 
+                       incident.type === 2 ? "Cần hỗ trợ" :
+                       incident.type === 3 ? "Không thể sửa" :
                        "N/A"}
                     </Typography>
                   </Box>
