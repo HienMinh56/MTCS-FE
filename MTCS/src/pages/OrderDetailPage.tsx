@@ -953,7 +953,7 @@ const OrderDetailPage: React.FC = () => {
       open: true,
       message: "Đang xếp chuyến tự động...",
       severity: "info",
-      autoHideDuration: 3000
+      autoHideDuration: 1500
     });
 
     try {
