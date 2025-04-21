@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Box,
   Paper,
@@ -32,6 +32,8 @@ import {
   TextField,
   IconButton,
   CircularProgress,
+  ButtonGroup,
+  Stack,
 } from "@mui/material";
 import {
   ArrowUpward as ArrowUpwardIcon,
@@ -40,10 +42,15 @@ import {
   Edit as EditIcon,
   Check as CheckIcon,
   Close as CloseIcon,
+  CloudUpload as CloudUploadIcon,
+  CloudDownload as CloudDownloadIcon,
+  FileUpload as FileUploadIcon,
 } from "@mui/icons-material";
 import {
   getPriceTables,
   updatePriceTables,
+  importPriceTable,
+  downloadPriceTableTemplate,
 } from "../../services/priceTableApi";
 import {
   ContainerSizeMap,
@@ -126,6 +133,7 @@ const PriceTableComponent: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [priceTables, setPriceTables] = useState<IPriceTable[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -141,6 +149,14 @@ const PriceTableComponent: React.FC = () => {
     undefined
   );
   const [showChanges, setShowChanges] = useState<boolean>(false);
+
+  // Import related states
+  const [importDialogOpen, setImportDialogOpen] = useState<boolean>(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState<boolean>(false);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [createConfirmOpen, setCreateConfirmOpen] = useState<boolean>(false);
 
   const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
   const [editingPrice, setEditingPrice] = useState<IPriceTable | null>(null);
@@ -333,6 +349,76 @@ const PriceTableComponent: React.FC = () => {
     }
   };
 
+  const handleImportClick = () => {
+    setImportDialogOpen(true);
+  };
+
+  const handleImportDialogClose = () => {
+    setImportDialogOpen(false);
+    setSelectedFile(null);
+    setImportSuccess(null);
+    setImportError(null);
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      setSelectedFile(event.target.files[0]);
+    }
+  };
+
+  const handleConfirmImport = () => {
+    if (!selectedFile) return;
+    setCreateConfirmOpen(true);
+  };
+
+  const handleImportSubmit = async () => {
+    if (!selectedFile) return;
+
+    setImportLoading(true);
+    try {
+      const response = await importPriceTable(selectedFile);
+
+      if (response.success) {
+        setImportSuccess("Nhập dữ liệu thành công!");
+        fetchPriceTables();
+        setTimeout(() => {
+          handleImportDialogClose();
+          setCreateConfirmOpen(false);
+        }, 1500);
+      } else {
+        setImportError(response.messageVN || response.message);
+      }
+    } catch (err) {
+      setImportError(
+        err instanceof Error ? err.message : "Lỗi khi nhập dữ liệu"
+      );
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const blob = await downloadPriceTableTemplate();
+
+      // Create a URL for the blob and trigger download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "PriceTableTemplate.xlsx");
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Lỗi khi tải mẫu bảng giá"
+      );
+    }
+  };
+
   // Render loading skeletons
   const renderSkeletons = () => {
     return Array.from(new Array(5)).map((_, index) => (
@@ -456,47 +542,25 @@ const PriceTableComponent: React.FC = () => {
             </FormControl>
           </Grid>
           <Grid item>
-            {selectedVersion && (
-              <Box sx={{ textAlign: "right", mb: 1 }}>
-                {(() => {
-                  const versionInfo = versionsInfo.find(
-                    (v) => v.version === selectedVersion
-                  );
-                  if (versionInfo) {
-                    const startDate = versionInfo.startDate
-                      ? new Date(versionInfo.startDate).toLocaleDateString(
-                          "vi-VN"
-                        )
-                      : "Chưa xác định";
-                    const endDate = versionInfo.endDate
-                      ? new Date(versionInfo.endDate).toLocaleDateString(
-                          "vi-VN"
-                        )
-                      : "Hiện tại";
-                    return (
-                      <Typography variant="body2" color="text.secondary">
-                        <b>Phiên bản {selectedVersion}:</b> {startDate} -{" "}
-                        {endDate}
-                        {selectedVersion === activeVersion &&
-                          " (Đang lưu hành)"}
-                      </Typography>
-                    );
-                  }
-                  return null;
-                })()}
-              </Box>
-            )}
-            <Button
-              variant={showChanges ? "contained" : "outlined"}
-              color="primary"
-              onClick={() => setShowChanges(!showChanges)}
-              size="medium"
-              startIcon={
-                showChanges ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />
-              }
-            >
-              {showChanges ? "Ẩn lịch sử chỉnh sửa" : "Lịch sử chỉnh sửa"}
-            </Button>
+            <Stack direction="row" spacing={2}>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<CloudDownloadIcon />}
+                onClick={handleDownloadTemplate}
+              >
+                Tải mẫu
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<CloudUploadIcon />}
+                onClick={handleImportClick}
+                disabled={!isAdmin}
+              >
+                Tạo cước phí mới
+              </Button>
+            </Stack>
           </Grid>
         </Grid>
       </Paper>
@@ -1124,6 +1188,95 @@ const PriceTableComponent: React.FC = () => {
             }
           >
             {updating ? "Đang cập nhật" : "Xác nhận"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={importDialogOpen} onClose={handleImportDialogClose}>
+        <DialogTitle>Tạo bảng cước phí mới</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              style={{ display: "none" }}
+            />
+            <Button
+              variant="outlined"
+              onClick={() => fileInputRef.current?.click()}
+              startIcon={<FileUploadIcon />}
+            >
+              Chọn tệp
+            </Button>
+            {selectedFile && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Tệp đã chọn: {selectedFile.name}
+              </Typography>
+            )}
+          </Box>
+          {importError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {importError}
+            </Alert>
+          )}
+          {importSuccess && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              {importSuccess}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleImportDialogClose} color="inherit">
+            Hủy
+          </Button>
+          <Button
+            onClick={handleConfirmImport}
+            color="primary"
+            variant="contained"
+            disabled={!selectedFile || importLoading}
+          >
+            Tiếp tục
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create Confirmation Dialog */}
+      <Dialog
+        open={createConfirmOpen}
+        onClose={() => !importLoading && setCreateConfirmOpen(false)}
+      >
+        <DialogTitle>Xác nhận tạo bảng cước phí</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            Bạn có chắc chắn muốn tạo bảng cước phí mới từ tệp đã chọn không?
+          </Typography>
+          {selectedFile && (
+            <Typography variant="body2" sx={{ mt: 2 }}>
+              Tệp: {selectedFile.name}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setCreateConfirmOpen(false)}
+            color="inherit"
+            disabled={importLoading}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleImportSubmit}
+            color="primary"
+            variant="contained"
+            disabled={importLoading}
+            startIcon={
+              importLoading ? <CircularProgress size={20} /> : <CheckIcon />
+            }
+          >
+            {importLoading ? "Đang nhập" : "Xác nhận"}
           </Button>
         </DialogActions>
       </Dialog>

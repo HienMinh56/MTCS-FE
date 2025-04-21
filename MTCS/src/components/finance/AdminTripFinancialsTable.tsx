@@ -160,9 +160,6 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
               <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
                 Biên LN
               </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
-                Hành Động
-              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -230,28 +227,6 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
                       sx={{ fontWeight: 600 }}
                       className="min-w-16"
                     />
-                  </TableCell>
-                  <TableCell align="center" sx={{ py: 2 }}>
-                    <Stack direction="row" spacing={1} justifyContent="center">
-                      <Tooltip title="Xem Chi Tiết">
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          className="hover:bg-blue-50"
-                        >
-                          <DirectionsCar fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Xuất PDF">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          className="hover:bg-red-50"
-                        >
-                          <PictureAsPdf fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
                   </TableCell>
                 </TableRow>
               );
