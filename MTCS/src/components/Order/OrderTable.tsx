@@ -841,7 +841,7 @@ const OrderManagement: React.FC = () => {
             >
               <TableHead>
                 <TableRow>
-                  <TableCell align="center">Mã đơn hàng</TableCell>
+                  <TableCell align="center">Mã vận chuyển</TableCell>
                   <TableCell align="center">Khách hàng</TableCell>
                   <TableCell align="center">Ngày giao hàng</TableCell>
                   <TableCell align="center">Loại vận chuyển</TableCell>

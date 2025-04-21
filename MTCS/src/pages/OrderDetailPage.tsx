@@ -148,6 +148,9 @@ const OrderDetailPage: React.FC = () => {
     severity: "info",
     autoHideDuration: 3000
   });
+  const [paymentConfirmationOpen, setPaymentConfirmationOpen] = useState(false);
+  const [confirmCheckbox1, setConfirmCheckbox1] = useState(false);
+  const [confirmCheckbox2, setConfirmCheckbox2] = useState(false);
 
   // Close loading snackbar
   const handleCloseLoadingSnackbar = () => {
@@ -1034,6 +1037,13 @@ const OrderDetailPage: React.FC = () => {
       const statusText = orderDetails.isPay === IsPay.Yes ? "Chưa thanh toán" : "Đã thanh toán";
       setUpdateSuccess(`Trạng thái thanh toán đã được cập nhật thành công: ${statusText}`);
       fetchData();
+      
+      // Close the confirmation dialog after successful update
+      setPaymentConfirmationOpen(false);
+      
+      // Reset checkbox states for next time
+      setConfirmCheckbox1(false);
+      setConfirmCheckbox2(false);
 
       setTimeout(() => {
         setUpdateSuccess(null);
@@ -1168,9 +1178,9 @@ const OrderDetailPage: React.FC = () => {
               variant="outlined"
               color={orderDetails.isPay === IsPay.Yes ? "success" : "warning"}
               startIcon={orderDetails.isPay === IsPay.Yes ? <CheckCircleIcon /> : <PaymentIcon />}
-              onClick={handleUpdatePaymentStatus}
+              onClick={() => setPaymentConfirmationOpen(true)}
             >
-              Câp nhật Thanh Toán
+              Cập nhật Thanh Toán
             </Button>
           )}
         </Box>
@@ -2547,6 +2557,49 @@ const OrderDetailPage: React.FC = () => {
             }
           >
             {createTripLoading ? "Đang tạo..." : "Tạo chuyến đi"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={paymentConfirmationOpen}
+        onClose={() => setPaymentConfirmationOpen(false)}
+        PaperProps={{
+          sx: { borderRadius: 2 },
+        }}
+      >
+        <DialogTitle>Xác nhận cập nhật trạng thái thanh toán</DialogTitle>
+        <DialogContent sx={{ pt: 1, width: 400 }}>
+          <Typography variant="body2" gutterBottom>
+            Vui lòng xác nhận các điều kiện sau trước khi cập nhật trạng thái thanh toán:
+          </Typography>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={confirmCheckbox1}
+                onChange={(e) => setConfirmCheckbox1(e.target.checked)}
+              />
+            }
+            label="Tôi đã kiểm tra và xác nhận thông tin thanh toán là chính xác."
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={confirmCheckbox2}
+                onChange={(e) => setConfirmCheckbox2(e.target.checked)}
+              />
+            }
+            label="Tôi hiểu rằng việc cập nhật trạng thái thanh toán là không thể hoàn tác."
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPaymentConfirmationOpen(false)}>Hủy</Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdatePaymentStatus}
+            disabled={!confirmCheckbox1 || !confirmCheckbox2 || isSubmitting}
+          >
+            {isSubmitting ? "Đang xử lý..." : "Xác nhận"}
           </Button>
         </DialogActions>
       </Dialog>
