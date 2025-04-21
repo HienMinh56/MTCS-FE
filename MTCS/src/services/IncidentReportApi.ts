@@ -1,5 +1,6 @@
 import { ApiResponse } from "../types/api-types";
 import axiosInstance from "../utils/axiosConfig";
+import { formatApiError } from "../utils/errorFormatting";
 
 export interface IncidentReportFile {
   fileId: string;
@@ -68,6 +69,24 @@ export interface IncidentReports {
   order: Order;
 }
 
+export interface IncidentReportAdminDTO {
+  reportId: string;
+  tripId: string;
+  incidentType: string;
+  description: string;
+  incidentTime: string;
+  status: string;
+  resolutionDetails: string | null;
+  handledBy: string | null;
+  handledTime: string | null;
+  reportedBy: string;
+  files: IncidentReportFile[];
+}
+
+export interface IncidentHistoryResponse extends ApiResponse {
+  data: IncidentReportAdminDTO[];
+}
+
 interface IncidentReportsResponse extends ApiResponse {
   data: IncidentReports[];
 }
@@ -108,5 +127,27 @@ export const getIncidentReportById = async (
   } catch (error) {
     console.error(`Error fetching incident report with ID ${reportId}:`, error);
     throw error;
+  }
+};
+
+// Function to get incident reports by vehicle (tractor or trailer)
+export const getVehicleIncidentHistory = async (
+  vehicleId: string,
+  vehicleType: number
+): Promise<ApiResponse> => {
+  try {
+    const response = await axiosInstance.get<IncidentHistoryResponse>(
+      `/api/IncidentReport/HistoryIncident?vehicleId=${vehicleId}&vehicleType=${vehicleType}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching vehicle incident history:", error);
+    return {
+      success: false,
+      data: null,
+      message: "Failed to fetch incident history",
+      messageVN: "Không thể lấy dữ liệu sự cố",
+      errors: formatApiError(error), // Fixed: Now returns a string instead of array
+    };
   }
 };

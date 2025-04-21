@@ -19,9 +19,12 @@ import {
   AlertTitle,
   useTheme,
   Link,
+  Button,
+  CircularProgress,
 } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import { formatTime } from "../utils/dateUtils";
 
 interface NotificationComponentProps {
@@ -190,7 +193,6 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
         PaperProps={{
           sx: {
             width: 320,
-            maxHeight: 400,
             boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
             borderRadius: 2,
           },
@@ -214,11 +216,25 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
             {error}
           </Alert>
         ) : notifications.length === 0 ? (
-          <Box sx={{ p: 2, textAlign: "center" }}>
-            <Typography color="textSecondary">Không có thông báo</Typography>
+          <Box
+            sx={{
+              p: 3,
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <NotificationsNoneIcon
+              sx={{ fontSize: 40, color: "text.secondary" }}
+            />
+            <Typography color="textSecondary">
+              Bạn chưa có thông báo nào
+            </Typography>
           </Box>
         ) : (
-          <List sx={{ p: 0 }}>
+          <List sx={{ p: 0, maxHeight: 300, overflowY: "auto" }}>
             {notifications.map((notification) => (
               <React.Fragment key={notification.id}>
                 <ListItem
@@ -255,10 +271,11 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
                           alignItems: "center",
                         }}
                       >
-                        <Typography fontWeight="medium">
+                        <Typography
+                          fontWeight={notification.isRead ? "normal" : "bold"}
+                        >
                           {notification.Title}
                         </Typography>
-                        {/* Move timestamp next to the title */}
                         {notification.Timestamp && (
                           <Typography
                             component="span"
@@ -271,12 +288,14 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
                         )}
                       </Box>
                     }
-                    // Fix the hydration issue by using Typography with component="div"
                     secondary={
                       <Typography
                         component="div"
                         variant="body2"
-                        sx={{ mt: 0.5 }}
+                        sx={{
+                          mt: 0.5,
+                          fontWeight: notification.isRead ? "normal" : "medium",
+                        }}
                       >
                         <ExpandableText
                           text={notification.Body}

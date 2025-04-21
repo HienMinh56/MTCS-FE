@@ -56,6 +56,7 @@ import DirectionsIcon from "@mui/icons-material/Directions";
 import HistoryIcon from "@mui/icons-material/History";
 import TractorUpdate from "../components/Tractor/TractorUpdate";
 import TractorUseHistoryTable from "../components/Tractor/TractorUseHistoryTable";
+import TractorIncidentHistoryTable from "../components/Tractor/TractorIncidentHistoryTable";
 import {
   getTractorDetails,
   deactivateTractor,
@@ -1352,6 +1353,28 @@ const TractorDetailPage = () => {
                 onPageChange={handleHistoryPageChange}
                 onPageSizeChange={handleHistoryPageSizeChange}
               />
+            </Paper>
+
+            {/* Tractor Incident History */}
+            <Paper
+              elevation={3}
+              sx={{
+                p: { xs: 2, md: 3 },
+                borderRadius: 2,
+                mt: 3,
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+                <WarningIcon color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Lịch sử sự cố
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+
+              {tractorId && (
+                <TractorIncidentHistoryTable tractorId={tractorId} />
+              )}
             </Paper>
           </>
         ) : (
