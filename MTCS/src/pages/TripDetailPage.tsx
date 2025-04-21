@@ -83,9 +83,10 @@ const TripDetailPage: React.FC = () => {
       return "Vui lòng nhập lý do hủy chuyến";
     }
     
-    // Check if note starts and ends with letters
-    if (!/^[a-zA-Z\u00C0-\u1EF9].*[a-zA-Z\u00C0-\u1EF9]$/u.test(trimmedNote)) {
-      return "Lý do phải bắt đầu và kết thúc bằng chữ cái";
+    // Check if note starts and ends with valid characters (not whitespace)
+    // Valid characters: letters, numbers, or punctuation marks
+    if (/^\s/.test(trimmedNote) || /\s$/.test(trimmedNote)) {
+      return "Lý do không được bắt đầu hoặc kết thúc bằng dấu cách";
     }
     
     // Check for multiple spaces between words

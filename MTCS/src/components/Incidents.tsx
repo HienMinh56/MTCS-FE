@@ -35,6 +35,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import { getAllIncidentReports, getIncidentReportById, IncidentReports } from "../services/IncidentReportApi";
 import ReplaceTripModal from "./ReplaceTripModal";
 
@@ -286,12 +287,30 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                 {incidentFiles.length > 0 ? (
                   <ImageList cols={3} rowHeight={160} gap={8}>
                     {incidentFiles.map((file, index) => (
-                      <ImageListItem key={file.fileId} sx={{ border: '2px solid #e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
+                      <ImageListItem 
+                        key={file.fileId} 
+                        sx={{ 
+                          border: '2px solid #e0e0e0', 
+                          borderRadius: 1, 
+                          overflow: 'hidden',
+                          position: 'relative',
+                          cursor: 'pointer',
+                        }}
+                      >
                         <img 
                           src={file.fileUrl} 
                           alt={`Ảnh sự cố ${index + 1}`} 
                           loading="lazy"
                           style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = file.fileUrl;
+                            link.target = '_blank';
+                            link.rel = 'noopener noreferrer';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
                         />
                       </ImageListItem>
                     ))}
@@ -307,12 +326,30 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                 {invoiceFiles.length > 0 ? (
                   <ImageList cols={3} rowHeight={160} gap={8}>
                     {invoiceFiles.map((file, index) => (
-                      <ImageListItem key={file.fileId} sx={{ border: '2px solid #e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
+                      <ImageListItem 
+                        key={file.fileId} 
+                        sx={{ 
+                          border: '2px solid #e0e0e0', 
+                          borderRadius: 1, 
+                          overflow: 'hidden',
+                          position: 'relative',
+                          cursor: 'pointer',
+                        }}
+                      >
                         <img 
                           src={file.fileUrl} 
                           alt={`Ảnh hóa đơn ${index + 1}`} 
                           loading="lazy"
                           style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = file.fileUrl;
+                            link.target = '_blank';
+                            link.rel = 'noopener noreferrer';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
                         />
                       </ImageListItem>
                     ))}
@@ -328,12 +365,30 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                 {transferFiles.length > 0 ? (
                   <ImageList cols={3} rowHeight={160} gap={8}>
                     {transferFiles.map((file, index) => (
-                      <ImageListItem key={file.fileId} sx={{ border: '2px solid #e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
+                      <ImageListItem 
+                        key={file.fileId} 
+                        sx={{ 
+                          border: '2px solid #e0e0e0', 
+                          borderRadius: 1, 
+                          overflow: 'hidden',
+                          position: 'relative',
+                          cursor: 'pointer',
+                        }}
+                      >
                         <img 
                           src={file.fileUrl} 
                           alt={`Ảnh chuyển nhượng ${index + 1}`} 
                           loading="lazy"
                           style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = file.fileUrl;
+                            link.target = '_blank';
+                            link.rel = 'noopener noreferrer';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
                         />
                       </ImageListItem>
                     ))}
@@ -842,7 +897,9 @@ const IncidentManagement = () => {
                                 {incident.type === 1 
                                   ? "Có thể sửa" 
                                   : incident.type === 2 
-                                  ? "Cần hỗ trợ" 
+                                  ? "Cần hỗ trợ"
+                                  : incident.type === 3 
+                                  ? "Không thể sửa" 
                                   : incident.type}
                               </TableCell>
                               <TableCell align="center">
