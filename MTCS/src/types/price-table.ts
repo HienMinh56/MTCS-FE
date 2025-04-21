@@ -24,9 +24,15 @@ export interface PriceChangeGroup {
   changes: PriceTable[];
 }
 
+export interface VersionInfo {
+  version: number;
+  startDate: string | null;
+  endDate: string | null;
+}
+
 export interface PriceTablesHistoryDTO {
   priceTables: PriceTable[];
-  availableVersions: number[];
+  versionsInfo: VersionInfo[];
   currentVersion: number;
   activeVersion: number;
   totalCount: number;
