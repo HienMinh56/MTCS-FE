@@ -40,6 +40,8 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -60,6 +62,7 @@ import VerifiedIcon from "@mui/icons-material/Verified";
 import AirportShuttleIcon from "@mui/icons-material/AirportShuttle";
 import EditIcon from "@mui/icons-material/Edit";
 import HistoryIcon from "@mui/icons-material/History";
+import BugReportIcon from "@mui/icons-material/BugReport";
 import {
   getTrailerDetails,
   deactivateTrailer,
@@ -76,6 +79,7 @@ import {
 import { ContainerSize } from "../forms/trailer/trailerSchema";
 import TrailerUpdate from "../components/Trailer/TrailerUpdate";
 import TrailerUseHistoryTable from "../components/Trailer/TrailerUseHistoryTable";
+import TrailerIncidentHistoryTable from "../components/Trailer/TrailerIncidentHistoryTable";
 
 const FILE_CATEGORIES = ["Giấy Đăng ký", "Giấy Kiểm định", "Khác"];
 
@@ -150,6 +154,36 @@ const TrailerDetailPage = () => {
     pageNumber: 1,
     pageSize: 5,
   });
+  const [historyTabValue, setHistoryTabValue] = useState<number>(0);
+
+  const handleHistoryTabChange = (
+    _: React.SyntheticEvent,
+    newValue: number
+  ) => {
+    setHistoryTabValue(newValue);
+  };
+
+  interface TabPanelProps {
+    children?: React.ReactNode;
+    index: number;
+    value: number;
+  }
+
+  function TabPanel(props: TabPanelProps) {
+    const { children, value, index, ...other } = props;
+
+    return (
+      <div
+        role="tabpanel"
+        hidden={value !== index}
+        id={`history-tabpanel-${index}`}
+        aria-labelledby={`history-tab-${index}`}
+        {...other}
+      >
+        {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+      </div>
+    );
+  }
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -1329,6 +1363,28 @@ const TrailerDetailPage = () => {
                 onPageChange={handleHistoryPageChange}
                 onPageSizeChange={handleHistoryPageSizeChange}
               />
+            </Paper>
+
+            {/* Trailer Incident History */}
+            <Paper
+              elevation={3}
+              sx={{
+                p: { xs: 2, md: 3 },
+                borderRadius: 2,
+                mt: 3,
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+                <BugReportIcon color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Lịch sử sự cố
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+
+              {trailerId && (
+                <TrailerIncidentHistoryTable trailerId={trailerId} />
+              )}
             </Paper>
           </>
         ) : (
