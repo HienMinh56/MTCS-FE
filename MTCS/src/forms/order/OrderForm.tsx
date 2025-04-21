@@ -691,7 +691,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 control={control}
                 render={({ field }) => (
                   <TimePicker
-                    label="Thời Gian Hoàn Thành (giờ:phút)"
+                    label="Thời Gian Ước tính hoàn thành vận chuyển"
                     value={field.value ? dayjs(field.value, "HH:mm") : null}
                     onChange={(newValue) => {
                       field.onChange(newValue ? dayjs(newValue).format("HH:mm") : null);
@@ -702,6 +702,8 @@ const OrderForm: React.FC<OrderFormProps> = ({
                         fullWidth: true,
                         error: !!errors.completeTime,
                         helperText: errors.completeTime?.message,
+                        required: true, // Đánh dấu trường là bắt buộc
+                        disabled: isSubmitting,
                       },
                     }}
                     ampm={false} // Use 24-hour format
