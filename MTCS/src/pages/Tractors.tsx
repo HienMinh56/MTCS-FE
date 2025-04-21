@@ -32,9 +32,13 @@ import { useNavigate } from "react-router-dom";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { getTractors } from "../services/tractorApi";
+import { useAuth } from "../contexts/AuthContext";
 
 const Tractors = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "Admin";
+
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [summary, setSummary] = useState({
@@ -377,14 +381,16 @@ const Tractors = () => {
               Danh sách đầu kéo
             </Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleOpenCreate}
-                size="small"
-              >
-                Thêm mới
-              </Button>
+              {!isAdmin && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleOpenCreate}
+                  size="small"
+                >
+                  Thêm mới
+                </Button>
+              )}
               <TextField
                 size="small"
                 placeholder="Tìm kiếm biển số xe..."
@@ -422,36 +428,41 @@ const Tractors = () => {
           filterOptions={filterOptions}
           onUpdateSummary={handleUpdateSummary}
           refreshTrigger={refreshTrigger}
+          isAdmin={isAdmin}
         />
 
-        <Modal
-          open={openCreate}
-          onClose={handleCloseCreate}
-          aria-labelledby="create-tractor-modal"
-        >
-          <Box
-            sx={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: "80%",
-              maxWidth: 800,
-              bgcolor: "background.paper",
-              boxShadow: 24,
-              p: 4,
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
-          >
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <TractorCreate
-                onClose={handleCloseCreate}
-                onSuccess={handleCreateSuccess}
-              />
-            </LocalizationProvider>
-          </Box>
-        </Modal>
+        {!isAdmin && (
+          <>
+            <Modal
+              open={openCreate}
+              onClose={handleCloseCreate}
+              aria-labelledby="create-tractor-modal"
+            >
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: "80%",
+                  maxWidth: 800,
+                  bgcolor: "background.paper",
+                  boxShadow: 24,
+                  p: 4,
+                  maxHeight: "90vh",
+                  overflowY: "auto",
+                }}
+              >
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <TractorCreate
+                    onClose={handleCloseCreate}
+                    onSuccess={handleCreateSuccess}
+                  />
+                </LocalizationProvider>
+              </Box>
+            </Modal>
+          </>
+        )}
 
         <TractorFilter
           open={openFilter}

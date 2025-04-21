@@ -26,12 +26,16 @@ import { DriverStatus } from "../types/driver";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { getDriverList } from "../services/DriverApi";
+import { useAuth } from "../contexts/AuthContext"; // Import useAuth hook
 
 interface FilterOptions {
   status?: DriverStatus | null;
 }
 
 const Drivers = () => {
+  const { user } = useAuth(); // Get the user from auth context
+  const isAdmin = user?.role === "Admin"; // Check if user is Admin
+
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [summary, setSummary] = useState({
@@ -381,14 +385,17 @@ const Drivers = () => {
               Danh sách tài xế
             </Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleOpenCreate}
-                size="small"
-              >
-                Thêm mới
-              </Button>
+              {/* Only show the Add button for non-Admin users */}
+              {!isAdmin && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleOpenCreate}
+                  size="small"
+                >
+                  Thêm mới
+                </Button>
+              )}
               <TextField
                 size="small"
                 placeholder="Tìm kiếm tài xế..."
@@ -421,45 +428,51 @@ const Drivers = () => {
           </Box>
         </Box>
 
-        {/* Integrate the DriverTable component */}
+        {/* Pass isAdmin prop to DriverTable */}
         <DriverTable
           searchTerm={searchTerm}
           statusFilter={filterOptions.status}
           onUpdateSummary={handleUpdateSummary}
           refreshTrigger={refreshTrigger}
+          isAdmin={isAdmin}
         />
 
-        {/* Create modal */}
-        <Modal
-          open={openCreate}
-          onClose={handleCloseCreate}
-          aria-labelledby="create-driver-modal"
-        >
-          <Box
-            sx={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: "80%",
-              maxWidth: 800,
-              bgcolor: "background.paper",
-              boxShadow: 24,
-              p: 4,
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
-          >
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <DriverCreate
-                onClose={handleCloseCreate}
-                onSuccess={handleCreateSuccess}
-              />
-            </LocalizationProvider>
-          </Box>
-        </Modal>
+        {/* Only render modal components for non-Admin users */}
+        {!isAdmin && (
+          <>
+            {/* Create modal */}
+            <Modal
+              open={openCreate}
+              onClose={handleCloseCreate}
+              aria-labelledby="create-driver-modal"
+            >
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: "80%",
+                  maxWidth: 800,
+                  bgcolor: "background.paper",
+                  boxShadow: 24,
+                  p: 4,
+                  maxHeight: "90vh",
+                  overflowY: "auto",
+                }}
+              >
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DriverCreate
+                    onClose={handleCloseCreate}
+                    onSuccess={handleCreateSuccess}
+                  />
+                </LocalizationProvider>
+              </Box>
+            </Modal>
+          </>
+        )}
 
-        {/* Filter Dialog */}
+        {/* Filter Dialog - available for all users */}
         <DriverFilter
           open={openFilter}
           onClose={handleCloseFilter}

@@ -1020,7 +1020,7 @@ const TrackingOrder: React.FC = () => {
             }}
           >
             <LocalShipping sx={{ fontSize: 60, mb: 2, opacity: 0.4 }} />
-            <Typography variant="h6">Enter a tracking code to see order details</Typography>
+            <Typography variant="h6">Vui lòng điền mã vận chuyển của bạn để theo dõi đơn hàng.</Typography>
           </Box>
         )}
       </Paper>

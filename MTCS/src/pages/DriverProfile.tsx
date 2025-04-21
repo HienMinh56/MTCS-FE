@@ -50,6 +50,8 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import CloseIcon from "@mui/icons-material/Close";
 import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import { useAuth } from "../contexts/AuthContext";
 import {
   getDriverById,
   activateDriver,
@@ -65,6 +67,9 @@ import DriverUpdate from "../components/Driver/DriverUpdate";
 
 const DriverProfile: React.FC = () => {
   const { driverId } = useParams<{ driverId: string }>();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "Admin";
+
   const [driver, setDriver] = useState<Driver | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,7 +155,6 @@ const DriverProfile: React.FC = () => {
 
       if (response.success) {
         setStatusDialogOpen(false);
-        // Since the backend returns boolean instead of driver data, we need to fetch updated driver
         fetchDriverProfile();
       } else {
         setStatusUpdateError(response.messageVN || response.message);
@@ -698,42 +702,49 @@ const DriverProfile: React.FC = () => {
           </Grid>
 
           <Box mt={3} display="flex" justifyContent="space-between">
-            <Box>
-              {driver.status === DriverStatus.Active ||
-              driver.status === DriverStatus.OnDuty ? (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<BlockIcon />}
-                  onClick={() => handleStatusChange("deactivate")}
-                  size={isMobile ? "small" : "medium"}
-                  sx={{ px: 3, py: 1 }}
-                >
-                  Vô hiệu hóa
-                </Button>
-              ) : (
-                <Button
-                  variant="outlined"
-                  color="success"
-                  startIcon={<CheckCircleIcon />}
-                  onClick={() => handleStatusChange("activate")}
-                  size={isMobile ? "small" : "medium"}
-                  sx={{ px: 3, py: 1 }}
-                >
-                  Kích hoạt
-                </Button>
-              )}
-            </Box>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<EditIcon />}
-              onClick={handleOpenUpdateDialog}
-              size={isMobile ? "small" : "medium"}
-              sx={{ px: 3, py: 1 }}
-            >
-              Chỉnh sửa thông tin
-            </Button>
+            {!isAdmin && (
+              <>
+                <Box>
+                  {driver.status === DriverStatus.Active ||
+                  driver.status === DriverStatus.OnDuty ? (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<BlockIcon />}
+                      onClick={() => handleStatusChange("deactivate")}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ px: 3, py: 1 }}
+                    >
+                      Vô hiệu hóa
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outlined"
+                      color="success"
+                      startIcon={<CheckCircleIcon />}
+                      onClick={() => handleStatusChange("activate")}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ px: 3, py: 1 }}
+                    >
+                      Kích hoạt
+                    </Button>
+                  )}
+                </Box>
+
+                <Box>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<EditIcon />}
+                    onClick={handleOpenUpdateDialog}
+                    size={isMobile ? "small" : "medium"}
+                    sx={{ px: 3, py: 1 }}
+                  >
+                    Chỉnh sửa thông tin
+                  </Button>
+                </Box>
+              </>
+            )}
           </Box>
         </Paper>
 
@@ -764,116 +775,120 @@ const DriverProfile: React.FC = () => {
         )}
       </Box>
 
-      {/* Image Preview Dialog */}
-      <Dialog
-        open={imagePreview.open}
-        onClose={closeImagePreview}
-        maxWidth="lg"
-        fullWidth
-        TransitionComponent={Fade}
-        PaperProps={{ sx: { borderRadius: 2 } }}
-      >
-        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
-          <ImageIcon sx={{ mr: 1 }} color="primary" />
-          {imagePreview.title}
-          <IconButton
-            onClick={closeImagePreview}
-            sx={{
-              position: "absolute",
-              right: 8,
-              top: 8,
-            }}
+      {!isAdmin && (
+        <>
+          <Dialog
+            open={imagePreview.open}
+            onClose={closeImagePreview}
+            maxWidth="lg"
+            fullWidth
+            TransitionComponent={Fade}
+            PaperProps={{ sx: { borderRadius: 2 } }}
           >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}>
-          <img
-            src={imagePreview.src}
-            alt={imagePreview.title}
-            style={{
-              maxWidth: "100%",
-              maxHeight: "80vh",
-              objectFit: "contain",
-              padding: 16,
-            }}
+            <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
+              <ImageIcon sx={{ mr: 1 }} color="primary" />
+              {imagePreview.title}
+              <IconButton
+                onClick={closeImagePreview}
+                sx={{
+                  position: "absolute",
+                  right: 8,
+                  top: 8,
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent
+              sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}
+            >
+              <img
+                src={imagePreview.src}
+                alt={imagePreview.title}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "80vh",
+                  objectFit: "contain",
+                  padding: 16,
+                }}
+              />
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+              <Button
+                component="a"
+                href={imagePreview.src}
+                target="_blank"
+                rel="noopener noreferrer"
+                startIcon={<OpenInNewIcon />}
+                variant="outlined"
+              >
+                Mở trong cửa sổ mới
+              </Button>
+              <Button
+                onClick={closeImagePreview}
+                color="primary"
+                variant="contained"
+              >
+                Đóng
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog
+            open={statusDialogOpen}
+            onClose={handleCloseStatusDialog}
+            aria-labelledby="status-dialog-title"
+          >
+            <DialogTitle id="status-dialog-title">
+              {statusAction === "activate"
+                ? "Kích hoạt tài xế?"
+                : "Vô hiệu hóa tài xế?"}
+            </DialogTitle>
+            <DialogContent>
+              {statusUpdateError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {statusUpdateError}
+                </Alert>
+              )}
+              <DialogContentText>
+                {statusAction === "activate"
+                  ? "Tài xế này sẽ được kích hoạt và có thể nhận chuyến. Bạn chắc chắn muốn tiếp tục?"
+                  : "Tài xế này sẽ bị vô hiệu hóa và không thể nhận chuyến. Bạn chắc chắn muốn tiếp tục?"}
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={handleCloseStatusDialog}
+                disabled={statusUpdateLoading}
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={handleConfirmStatusChange}
+                color={statusAction === "activate" ? "success" : "error"}
+                variant="contained"
+                disabled={statusUpdateLoading}
+                startIcon={
+                  statusUpdateLoading ? <CircularProgress size={20} /> : null
+                }
+              >
+                {statusUpdateLoading
+                  ? "Đang xử lý..."
+                  : statusAction === "activate"
+                  ? "Kích hoạt"
+                  : "Vô hiệu hóa"}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <DriverUpdate
+            open={updateDialogOpen}
+            onClose={handleCloseUpdateDialog}
+            driverDetails={driver}
+            onSuccess={handleUpdateSuccess}
           />
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button
-            component="a"
-            href={imagePreview.src}
-            target="_blank"
-            rel="noopener noreferrer"
-            startIcon={<OpenInNewIcon />}
-            variant="outlined"
-          >
-            Mở trong cửa sổ mới
-          </Button>
-          <Button
-            onClick={closeImagePreview}
-            color="primary"
-            variant="contained"
-          >
-            Đóng
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Status Change Confirmation Dialog */}
-      <Dialog
-        open={statusDialogOpen}
-        onClose={handleCloseStatusDialog}
-        aria-labelledby="status-dialog-title"
-      >
-        <DialogTitle id="status-dialog-title">
-          {statusAction === "activate"
-            ? "Kích hoạt tài xế?"
-            : "Vô hiệu hóa tài xế?"}
-        </DialogTitle>
-        <DialogContent>
-          {statusUpdateError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {statusUpdateError}
-            </Alert>
-          )}
-          <DialogContentText>
-            {statusAction === "activate"
-              ? "Tài xế này sẽ được kích hoạt và có thể nhận chuyến. Bạn chắc chắn muốn tiếp tục?"
-              : "Tài xế này sẽ bị vô hiệu hóa và không thể nhận chuyến. Bạn chắc chắn muốn tiếp tục?"}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={handleCloseStatusDialog}
-            disabled={statusUpdateLoading}
-          >
-            Hủy
-          </Button>
-          <Button
-            onClick={handleConfirmStatusChange}
-            color={statusAction === "activate" ? "success" : "error"}
-            variant="contained"
-            disabled={statusUpdateLoading}
-            startIcon={
-              statusUpdateLoading ? <CircularProgress size={20} /> : null
-            }
-          >
-            {statusUpdateLoading
-              ? "Đang xử lý..."
-              : statusAction === "activate"
-              ? "Kích hoạt"
-              : "Vô hiệu hóa"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <DriverUpdate
-        open={updateDialogOpen}
-        onClose={handleCloseUpdateDialog}
-        driverDetails={driver}
-        onSuccess={handleUpdateSuccess}
-      />
+        </>
+      )}
     </Container>
   );
 };

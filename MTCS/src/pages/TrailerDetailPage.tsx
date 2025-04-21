@@ -80,6 +80,7 @@ import { ContainerSize } from "../forms/trailer/trailerSchema";
 import TrailerUpdate from "../components/Trailer/TrailerUpdate";
 import TrailerUseHistoryTable from "../components/Trailer/TrailerUseHistoryTable";
 import TrailerIncidentHistoryTable from "../components/Trailer/TrailerIncidentHistoryTable";
+import { useAuth } from "../contexts/AuthContext"; // Import useAuth hook
 
 const FILE_CATEGORIES = ["Giấy Đăng ký", "Giấy Kiểm định", "Khác"];
 
@@ -111,6 +112,8 @@ const TrailerDetailPage = () => {
   const { trailerId } = useParams<{ trailerId: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
+  const { user } = useAuth(); // Get the user from auth context
+  const isAdmin = user?.role === "Admin"; // Check if user is Admin
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
   const [details, setDetails] = useState<ITrailerDetails | null>(null);
@@ -992,53 +995,55 @@ const TrailerDetailPage = () => {
                 </Grid>
               </Grid>
 
-              <Box mt={3} display="flex" justifyContent="space-between">
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<EditIcon />}
-                  onClick={handleEditClick}
-                  size={isMobile ? "small" : "medium"}
-                  sx={{ px: 3, py: 1 }}
-                >
-                  Chỉnh sửa thông tin
-                </Button>
-
-                {details.status === TrailerStatus.Active ? (
+              {!isAdmin && (
+                <Box mt={3} display="flex" justifyContent="space-between">
                   <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                    onClick={handleDeactivateClick}
-                    size={isMobile ? "small" : "medium"}
-                    sx={{ px: 3, py: 1 }}
-                  >
-                    Vô hiệu hóa rơ-moóc
-                  </Button>
-                ) : details.status === TrailerStatus.OnDuty ? (
-                  <Button
-                    variant="contained"
+                    variant="outlined"
                     color="primary"
-                    disabled
-                    startIcon={<LocalShippingIcon />}
+                    startIcon={<EditIcon />}
+                    onClick={handleEditClick}
                     size={isMobile ? "small" : "medium"}
                     sx={{ px: 3, py: 1 }}
                   >
-                    Đang vận chuyển
+                    Chỉnh sửa thông tin
                   </Button>
-                ) : (
-                  <Button
-                    variant="contained"
-                    color="success"
-                    startIcon={<CheckCircleIcon />}
-                    onClick={handleActivateClick}
-                    size={isMobile ? "small" : "medium"}
-                    sx={{ px: 3, py: 1 }}
-                  >
-                    Kích hoạt rơ-moóc
-                  </Button>
-                )}
-              </Box>
+
+                  {details.status === TrailerStatus.Active ? (
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={handleDeactivateClick}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ px: 3, py: 1 }}
+                    >
+                      Vô hiệu hóa rơ-moóc
+                    </Button>
+                  ) : details.status === TrailerStatus.OnDuty ? (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      disabled
+                      startIcon={<LocalShippingIcon />}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ px: 3, py: 1 }}
+                    >
+                      Đang vận chuyển
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      color="success"
+                      startIcon={<CheckCircleIcon />}
+                      onClick={handleActivateClick}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ px: 3, py: 1 }}
+                    >
+                      Kích hoạt rơ-moóc
+                    </Button>
+                  )}
+                </Box>
+              )}
             </Paper>
 
             {/* Display trailer files by category */}
