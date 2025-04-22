@@ -28,6 +28,7 @@ import {
   ImageListItem,
   CircularProgress,
   Alert,
+  Fade,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
@@ -36,6 +37,9 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import ImageIcon from "@mui/icons-material/Image";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import CloseIcon from "@mui/icons-material/Close";
 import { getAllIncidentReports, getIncidentReportById, IncidentReports } from "../services/IncidentReportApi";
 import ReplaceTripModal from "./ReplaceTripModal";
 
@@ -81,10 +85,16 @@ interface Incident extends IncidentReports {
 }
 
 // Incident detail dialog component
-const IncidentDetailDialog = ({ open, incident, onClose }: { 
+const IncidentDetailDialog = ({ 
+  open, 
+  incident, 
+  onClose,
+  onImagePreview
+}: { 
   open: boolean; 
   incident: Incident | null; 
   onClose: () => void;
+  onImagePreview: (src: string, title: string) => void;
 }) => {
   const [openReplaceTripModal, setOpenReplaceTripModal] = useState(false);
   const [createTripSuccess, setCreateTripSuccess] = useState(false);
@@ -103,6 +113,11 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
     setTripReplaced(true); // Set flag to indicate trip has been replaced
     // Reset success message after 3 seconds
     setTimeout(() => setCreateTripSuccess(false), 2000);
+  };
+
+  // Handler for image clicks - use onImagePreview prop instead of direct link
+  const handleImageClick = (fileUrl: string, fileTitle: string) => {
+    onImagePreview(fileUrl, fileTitle);
   };
   
   return (
@@ -275,7 +290,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
             </Grid>
           </Paper>        
           
-          {/* Section: Images */}
+          {/* Section: Images - modified to use the image preview */}
           <Paper variant="outlined" sx={{ p: 2, borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.12)' }}>
             <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, borderBottom: '2px solid #e0e0e0', pb: 1 }}>
               Hình ảnh
@@ -303,15 +318,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                           alt={`Ảnh sự cố ${index + 1}`} 
                           loading="lazy"
                           style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = file.fileUrl;
-                            link.target = '_blank';
-                            link.rel = 'noopener noreferrer';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          }}
+                          onClick={() => handleImageClick(file.fileUrl, `Ảnh sự cố ${index + 1}`)}
                         />
                       </ImageListItem>
                     ))}
@@ -342,15 +349,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                           alt={`Ảnh hóa đơn ${index + 1}`} 
                           loading="lazy"
                           style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = file.fileUrl;
-                            link.target = '_blank';
-                            link.rel = 'noopener noreferrer';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          }}
+                          onClick={() => handleImageClick(file.fileUrl, `Ảnh hóa đơn ${index + 1}`)}
                         />
                       </ImageListItem>
                     ))}
@@ -381,15 +380,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                           alt={`Ảnh chuyển nhượng ${index + 1}`} 
                           loading="lazy"
                           style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = file.fileUrl;
-                            link.target = '_blank';
-                            link.rel = 'noopener noreferrer';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          }}
+                          onClick={() => handleImageClick(file.fileUrl, `Ảnh chuyển nhượng ${index + 1}`)}
                         />
                       </ImageListItem>
                     ))}
@@ -452,6 +443,17 @@ const IncidentManagement = () => {
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  
+  // Add state for image preview
+  const [imagePreview, setImagePreview] = useState<{
+    open: boolean;
+    src: string;
+    title: string;
+  }>({
+    open: false,
+    src: "",
+    title: "",
+  });
 
   // Fetch incident reports from API
   useEffect(() => {
@@ -518,6 +520,22 @@ const IncidentManagement = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedIncident(null);
+  };
+
+  // Add functions to handle image preview
+  const openImagePreview = (src: string, title: string = "Image Preview") => {
+    setImagePreview({
+      open: true,
+      src,
+      title,
+    });
+  };
+
+  const closeImagePreview = () => {
+    setImagePreview({
+      ...imagePreview,
+      open: false,
+    });
   };
 
   // Updated to properly count all non-handling statuses as "Đã xử lý"
@@ -971,7 +989,66 @@ const IncidentManagement = () => {
         open={openDialog}
         incident={selectedIncident}
         onClose={handleCloseDialog}
+        onImagePreview={openImagePreview} // Pass the open preview function
       />
+
+      {/* Image Preview Dialog */}
+      <Dialog
+        open={imagePreview.open}
+        onClose={closeImagePreview}
+        maxWidth="lg"
+        fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
+          <ImageIcon sx={{ mr: 1 }} color="primary" />
+          {imagePreview.title}
+          <IconButton
+            onClick={closeImagePreview}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}
+        >
+          <img
+            src={imagePreview.src}
+            alt={imagePreview.title}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+              padding: 16,
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            component="a"
+            href={imagePreview.src}
+            target="_blank"
+            rel="noopener noreferrer"
+            startIcon={<OpenInNewIcon />}
+            variant="outlined"
+          >
+            Mở trong cửa sổ mới
+          </Button>
+          <Button
+            onClick={closeImagePreview}
+            color="primary"
+            variant="contained"
+          >
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

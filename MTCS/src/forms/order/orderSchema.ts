@@ -4,10 +4,10 @@ import dayjs from 'dayjs';
 
 // Container number validation pattern:
 // - First 3 characters: company code (letters)
-// - 4th character: U (fixed)
-// - Next 5 characters: container number (digits)
+// - 4th character: U, J or Z (indicator of container type)
+// - Next 6 characters: serial number (digits)
 // - Last 1 character: check digit (digit)
-const containerNumberPattern = /^[A-Z]{3}U\d{5}\d{1}$/;
+const containerNumberPattern = /^[A-Z]{3}[UJZ]\d{6}\d{1}$/;
 
 // Custom string validator for no leading/trailing spaces and no consecutive spaces
 const validateStringFormat = (errorMessage: string) => {
