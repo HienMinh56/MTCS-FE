@@ -113,7 +113,7 @@ const AdminFinanceDashboard: React.FC = () => {
   const sidebarItems = [
     {
       id: "finance",
-      text: "Báo Cáo Tài Chính",
+      text: "Báo Cáo Hoạt Động",
       icon: <BarChartOutlined />,
       selected: activeSideTab === "finance",
       path: "/admin/finance",
