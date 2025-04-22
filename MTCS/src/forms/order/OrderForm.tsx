@@ -16,9 +16,11 @@ import {
   Divider,
   CircularProgress,
   Autocomplete,
+  Tooltip,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker"; // Add TimePicker import
 import { Controller, useFieldArray, useForm } from "react-hook-form";
@@ -362,11 +364,11 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     label="Số container"
                     fullWidth
                     error={!!errors.containerNumber}
-                    helperText={errors.containerNumber?.message || 'Ví dụ: SEGU5593802 (3 kí tự đầu công ty, U, 5 số, 1 số kiểm tra)'}
+                    helperText={errors.containerNumber?.message}
                     disabled={isSubmitting || isDisabled}
                     required
                     inputProps={{
-                      maxLength: 10,
+                      maxLength: 11,
                       style: { textTransform: 'uppercase' }
                     }}
                     onChange={(e) => {
@@ -379,9 +381,27 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
-                          <Typography variant="caption" color="textSecondary">
-                            XXX-U-YYYYY-Z
-                          </Typography>
+                          <Tooltip 
+                            title={
+                              <React.Fragment>
+                                <Typography variant="subtitle2">Định dạng số container:</Typography>
+                                <Typography variant="body2">- 3 kí tự đầu: Viết tắt tên công ty</Typography>
+                                <Typography variant="body2">- Kí tự thứ 4:</Typography>
+                                <Typography variant="body2">&nbsp;&nbsp;U: Container chở hàng</Typography>
+                                <Typography variant="body2">&nbsp;&nbsp;J: Thiết bị có thể tháo rời của container</Typography>
+                                <Typography variant="body2">&nbsp;&nbsp;Z: Đầu kéo hoặc rơ mooc</Typography>
+                                <Typography variant="body2">- 6 kí tự tiếp theo: Số seri của container</Typography>
+                                <Typography variant="body2">- Kí tự cuối: Số kiểm tra</Typography>
+                                <Typography variant="body2">Ví dụ: SEGU5593802</Typography>
+                              </React.Fragment>
+                            }
+                            placement="top-start"
+                            arrow
+                          >
+                            <IconButton size="small" color="primary">
+                              <HelpOutlineIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </InputAdornment>
                       ),
                     }}

@@ -111,27 +111,6 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
               Đơn vị: VNĐ
             </Typography>
           </Box>
-
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="Lọc dữ liệu">
-              <IconButton
-                size="small"
-                color="primary"
-                className="hover:bg-blue-50"
-              >
-                <FilterList />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Tìm kiếm">
-              <IconButton
-                size="small"
-                color="primary"
-                className="hover:bg-blue-50"
-              >
-                <Search />
-              </IconButton>
-            </Tooltip>
-          </Stack>
         </Stack>
       </Box>
 
@@ -182,7 +161,7 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
                     {trip.tripCode || trip.tripId}
                   </TableCell>
                   <TableCell align="center" sx={{ py: 2 }}>
-                    {trip.orderId}
+                    {trip.trackingCode}
                   </TableCell>
                   <TableCell align="center" sx={{ py: 2 }}>
                     {trip.customerName}

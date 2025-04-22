@@ -14,37 +14,40 @@ import {
   MenuItem,
   useTheme,
   alpha,
-  Stack,
 } from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import dayjs from "dayjs";
 import {
-  AttachMoney,
-  TrendingUp,
-  LocalShipping,
-  BusinessCenter,
-  LocalGasStation,
-} from "@mui/icons-material";
+  DatePicker,
+  DateCalendar,
+  MonthCalendar,
+  YearCalendar,
+  PickersDay,
+} from "@mui/x-date-pickers";
+import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
+import isoWeek from "dayjs/plugin/isoWeek";
+import { AttachMoney, TrendingUp, LocalShipping } from "@mui/icons-material";
 import {
   getAdminRevenueAnalytics,
   getAdminRevenueByCustomer,
-  getAdminProfitAnalytics,
   getAdminTripsFinancialDetails,
-  getAdminAverageFuelCostPerDistance,
+  getAdminTripPerformance,
 } from "../../services/adminFinanceApi";
 import {
   AdminRevenueAnalytics,
-  AdminCustomerRevenue,
-  AdminProfitAnalytics,
+  PagedCustomerRevenue,
   AdminTripFinancial,
   AdminRevenuePeriodType,
+  TripPerformanceDTO,
 } from "../../types/admin-finance";
 import AdminRevenueChart from "./AdminRevenueChart";
 import AdminCustomerRevenueTable from "./AdminCustomerRevenueTable";
 import AdminTripFinancialsTable from "./AdminTripFinancialsTable";
-import AdminProfitChart from "./AdminProfitChart";
 import AdminStatCard from "./AdminStatCard";
+import AdminTripPerformanceChart from "./AdminTripPerformanceChart";
 import { DATE_FORMAT } from "../../utils/dateConfig";
+
+dayjs.extend(isBetween);
+dayjs.extend(isoWeek);
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -80,16 +83,24 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
   const [revenueData, setRevenueData] = useState<AdminRevenueAnalytics | null>(
     null
   );
-  const [customerRevenue, setCustomerRevenue] = useState<
-    AdminCustomerRevenue[]
-  >([]);
-  const [profitData, setProfitData] = useState<AdminProfitAnalytics | null>(
-    null
-  );
+  const [customerRevenue, setCustomerRevenue] = useState<PagedCustomerRevenue>({
+    currentPage: 1,
+    totalPages: 1,
+    pageSize: 10,
+    totalCount: 0,
+    hasPrevious: false,
+    hasNext: false,
+    items: [],
+  });
+  const [customerPageParams, setCustomerPageParams] = useState({
+    page: 1,
+    pageSize: 10,
+  });
   const [tripFinancials, setTripFinancials] = useState<AdminTripFinancial[]>(
     []
   );
-  const [avgFuelCost, setAvgFuelCost] = useState<number | null>(null);
+  const [tripPerformance, setTripPerformance] =
+    useState<TripPerformanceDTO | null>(null);
   const [periodType, setPeriodType] = useState<AdminRevenuePeriodType>(
     AdminRevenuePeriodType.Monthly
   );
@@ -99,6 +110,66 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
   const [endDate, setEndDate] = useState<dayjs.Dayjs>(() =>
     dayjs().endOf("month").endOf("day")
   );
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const handlePeriodTypeChange = (e: any) => {
+    const newPeriodType = e.target.value as AdminRevenuePeriodType;
+    setPeriodType(newPeriodType);
+
+    const today = dayjs();
+
+    switch (newPeriodType) {
+      case AdminRevenuePeriodType.Weekly:
+        setStartDate(today.startOf("week"));
+        setEndDate(today.endOf("week"));
+        break;
+      case AdminRevenuePeriodType.Monthly:
+        setStartDate(today.startOf("month"));
+        setEndDate(today.endOf("month"));
+        break;
+      case AdminRevenuePeriodType.Yearly:
+        setStartDate(today.startOf("year"));
+        setEndDate(today.endOf("year"));
+        break;
+      case AdminRevenuePeriodType.Custom:
+        break;
+    }
+
+    setShowDatePicker(false);
+  };
+
+  const handleWeekSelection = (date: dayjs.Dayjs | null) => {
+    if (!date) return;
+
+    const weekStart = date.startOf("week");
+    const weekEnd = date.endOf("week");
+
+    setStartDate(weekStart);
+    setEndDate(weekEnd);
+    setShowDatePicker(false);
+  };
+
+  const handleMonthSelection = (date: dayjs.Dayjs | null) => {
+    if (!date) return;
+
+    const monthStart = date.startOf("month");
+    const monthEnd = date.endOf("month");
+
+    setStartDate(monthStart);
+    setEndDate(monthEnd);
+    setShowDatePicker(false);
+  };
+
+  const handleYearSelection = (date: dayjs.Dayjs | null) => {
+    if (!date) return;
+
+    const yearStart = date.startOf("year");
+    const yearEnd = date.endOf("year");
+
+    setStartDate(yearStart);
+    setEndDate(yearEnd);
+    setShowDatePicker(false);
+  };
 
   const formatDateToString = (
     date: dayjs.Dayjs,
@@ -121,9 +192,9 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
       } else if (activeTab === 1) {
         await fetchCustomerRevenueData();
       } else if (activeTab === 2) {
-        await fetchProfitData();
-      } else if (activeTab === 3) {
         await fetchTripsData();
+      } else if (activeTab === 3) {
+        await fetchTripPerformanceData();
       }
     };
 
@@ -157,14 +228,19 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
     }
   };
 
-  const fetchCustomerRevenueData = async () => {
+  const fetchCustomerRevenueData = async (
+    page: number = customerPageParams.page,
+    pageSize: number = customerPageParams.pageSize
+  ) => {
     setLoading(true);
     setError(null);
 
     try {
       const response = await getAdminRevenueByCustomer(
         formatDateToString(startDate),
-        formatDateToString(endDate, true)
+        formatDateToString(endDate, true),
+        page,
+        pageSize
       );
 
       if (response.success && response.data) {
@@ -182,37 +258,10 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
     }
   };
 
-  const fetchProfitData = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [profitResponse, fuelCostResponse] = await Promise.all([
-        getAdminProfitAnalytics(
-          formatDateToString(startDate),
-          formatDateToString(endDate, true)
-        ),
-        getAdminAverageFuelCostPerDistance(
-          formatDateToString(startDate),
-          formatDateToString(endDate, true)
-        ),
-      ]);
-
-      if (profitResponse.success && profitResponse.data) {
-        setProfitData(profitResponse.data);
-      } else {
-        setError(profitResponse.message || "Không thể tải dữ liệu lợi nhuận");
-      }
-
-      if (fuelCostResponse.success && fuelCostResponse.data !== undefined) {
-        setAvgFuelCost(fuelCostResponse.data);
-      }
-    } catch (err) {
-      setError("Đã xảy ra lỗi khi tải dữ liệu lợi nhuận");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+  // Handle pagination for customer revenue table
+  const handleCustomerPageChange = (page: number, pageSize: number) => {
+    setCustomerPageParams({ page, pageSize });
+    fetchCustomerRevenueData(page, pageSize);
   };
 
   const fetchTripsData = async () => {
@@ -240,6 +289,165 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
     }
   };
 
+  const fetchTripPerformanceData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await getAdminTripPerformance(
+        formatDateToString(startDate),
+        formatDateToString(endDate, true)
+      );
+
+      if (response.success && response.data) {
+        setTripPerformance(response.data);
+      } else {
+        setError(
+          response.message || "Không thể tải dữ liệu hiệu suất chuyến đi"
+        );
+      }
+    } catch (err) {
+      setError("Đã xảy ra lỗi khi tải dữ liệu hiệu suất chuyến đi");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDateRangeDisplay = () => {
+    switch (periodType) {
+      case AdminRevenuePeriodType.Weekly:
+        return `Tuần: ${startDate.format("DD/MM/YYYY")} - ${endDate.format(
+          "DD/MM/YYYY"
+        )}`;
+      case AdminRevenuePeriodType.Monthly:
+        return `Tháng ${startDate.format("MM/YYYY")}`;
+      case AdminRevenuePeriodType.Yearly:
+        return `Năm ${startDate.format("YYYY")}`;
+      case AdminRevenuePeriodType.Custom:
+        return `${startDate.format("DD/MM/YYYY")} - ${endDate.format(
+          "DD/MM/YYYY"
+        )}`;
+      default:
+        return "";
+    }
+  };
+
+  const renderDatePicker = () => {
+    if (!showDatePicker) return null;
+
+    switch (periodType) {
+      case AdminRevenuePeriodType.Weekly:
+        return (
+          <Paper
+            elevation={3}
+            sx={{
+              position: "absolute",
+              zIndex: 1000,
+              mt: 1,
+              p: 2,
+              borderRadius: 2,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DateCalendar
+              value={startDate}
+              onChange={handleWeekSelection}
+              showDaysOutsideCurrentMonth
+              slots={{
+                day: (props) => {
+                  const isInSelectedWeek = props.day.isBetween(
+                    startDate,
+                    endDate,
+                    "day",
+                    "[]"
+                  );
+
+                  const isFirstDayOfSelectedWeek = props.day.isSame(
+                    startDate,
+                    "day"
+                  );
+                  const isLastDayOfSelectedWeek = props.day.isSame(
+                    endDate,
+                    "day"
+                  );
+
+                  return (
+                    <PickersDay
+                      {...props}
+                      disableMargin
+                      selected={isInSelectedWeek}
+                      sx={{
+                        ...(isInSelectedWeek && {
+                          backgroundColor: alpha(
+                            theme.palette.primary.main,
+                            0.15
+                          ),
+                          color: theme.palette.primary.main,
+                          fontWeight: 600,
+                          "&:hover": {
+                            backgroundColor: alpha(
+                              theme.palette.primary.main,
+                              0.25
+                            ),
+                          },
+                          ...(isFirstDayOfSelectedWeek && {
+                            borderTopLeftRadius: "50%",
+                            borderBottomLeftRadius: "50%",
+                          }),
+                          ...(isLastDayOfSelectedWeek && {
+                            borderTopRightRadius: "50%",
+                            borderBottomRightRadius: "50%",
+                          }),
+                        }),
+                      }}
+                    />
+                  );
+                },
+              }}
+            />
+          </Paper>
+        );
+      case AdminRevenuePeriodType.Monthly:
+        return (
+          <Paper
+            elevation={3}
+            sx={{
+              position: "absolute",
+              zIndex: 1000,
+              mt: 1,
+              p: 2,
+              borderRadius: 2,
+            }}
+          >
+            <MonthCalendar value={startDate} onChange={handleMonthSelection} />
+          </Paper>
+        );
+      case AdminRevenuePeriodType.Yearly:
+        return (
+          <Paper
+            elevation={3}
+            sx={{
+              position: "absolute",
+              zIndex: 1000,
+              mt: 1,
+              p: 2,
+              borderRadius: 2,
+            }}
+          >
+            <YearCalendar
+              value={startDate}
+              onChange={handleYearSelection}
+              minDate={dayjs().subtract(10, "year")}
+              maxDate={dayjs().add(1, "year")}
+            />
+          </Paper>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <Box sx={{ width: "100%" }}>
       <Box sx={{ mb: 3 }}>
@@ -263,9 +471,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
                   labelId="period-type-label"
                   value={periodType}
                   label="Khoảng Thời Gian"
-                  onChange={(e) =>
-                    setPeriodType(e.target.value as AdminRevenuePeriodType)
-                  }
+                  onChange={handlePeriodTypeChange}
                   sx={{ borderRadius: 1.5 }}
                 >
                   <MenuItem value={AdminRevenuePeriodType.Weekly}>
@@ -283,35 +489,56 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4}>
-              <DatePicker
-                label="Ngày Bắt Đầu"
-                value={startDate}
-                onChange={(newDate) => newDate && setStartDate(newDate)}
-                format={DATE_FORMAT}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    sx: { borderRadius: 1.5 },
-                  },
-                }}
-              />
-            </Grid>
-            {periodType === AdminRevenuePeriodType.Custom && (
-              <Grid item xs={12} sm={4}>
-                <DatePicker
-                  label="Ngày Kết Thúc"
-                  value={endDate}
-                  onChange={(newDate) => newDate && setEndDate(newDate)}
-                  format={DATE_FORMAT}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      sx: { borderRadius: 1.5 },
+
+            {periodType !== AdminRevenuePeriodType.Custom ? (
+              <Grid item xs={12} sm={5} sx={{ position: "relative" }}>
+                <Box
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  sx={{
+                    p: 2,
+                    border: `1px solid ${theme.palette.grey[300]}`,
+                    borderRadius: 1.5,
+                    cursor: "pointer",
+                    "&:hover": {
+                      borderColor: theme.palette.primary.main,
                     },
                   }}
-                />
+                >
+                  <Typography>{getDateRangeDisplay()}</Typography>
+                </Box>
+                {renderDatePicker()}
               </Grid>
+            ) : (
+              <>
+                <Grid item xs={12} sm={4}>
+                  <DatePicker
+                    label="Ngày Bắt Đầu"
+                    value={startDate}
+                    onChange={(newDate) => newDate && setStartDate(newDate)}
+                    format={DATE_FORMAT}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        sx: { borderRadius: 1.5 },
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <DatePicker
+                    label="Ngày Kết Thúc"
+                    value={endDate}
+                    onChange={(newDate) => newDate && setEndDate(newDate)}
+                    format={DATE_FORMAT}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        sx: { borderRadius: 1.5 },
+                      },
+                    }}
+                  />
+                </Grid>
+              </>
             )}
           </Grid>
         </Paper>
@@ -356,8 +583,8 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
         >
           <Tab label="Tổng Quan Doanh Thu" />
           <Tab label="Doanh Thu Theo Khách Hàng" />
-          <Tab label="Phân Tích Lợi Nhuận" />
           <Tab label="Tài Chính Chuyến Đi" />
+          <Tab label="Hiệu Suất Chuyến Đi" />
         </Tabs>
 
         {error && (
@@ -421,106 +648,36 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
             <TabPanel value={activeTab} index={1}>
               <Grid container spacing={3}>
                 <Grid item xs={12}>
-                  <AdminCustomerRevenueTable data={customerRevenue} />
+                  <AdminCustomerRevenueTable
+                    data={customerRevenue}
+                    onPageChange={handleCustomerPageChange}
+                  />
                 </Grid>
               </Grid>
             </TabPanel>
 
             <TabPanel value={activeTab} index={2}>
               <Grid container spacing={3}>
-                {profitData && (
-                  <>
-                    <Grid item xs={12} md={3}>
-                      <AdminStatCard
-                        title="Tổng Doanh Thu"
-                        value={`${profitData.totalRevenue.toLocaleString(
-                          "vi-VN"
-                        )} ₫`}
-                        icon={<AttachMoney />}
-                        color="success"
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <AdminStatCard
-                        title="Tổng Chi Phí Nhiên Liệu"
-                        value={`${profitData.totalFuelCost.toLocaleString(
-                          "vi-VN"
-                        )} ₫`}
-                        icon={<LocalGasStation />}
-                        color="error"
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <AdminStatCard
-                        title="Lợi Nhuận Ròng"
-                        value={`${profitData.netProfit.toLocaleString(
-                          "vi-VN"
-                        )} ₫`}
-                        icon={<BusinessCenter />}
-                        color="secondary"
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <AdminStatCard
-                        title="Tỷ Suất Lợi Nhuận"
-                        value={`${profitData.profitMarginPercentage.toFixed(
-                          2
-                        )}%`}
-                        icon={<TrendingUp />}
-                        color="warning"
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <AdminProfitChart data={profitData} />
-                    </Grid>
-                    {avgFuelCost !== null && (
-                      <Grid item xs={12}>
-                        <Paper
-                          sx={{
-                            p: 3,
-                            borderRadius: 2,
-                            border: `1px solid ${theme.palette.grey[200]}`,
-                            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 2,
-                            }}
-                          >
-                            <LocalGasStation
-                              sx={{
-                                fontSize: 40,
-                                color: theme.palette.error.main,
-                              }}
-                            />
-                            <Box>
-                              <Typography variant="h6" gutterBottom>
-                                Chỉ Số Chi Phí Nhiên Liệu
-                              </Typography>
-                              <Typography
-                                variant="body1"
-                                sx={{ fontWeight: 600 }}
-                              >
-                                Chi Phí Nhiên Liệu TB:{" "}
-                                {avgFuelCost.toLocaleString("vi-VN")} ₫/km
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </Paper>
-                      </Grid>
-                    )}
-                  </>
-                )}
+                <Grid item xs={12}>
+                  <AdminTripFinancialsTable data={tripFinancials} />
+                </Grid>
               </Grid>
             </TabPanel>
 
             <TabPanel value={activeTab} index={3}>
               <Grid container spacing={3}>
                 <Grid item xs={12}>
-                  <AdminTripFinancialsTable data={tripFinancials} />
+                  {tripPerformance ? (
+                    <AdminTripPerformanceChart
+                      data={tripPerformance}
+                      loading={loading}
+                    />
+                  ) : (
+                    <Alert severity="info" sx={{ borderRadius: 2 }}>
+                      Không có dữ liệu hiệu suất chuyến đi cho khoảng thời gian
+                      đã chọn
+                    </Alert>
+                  )}
                 </Grid>
               </Grid>
             </TabPanel>

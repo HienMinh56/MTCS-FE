@@ -31,6 +31,7 @@ import {
   ListItemSecondaryAction,
   Checkbox,
   Snackbar,
+  Fade,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
@@ -44,6 +45,9 @@ import FolderIcon from '@mui/icons-material/Folder';
 import ContactsIcon from '@mui/icons-material/Contacts';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PaymentIcon from '@mui/icons-material/Payment';
+import ImageIcon from "@mui/icons-material/Image";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import CloseIcon from "@mui/icons-material/Close";
 import {
   OrderDetails,
   ContainerType,
@@ -151,6 +155,15 @@ const OrderDetailPage: React.FC = () => {
   const [paymentConfirmationOpen, setPaymentConfirmationOpen] = useState(false);
   const [confirmCheckbox1, setConfirmCheckbox1] = useState(false);
   const [confirmCheckbox2, setConfirmCheckbox2] = useState(false);
+  const [imagePreview, setImagePreview] = useState<{
+    open: boolean;
+    src: string;
+    title: string;
+  }>({
+    open: false,
+    src: "",
+    title: "",
+  });
 
   // Close loading snackbar
   const handleCloseLoadingSnackbar = () => {
@@ -1056,6 +1069,21 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+  const openImagePreview = (src: string, title: string = "Image Preview") => {
+    setImagePreview({
+      open: true,
+      src,
+      title,
+    });
+  };
+
+  const closeImagePreview = () => {
+    setImagePreview({
+      ...imagePreview,
+      open: false,
+    });
+  };
+
   if (loading) {
     return (
       <Box
@@ -1634,7 +1662,7 @@ const OrderDetailPage: React.FC = () => {
                                     cursor: "pointer",
                                     borderRadius: 1,
                                   }}
-                                  onClick={() => window.open(fileUrl, "_blank")}
+                                  onClick={() => openImagePreview(fileUrl, fileName || `Order file ${index + 1}`)}
                                 />
                                 <Typography
                                   variant="caption"
@@ -1774,9 +1802,7 @@ const OrderDetailPage: React.FC = () => {
                                     cursor: "pointer",
                                     borderRadius: 1,
                                   }}
-                                  onClick={() =>
-                                    window.open(file.fileUrl, "_blank")
-                                  }
+                                  onClick={() => openImagePreview(file.fileUrl, file.fileName || `Contract image ${index + 1}`)}
                                 />
                                 <Typography
                                   variant="caption"
@@ -2600,6 +2626,63 @@ const OrderDetailPage: React.FC = () => {
             disabled={!confirmCheckbox1 || !confirmCheckbox2 || isSubmitting}
           >
             {isSubmitting ? "Đang xử lý..." : "Xác nhận"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={imagePreview.open}
+        onClose={closeImagePreview}
+        maxWidth="lg"
+        fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
+          <ImageIcon sx={{ mr: 1 }} color="primary" />
+          {imagePreview.title}
+          <IconButton
+            onClick={closeImagePreview}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}
+        >
+          <img
+            src={imagePreview.src}
+            alt={imagePreview.title}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+              padding: 16,
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            component="a"
+            href={imagePreview.src}
+            target="_blank"
+            rel="noopener noreferrer"
+            startIcon={<OpenInNewIcon />}
+            variant="outlined"
+          >
+            Mở trong cửa sổ mới
+          </Button>
+          <Button
+            onClick={closeImagePreview}
+            color="primary"
+            variant="contained"
+          >
+            Đóng
           </Button>
         </DialogActions>
       </Dialog>
