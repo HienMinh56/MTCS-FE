@@ -546,7 +546,7 @@ const TripDetailPage: React.FC = () => {
                         color: "primary.dark",
                       },
                     }}
-                    onClick={() => handleOrderClick(tripData.trackingCode)}
+                    onClick={() => handleOrderClick(tripData.orderId)}
                   >
                     {tripData.trackingCode || "N/A"}
                   </Typography>
