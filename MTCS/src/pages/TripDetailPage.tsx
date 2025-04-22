@@ -33,6 +33,7 @@ import {
   TextField,
   Snackbar,
   SnackbarContent,
+  Fade,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DirectionsIcon from "@mui/icons-material/Directions";
@@ -48,6 +49,9 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import GasMeterIcon from "@mui/icons-material/GasMeter";
 import CancelIcon from "@mui/icons-material/Cancel";
+import ImageIcon from "@mui/icons-material/Image";
+import CloseIcon from "@mui/icons-material/Close";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -73,6 +77,17 @@ const TripDetailPage: React.FC = () => {
   const [cancelLoading, setCancelLoading] = useState<boolean>(false);
   const [cancelSuccess, setCancelSuccess] = useState<boolean>(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+
+  // Add state for image preview
+  const [imagePreview, setImagePreview] = useState<{
+    open: boolean;
+    src: string;
+    title: string;
+  }>({
+    open: false,
+    src: "",
+    title: "",
+  });
 
   // Add validation function for note
   const validateNote = (note: string): string => {
@@ -153,6 +168,22 @@ const TripDetailPage: React.FC = () => {
 
   const handleConfirmModalClose = () => {
     setConfirmCancelModalOpen(false);
+  };
+
+  // Add functions to handle image preview
+  const openImagePreview = (src: string, title: string = "Image Preview") => {
+    setImagePreview({
+      open: true,
+      src,
+      title,
+    });
+  };
+
+  const closeImagePreview = () => {
+    setImagePreview({
+      ...imagePreview,
+      open: false,
+    });
   };
 
   // Fetch delivery statuses
@@ -755,7 +786,7 @@ const TripDetailPage: React.FC = () => {
                                           borderRadius: 1,
                                         }}
                                         onClick={() =>
-                                          window.open(file.fileUrl, "_blank")
+                                          openImagePreview(file.fileUrl, "Ảnh biên bản")
                                         }
                                       />
                                     )
@@ -846,7 +877,7 @@ const TripDetailPage: React.FC = () => {
                                           borderRadius: 1,
                                         }}
                                         onClick={() =>
-                                          window.open(file.fileUrl, "_blank")
+                                          openImagePreview(file.fileUrl, "Hoá đơn nhiên liệu")
                                         }
                                       />
                                     )
@@ -1373,6 +1404,64 @@ const TripDetailPage: React.FC = () => {
           </Button>
           <Button onClick={handleConfirmCancel} color="error" disabled={cancelLoading}>
             {cancelLoading ? "Đang xử lý..." : "Hủy chuyến"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog
+        open={imagePreview.open}
+        onClose={closeImagePreview}
+        maxWidth="lg"
+        fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
+          <ImageIcon sx={{ mr: 1 }} color="primary" />
+          {imagePreview.title}
+          <IconButton
+            onClick={closeImagePreview}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}
+        >
+          <img
+            src={imagePreview.src}
+            alt={imagePreview.title}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+              padding: 16,
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            component="a"
+            href={imagePreview.src}
+            target="_blank"
+            rel="noopener noreferrer"
+            startIcon={<OpenInNewIcon />}
+            variant="outlined"
+          >
+            Mở trong cửa sổ mới
+          </Button>
+          <Button
+            onClick={closeImagePreview}
+            color="primary"
+            variant="contained"
+          >
+            Đóng
           </Button>
         </DialogActions>
       </Dialog>
