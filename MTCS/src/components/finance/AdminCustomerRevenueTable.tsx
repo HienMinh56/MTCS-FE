@@ -159,7 +159,7 @@ const AdminCustomerRevenueTable: React.FC<AdminCustomerRevenueTableProps> = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {data.items.map((customer, index) => {
+              {data.items?.map((customer, index) => {
                 // Add highlighting for top customers
                 const isTopThree = index < 3;
 
@@ -239,7 +239,7 @@ const AdminCustomerRevenueTable: React.FC<AdminCustomerRevenueTableProps> = ({
         )}
       </TableContainer>
 
-      {data.items.length === 0 && !loading && (
+      {(!data.items || data.items.length === 0) && !loading && (
         <Box sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">
             Không có dữ liệu để hiển thị
