@@ -74,10 +74,12 @@ import { Driver } from "../types/driver";
 import { Tractor } from "../types/tractor";
 import { Trailer } from "../types/trailer";
 import { getDeliveryStatus } from "../services/deliveryStatus";
+import useAuth from "../hooks/useAuth"; // Thêm import useAuth
 
 const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth(); // Lấy thông tin user từ useAuth hook
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [contractFiles, setContractFiles] = useState<ContractFile[] | null>(
     null
@@ -1189,8 +1191,8 @@ const OrderDetailPage: React.FC = () => {
             label={getStatusDisplay(orderDetails.status).label}
             color={getStatusDisplay(orderDetails.status).color as any}
           />
-          {/* Show update info button only for Pending orders */}
-          {orderDetails.status === OrderStatus.Pending && (
+          {/* Show update info button only for Pending orders and Staff role */}
+          {orderDetails.status === OrderStatus.Pending && user?.role === "Staff" && (
             <Button
               variant="outlined"
               color="primary"
@@ -1201,7 +1203,7 @@ const OrderDetailPage: React.FC = () => {
             </Button>
           )}
           {/* Show payment status button for all orders except those already paid */}
-          {orderDetails.isPay !== IsPay.Yes && (
+          {orderDetails.isPay !== IsPay.Yes && user?.role === "Staff" && (
             <Button
               variant="outlined"
               color={orderDetails.isPay === IsPay.Yes ? "success" : "warning"}
@@ -1976,28 +1978,32 @@ const OrderDetailPage: React.FC = () => {
                   contractFiles &&
                   contractFiles.length > 0 ? (
                     <Box display="flex" justifyContent="space-between">
-                    <Box display="flex" justifyContent="center" mt={2}>
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleAutoScheduleTrip}
-                        disabled={autoScheduleLoading}
-                      >
-                        {autoScheduleLoading ? "Đang xếp chuyến..." : "Hệ thống xếp chuyến"}
-                      </Button>
-                    </Box>
+                    {user?.role === "Staff" && (
+                      <>
+                      <Box display="flex" justifyContent="center" mt={2}>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<AddIcon />}
+                          onClick={handleAutoScheduleTrip}
+                          disabled={autoScheduleLoading}
+                        >
+                          {autoScheduleLoading ? "Đang xếp chuyến..." : "Hệ thống xếp chuyến"}
+                        </Button>
+                      </Box>
 
-                    <Box display="flex" justifyContent="center" mt={2}>
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleOpenCreateTripDialog}
-                      >
-                        Tạo chuyến thủ công
-                      </Button>
-                    </Box>
+                      <Box display="flex" justifyContent="center" mt={2}>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<AddIcon />}
+                          onClick={handleOpenCreateTripDialog}
+                        >
+                          Tạo chuyến thủ công
+                        </Button>
+                      </Box>
+                      </>
+                    )}
                     </Box>
                   ) : (
                     <Alert severity="warning" sx={{ mt: 2 }}>

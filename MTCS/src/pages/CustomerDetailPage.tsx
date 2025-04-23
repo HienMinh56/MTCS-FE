@@ -70,6 +70,7 @@ import { updateContract } from "../services/contractApi";
 import { CustomerDetail } from "../types/customer";
 import { ContractFile } from "../types/contract";
 import AddContractFileModal from "../components/contract/AddContractFileModal";
+import useAuth from "../hooks/useAuth"; // Thêm import useAuth
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -96,6 +97,9 @@ function TabPanel(props: TabPanelProps) {
 const CustomerDetailPage = () => {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth(); // Lấy thông tin user từ useAuth hook
+  const isAdmin = user?.role === "Admin"; // Kiểm tra xem người dùng có role Admin không
+
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -713,15 +717,17 @@ const CustomerDetailPage = () => {
         }}
       >
         <Typography variant="h6">Danh sách hợp đồng</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          size="small"
-          onClick={handleOpenAddContractModal}
-        >
-          Thêm hợp đồng
-        </Button>
+        {user?.role === "Staff" && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            size="small"
+            onClick={handleOpenAddContractModal}
+          >
+            Thêm hợp đồng
+          </Button>
+        )}
       </Box>
 
       {customer.contracts && customer.contracts.length > 0 ? (
@@ -810,14 +816,18 @@ const CustomerDetailPage = () => {
                             >
                               <DownloadIcon fontSize="small" />
                             </IconButton>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleEditContractClick(contract)}
-                              title="Chỉnh sửa hợp đồng"
-                              color="info"
-                            >
-                              <EditOutlinedIcon fontSize="small" />
-                            </IconButton>
+                            {user?.role === "Staff" && (
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  handleEditContractClick(contract)
+                                }
+                                title="Chỉnh sửa hợp đồng"
+                                color="info"
+                              >
+                                <EditOutlinedIcon fontSize="small" />
+                              </IconButton>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -1044,26 +1054,28 @@ const CustomerDetailPage = () => {
         <Typography variant="h5" component="h1" fontWeight="500">
           Chi tiết khách hàng
         </Typography>
-        <Box>
-          <Button
-            variant="outlined"
-            startIcon={<EditIcon />}
-            onClick={handleEdit}
-            sx={{ mr: 1 }}
-          >
-            Chỉnh sửa
-          </Button>
-          {/* Commented out delete button
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={handleDelete}
-          >
-            Xóa
-          </Button>
-          */}
-        </Box>
+        {user?.role === "Staff" && (
+          <Box>
+            <Button
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={handleEdit}
+              sx={{ mr: 1 }}
+            >
+              Chỉnh sửa
+            </Button>
+            {/* Commented out delete button
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={handleDelete}
+            >
+              Xóa
+            </Button>
+            */}
+          </Box>
+        )}
       </Box>
 
       {/* Main Content */}

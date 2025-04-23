@@ -38,8 +38,10 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import { useNavigate } from "react-router-dom";
 import { getCustomers, createCustomer } from "../services/customerApi";
 import { Customer } from "../types/customer";
+import useAuth from "../hooks/useAuth"; // Add useAuth import
 
 const Customers = () => {
+  const { user } = useAuth(); // Use the useAuth hook to get user information
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
@@ -460,15 +462,17 @@ const Customers = () => {
               </Typography>
             </Box>
             <Box sx={{ display: "flex", gap: 1, width: { xs: "100%", sm: "auto" } }}>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AddIcon />}
-                onClick={handleOpenCreateDialog}
-                size="small"
-              >
-                Thêm khách hàng
-              </Button>
+              {user?.role?.toLowerCase() !== 'admin' && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={handleOpenCreateDialog}
+                  size="small"
+                >
+                  Thêm khách hàng
+                </Button>
+              )}
               <TextField
                 size="small"
                 placeholder="Tìm kiếm theo Công ty, Email, Số điện thoại..."
