@@ -1771,6 +1771,10 @@ const OrderDetailPage: React.FC = () => {
                       file.fileType === "PowerPoint Presentation" ||
                       file.fileType === "Text Document" ||
                       file.fileType === "Archive";
+                    const description =
+                      typeof file === "string" ? null : file.description;
+                    const notes =
+                      typeof file === "string" ? null : file.note;
 
                     const isImage =
                       file.fileType === "Image" ||
@@ -1803,7 +1807,7 @@ const OrderDetailPage: React.FC = () => {
                                     borderRadius: 1,
                                   }}
                                   onClick={() => openImagePreview(file.fileUrl, file.fileName || `Contract image ${index + 1}`)}
-                                />
+                                />                                
                                 <Typography
                                   variant="caption"
                                   display="block"
@@ -1834,6 +1838,58 @@ const OrderDetailPage: React.FC = () => {
                                     `Tài liệu hợp đồng ${index + 1}`}
                                 </a>
                               </Typography>
+                            )}
+
+                            {(description || notes) && (
+                              <Box
+                                mt={1}
+                                pt={1}
+                                sx={{
+                                  borderTop: "1px dashed rgba(0, 0, 0, 0.12)",
+                                  maxHeight: "80px",
+                                  overflow: "auto",
+                                }}
+                              >
+                                {description && (
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      component="span"
+                                      sx={{ fontWeight: "medium" }}
+                                    >
+                                      Mô tả:
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      component="span"
+                                      sx={{ ml: 0.5 }}
+                                    >
+                                      {description}
+                                    </Typography>
+                                  </Box>
+                                )}
+
+                                {notes && (
+                                  <Box mt={0.5}>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      component="span"
+                                      sx={{ fontWeight: "medium" }}
+                                    >
+                                      Ghi chú:
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      component="span"
+                                      sx={{ ml: 0.5 }}
+                                    >
+                                      {notes}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              </Box>
                             )}
                           </CardContent>
                         </Card>
