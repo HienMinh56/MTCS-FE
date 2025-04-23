@@ -52,9 +52,8 @@ function App() {
                 element={<DistanceCalculatorPage />}
               />
 
-              <Route
-                element={<ProtectedRoute allowedRoles={["Staff", "Admin"]} />}
-              >
+              {/* Staff routes - accessible to Staff and Admin */}
+              <Route element={<ProtectedRoute allowedRoles={["Staff"]} />}>
                 <Route path="/staff-menu/*" element={<StaffMenu />} />
                 <Route
                   path="/staff-menu/orders/:orderId"
@@ -81,14 +80,35 @@ function App() {
                   element={<DriverProfile />}
                 />
                 <Route path="/drivers/:driverId" element={<DriverProfile />} />
-                <Route
-                  path="/distance-calculator"
-                  element={<DistanceCalculatorPage />}
-                />
               </Route>
 
+              {/* Admin routes - accessible only to Admin */}
               <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
                 <Route path="/admin/*" element={<AdminFinanceDashboard />} />
+                <Route
+                  path="/admin/orders/:orderId"
+                  element={<OrderDetailPage />}
+                />
+                <Route
+                  path="/admin/trips/:tripId"
+                  element={<TripDetailPage />}
+                />
+                <Route
+                  path="/admin/tractors/:tractorId"
+                  element={<TractorDetailPage />}
+                />
+                <Route
+                  path="/admin/trailers/:trailerId"
+                  element={<TrailerDetailPage />}
+                />
+                <Route
+                  path="/admin/customers/:customerId"
+                  element={<CustomerDetailPage />}
+                />
+                <Route
+                  path="/admin/drivers/:driverId"
+                  element={<DriverProfile />}
+                />
               </Route>
 
               <Route element={<ProtectedRoute />}>
