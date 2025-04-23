@@ -20,10 +20,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" replace state={{ from: location }} />;
   }
 
+  // Special case: Admin should have access to all routes
+  if (user?.role === "Admin") {
+    // Admin can access any protected route
+    return <Outlet />;
+  }
+
+  // For non-admin users, check allowed roles
   if (allowedRoles.length > 0 && !hasRole(allowedRoles)) {
     return <Navigate to={redirectPath} replace state={{ from: location }} />;
   }
 
+  // Path redirection logic
   if (user?.role === "Admin" && location.pathname.startsWith("/staff-menu/")) {
     const adminPath = location.pathname.replace("/staff-menu/", "/admin/");
     return <Navigate to={adminPath} replace />;
