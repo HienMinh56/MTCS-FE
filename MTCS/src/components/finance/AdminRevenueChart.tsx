@@ -198,7 +198,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
   }, [data.totalRevenue]);
 
   const formatCurrency = (value: number) => {
-    return value.toLocaleString("vi-VN") + " ₫";
+    return new Intl.NumberFormat("vi-VN").format(value) + " ₫";
   };
 
   const handlePaidOrdersClick = () => {
