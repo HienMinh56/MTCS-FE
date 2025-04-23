@@ -941,12 +941,12 @@ const TripDetailPage: React.FC = () => {
                             <Chip
                               size="small"
                               label={
-                                report.status === "resolved"
+                                report.status === "Resolved"
                                   ? "Đã xử lý"
                                   : "Chưa xử lý"
                               }
                               color={
-                                report.status === "resolved"
+                                report.status === "Resolved"
                                   ? "success"
                                   : "warning"
                               }
