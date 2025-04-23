@@ -18,6 +18,7 @@ import {
   useTheme,
   Tooltip,
   Badge,
+  Paper,
 } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
@@ -40,6 +41,7 @@ import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
 import logo1 from "../assets/logo1.png";
+import mobileAppQR from "../assets/MobileApp.png";
 
 const drawerWidth = 240;
 
@@ -400,6 +402,33 @@ const StaffMenu: React.FC = () => {
             </ListItem>
           ))}
         </List>
+        <Box
+          sx={{
+            mt: "auto",
+            p: 2,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Paper
+            elevation={3}
+            sx={{
+              p: 1,
+              borderRadius: 2,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Box
+              component="img"
+              src={mobileAppQR}
+              alt="Mobile App QR Code"
+              sx={{ width: "160px", height: "160px" }}
+            />
+          </Paper>
+        </Box>
       </Drawer>
 
       <Box

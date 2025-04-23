@@ -169,6 +169,8 @@ const SystemConfiguration: React.FC = () => {
       return "kg";
     } else if (key.includes("WorkTime")) {
       return "giờ";
+    } else if (key.includes("Alert")) {
+      return "ngày";
     }
     return "";
   };

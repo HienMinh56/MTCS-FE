@@ -52,6 +52,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import ImageIcon from "@mui/icons-material/Image";
 import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import { useAuth } from "../contexts/AuthContext";
 
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -62,16 +63,21 @@ import { getDeliveryStatus } from "../services/deliveryStatus";
 const TripDetailPage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "Admin";
 
   const [tripData, setTripData] = useState<tripDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [deliveryStatuses, setDeliveryStatuses] = useState<{[key: string]: {statusName: string, color: string}} | null>(null);
+  const [deliveryStatuses, setDeliveryStatuses] = useState<{
+    [key: string]: { statusName: string; color: string };
+  } | null>(null);
   const [statusesLoaded, setStatusesLoaded] = useState<boolean>(false);
-  
+
   // Add states for cancel trip functionality
   const [cancelModalOpen, setCancelModalOpen] = useState<boolean>(false);
-  const [confirmCancelModalOpen, setConfirmCancelModalOpen] = useState<boolean>(false);
+  const [confirmCancelModalOpen, setConfirmCancelModalOpen] =
+    useState<boolean>(false);
   const [cancelNote, setCancelNote] = useState<string>("");
   const [noteError, setNoteError] = useState<string>("");
   const [cancelLoading, setCancelLoading] = useState<boolean>(false);
@@ -92,23 +98,23 @@ const TripDetailPage: React.FC = () => {
   // Add validation function for note
   const validateNote = (note: string): string => {
     const trimmedNote = note.trim();
-    
+
     // Check if note is empty
     if (!trimmedNote) {
       return "Vui lòng nhập lý do hủy chuyến";
     }
-    
+
     // Check if note starts and ends with valid characters (not whitespace)
     // Valid characters: letters, numbers, or punctuation marks
     if (/^\s/.test(trimmedNote) || /\s$/.test(trimmedNote)) {
       return "Lý do không được bắt đầu hoặc kết thúc bằng dấu cách";
     }
-    
+
     // Check for multiple spaces between words
     if (/\s{2,}/.test(trimmedNote)) {
       return "Lý do không được chứa nhiều hơn một dấu cách giữa các từ";
     }
-    
+
     return "";
   };
 
@@ -123,7 +129,7 @@ const TripDetailPage: React.FC = () => {
   const handleCancelSubmit = () => {
     const error = validateNote(cancelNote);
     setNoteError(error);
-    
+
     if (!error) {
       setCancelModalOpen(false);
       setConfirmCancelModalOpen(true);
@@ -133,24 +139,23 @@ const TripDetailPage: React.FC = () => {
   // Handle final confirmation and API call
   const handleConfirmCancel = async () => {
     if (!tripId) return;
-    
+
     setCancelLoading(true);
     setCancelError(null);
-    
+
     try {
       const result = await CancelTrip({
         tripId,
-        note: cancelNote.trim()
+        note: cancelNote.trim(),
       });
-      
+
       setCancelSuccess(true);
       setConfirmCancelModalOpen(false);
-      
+
       // Reload the data after a short delay to show the updated trip status
       setTimeout(() => {
         window.location.reload();
       }, 2000);
-      
     } catch (error: any) {
       console.error("Error cancelling trip:", error);
       setCancelError(error.message || "Có lỗi xảy ra khi hủy chuyến");
@@ -192,30 +197,32 @@ const TripDetailPage: React.FC = () => {
       try {
         setLoading(true); // Show loading state while fetching both resources
         const statusData = await getDeliveryStatus();
-        
+
         // Convert to a lookup map for easier use
-        const statusMap: {[key: string]: {statusName: string, color: string}} = {};
-        
+        const statusMap: {
+          [key: string]: { statusName: string; color: string };
+        } = {};
+
         if (Array.isArray(statusData)) {
           statusData.forEach((status) => {
             // Use status.statusId as key and provide statusName with default color of "default"
             // You can modify this to map different colors based on status if needed
             statusMap[status.statusId] = {
               statusName: status.statusName,
-              color: getStatusColor(status.statusId)
+              color: getStatusColor(status.statusId),
             };
           });
-        } else if (statusData && typeof statusData === 'object') {
+        } else if (statusData && typeof statusData === "object") {
           // Handle if response is an object with a data property
           const dataArray = statusData.data || [];
           dataArray.forEach((status) => {
             statusMap[status.statusId] = {
               statusName: status.statusName,
-              color: getStatusColor(status.statusId)
+              color: getStatusColor(status.statusId),
             };
           });
         }
-        
+
         setDeliveryStatuses(statusMap);
         setStatusesLoaded(true);
       } catch (error) {
@@ -224,7 +231,7 @@ const TripDetailPage: React.FC = () => {
         setStatusesLoaded(true);
       }
     };
-    
+
     fetchDeliveryStatuses();
   }, []);
 
@@ -277,8 +284,8 @@ const TripDetailPage: React.FC = () => {
     };
 
     fetchTripDetails();
-  }, [tripId, statusesLoaded]);  
-  
+  }, [tripId, statusesLoaded]);
+
   // Helper function to assign color based on status
   const getStatusColor = (statusId: string) => {
     switch (statusId) {
@@ -293,7 +300,7 @@ const TripDetailPage: React.FC = () => {
       case "completed":
         return "success";
       case "canceled":
-        return "error";  // Sử dụng màu đỏ (error) cho trạng thái hủy
+        return "error"; // Sử dụng màu đỏ (error) cho trạng thái hủy
       case "delaying":
         return "warning";
       default:
@@ -304,12 +311,12 @@ const TripDetailPage: React.FC = () => {
   // Helper function to format trip status
   const getTripStatusDisplay = (status: string | null) => {
     if (!status) return { label: "Không xác định", color: "default" };
-    
+
     // Check if we have dynamic statuses from API and if this status exists in our map
     if (deliveryStatuses && deliveryStatuses[status]) {
-      return { 
-        label: deliveryStatuses[status].statusName, 
-        color: deliveryStatuses[status].color 
+      return {
+        label: deliveryStatuses[status].statusName,
+        color: deliveryStatuses[status].color,
       };
     }
   };
@@ -342,15 +349,19 @@ const TripDetailPage: React.FC = () => {
     if (tripData?.status === "canceled") {
       return true;
     }
-    
+
     // Check if there's any canceled status in history
-    if (tripData?.tripStatusHistories && tripData.tripStatusHistories.length > 0) {
-      return tripData.tripStatusHistories.some(history => 
-        history.statusId === "canceled" || 
-        getTripStatusDisplay(history.statusId)?.label === "Đã hủy chuyến"
+    if (
+      tripData?.tripStatusHistories &&
+      tripData.tripStatusHistories.length > 0
+    ) {
+      return tripData.tripStatusHistories.some(
+        (history) =>
+          history.statusId === "canceled" ||
+          getTripStatusDisplay(history.statusId)?.label === "Đã hủy chuyến"
       );
     }
-    
+
     return false;
   };
 
@@ -622,8 +633,7 @@ const TripDetailPage: React.FC = () => {
                   </Typography>
                   <Typography variant="body1">{tripData.matchBy}</Typography>
                 </Box>
-              </Grid>              
-              
+              </Grid>
             </Grid>
           </Paper>
 
@@ -786,7 +796,10 @@ const TripDetailPage: React.FC = () => {
                                           borderRadius: 1,
                                         }}
                                         onClick={() =>
-                                          openImagePreview(file.fileUrl, "Ảnh biên bản")
+                                          openImagePreview(
+                                            file.fileUrl,
+                                            "Ảnh biên bản"
+                                          )
                                         }
                                       />
                                     )
@@ -877,7 +890,10 @@ const TripDetailPage: React.FC = () => {
                                           borderRadius: 1,
                                         }}
                                         onClick={() =>
-                                          openImagePreview(file.fileUrl, "Hoá đơn nhiên liệu")
+                                          openImagePreview(
+                                            file.fileUrl,
+                                            "Hoá đơn nhiên liệu"
+                                          )
                                         }
                                       />
                                     )
@@ -1331,27 +1347,29 @@ const TripDetailPage: React.FC = () => {
                   Xem thông tin tài xế
                 </Button>
               )}
-              
+
               {/* Cancel Trip Button */}
-              {!isTripcanceled() && tripData.status !== "completed" && (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  fullWidth
-                  startIcon={<CancelIcon />}
-                  onClick={() => setCancelModalOpen(true)}
-                >
-                  Hủy chuyến
-                </Button>
-              )}
+              {!isAdmin &&
+                !isTripcanceled() &&
+                tripData.status !== "completed" && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    fullWidth
+                    startIcon={<CancelIcon />}
+                    onClick={() => setCancelModalOpen(true)}
+                  >
+                    Hủy chuyến
+                  </Button>
+                )}
             </Box>
           </Paper>
         </Grid>
       </Grid>
 
       {/* Cancel Trip Modal */}
-      <Dialog 
-        open={cancelModalOpen} 
+      <Dialog
+        open={cancelModalOpen}
         onClose={handleCancelModalClose}
         maxWidth="md"
         fullWidth
@@ -1373,10 +1391,10 @@ const TripDetailPage: React.FC = () => {
             multiline
             rows={5}
             variant="outlined"
-            sx={{ 
-              '& .MuiOutlinedInput-root': {
-                fontSize: '1.1rem',
-              }
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                fontSize: "1.1rem",
+              },
             }}
           />
         </DialogContent>
@@ -1384,7 +1402,11 @@ const TripDetailPage: React.FC = () => {
           <Button onClick={handleCancelModalClose} color="primary">
             Đóng
           </Button>
-          <Button onClick={handleCancelSubmit} color="error" disabled={!!noteError}>
+          <Button
+            onClick={handleCancelSubmit}
+            color="error"
+            disabled={!!noteError}
+          >
             Xác nhận
           </Button>
         </DialogActions>
@@ -1395,14 +1417,19 @@ const TripDetailPage: React.FC = () => {
         <DialogTitle>Xác nhận hủy chuyến</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Bạn có chắc chắn muốn hủy chuyến này? Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn hủy chuyến này? Hành động này không thể hoàn
+            tác.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleConfirmModalClose} color="primary">
             Đóng
           </Button>
-          <Button onClick={handleConfirmCancel} color="error" disabled={cancelLoading}>
+          <Button
+            onClick={handleConfirmCancel}
+            color="error"
+            disabled={cancelLoading}
+          >
             {cancelLoading ? "Đang xử lý..." : "Hủy chuyến"}
           </Button>
         </DialogActions>
@@ -1431,9 +1458,7 @@ const TripDetailPage: React.FC = () => {
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent
-          sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}
-        >
+        <DialogContent sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}>
           <img
             src={imagePreview.src}
             alt={imagePreview.title}

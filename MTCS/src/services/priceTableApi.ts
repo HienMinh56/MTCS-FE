@@ -47,3 +47,37 @@ export const updatePriceTables = async (
     throw formatApiError(error);
   }
 };
+
+export const importPriceTable = async (file: File): Promise<ApiResponse> => {
+  try {
+    const formData = new FormData();
+    formData.append("excelFile", file);
+
+    const response = await axiosInstance.post(
+      "/api/price-tables/excel",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw formatApiError(error);
+  }
+};
+
+export const downloadPriceTableTemplate = async (): Promise<Blob> => {
+  try {
+    const response = await axiosInstance.get(
+      "/api/price-tables/download-template",
+      {
+        responseType: "blob",
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw formatApiError(error);
+  }
+};

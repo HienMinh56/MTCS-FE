@@ -5,13 +5,15 @@ import { useAuth } from "../contexts/AuthContext";
 interface ProtectedRouteProps {
   allowedRoles?: string[];
   redirectPath?: string;
+  pathPrefix?: string;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles = [],
   redirectPath = "/unauthorized",
+  pathPrefix,
 }) => {
-  const { isAuthenticated, hasRole } = useAuth();
+  const { isAuthenticated, hasRole, user } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
@@ -20,6 +22,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (allowedRoles.length > 0 && !hasRole(allowedRoles)) {
     return <Navigate to={redirectPath} replace state={{ from: location }} />;
+  }
+
+  if (user?.role === "Admin" && location.pathname.startsWith("/staff-menu/")) {
+    const adminPath = location.pathname.replace("/staff-menu/", "/admin/");
+    return <Navigate to={adminPath} replace />;
+  }
+
+  if (user?.role === "Staff" && location.pathname.startsWith("/admin/")) {
+    const staffPath = location.pathname.replace("/admin/", "/staff-menu/");
+    return <Navigate to={staffPath} replace />;
   }
 
   return <Outlet />;
