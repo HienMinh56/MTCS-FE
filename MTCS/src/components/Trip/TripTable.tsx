@@ -769,7 +769,7 @@ const TripTable: React.FC = () => {
               <TableHead>
                 <TableRow>
                   <TableCell align="center">Mã chuyến</TableCell>
-                  <TableCell align="center">Mã đơn hàng</TableCell>
+                  <TableCell align="center">Mã vận chuyển</TableCell>
                   <TableCell align="center">Tài xế</TableCell>
                   <TableCell align="center">Thời gian bắt đầu</TableCell>
                   <TableCell align="center">Thời gian kết thúc</TableCell>
@@ -803,7 +803,7 @@ const TripTable: React.FC = () => {
                       }}
                     >
                       <TableCell align="center">{trip.tripId || 'N/A'}</TableCell>
-                      <TableCell align="center">{trip.orderId || 'N/A'}</TableCell>
+                      <TableCell align="center">{trip.trackingCode || 'N/A'}</TableCell>
                       <TableCell align="center">
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <PersonIcon sx={{ mr: 1, fontSize: 16, color: 'primary.main' }} />
