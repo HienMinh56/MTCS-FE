@@ -134,7 +134,6 @@ export const calculatePrice = async ({
   distance,
   containerType,
   containerSize,
-  deliveryType,
 }: PriceCalculationParams): Promise<PriceCalculationResponse> => {
   try {
     const response = await axiosInstance.get<PriceCalculationResponse>(
@@ -144,7 +143,6 @@ export const calculatePrice = async ({
           distance,
           containerType,
           containerSize,
-          deliveryType,
         },
       }
     );

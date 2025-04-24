@@ -81,7 +81,6 @@ export interface PriceCalculationParams {
   distance: number;
   containerType: number; // 1 for khô, 2 for lạnh
   containerSize: number; // 1 for 20', 2 for 40'
-  deliveryType: number; // 1 for nhập, 2 for xuất
 }
 
 export interface PriceResponse {
