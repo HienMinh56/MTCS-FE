@@ -66,6 +66,9 @@ import {
   updateCustomer,
   deleteCustomer,
 } from "../services/customerApi";
+import {
+  OrderStatus
+} from "../types/order";
 import { updateContract } from "../services/contractApi";
 import { CustomerDetail } from "../types/customer";
 import { ContractFile } from "../types/contract";
@@ -171,6 +174,23 @@ const CustomerDetailPage = () => {
   // Add state for contracts pagination
   const [contractsPage, setContractsPage] = useState(0);
   const [contractsRowsPerPage, setContractsRowsPerPage] = useState(5);
+
+  const getStatusDisplay = (status: OrderStatus) => {
+      switch (status) {
+        case OrderStatus.Pending:
+          return { label: "Chờ xử lý", color: "warning" };
+        case OrderStatus.Scheduled:
+          return { label: "Đã lên lịch", color: "info" };
+        case OrderStatus.Delivering:
+          return { label: "Đang giao hàng", color: "info" };
+        case OrderStatus.Shipped:
+          return { label: "Đã giao hàng", color: "info" };
+        case OrderStatus.Completed:
+          return { label: "Hoàn thành", color: "success" };
+        default:
+          return { label: "Không xác định", color: "default" };
+      }
+    };
 
   useEffect(() => {
     const fetchCustomerDetails = async () => {
@@ -882,10 +902,10 @@ const CustomerDetailPage = () => {
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell>Mã đơn hàng</TableCell>
-                  <TableCell>Ngày tạo</TableCell>
+                  <TableCell align="center">Mã đơn hàng</TableCell>
+                  <TableCell align="center">Ngày tạo</TableCell>
                   <TableCell align="right">Tổng giá trị</TableCell>
-                  <TableCell>Trạng thái</TableCell>
+                  <TableCell align="center">Trạng thái</TableCell>
                   <TableCell align="center">Thao tác</TableCell>
                 </TableRow>
               </TableHead>
@@ -924,7 +944,15 @@ const CustomerDetailPage = () => {
                           <TableCell>{orderId}</TableCell>
                           <TableCell>{createdDate}</TableCell>
                           <TableCell align="right">{price}</TableCell>
-                          <TableCell>{status}</TableCell>
+                          <TableCell align="center" sx={{
+                                                fontWeight: "medium",
+                                                color:
+                                                  order.status === OrderStatus.Completed
+                                                    ? "success.main"
+                                                    : order.status === OrderStatus.Scheduled
+                                                    ? "info.main"
+                                                    : "warning.main",
+                                              }}>{getStatusDisplay(order.status).label}</TableCell>
                           <TableCell align="center">
                             <IconButton
                               size="small"

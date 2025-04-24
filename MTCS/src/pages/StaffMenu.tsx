@@ -41,7 +41,6 @@ import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
 import logo1 from "../assets/logo1.png";
-import mobileAppQR from "../assets/MobileApp.png";
 
 const drawerWidth = 240;
 
@@ -415,12 +414,6 @@ const StaffMenu: React.FC = () => {
               alignItems: "center",
             }}
           >
-            <Box
-              component="img"
-              src={mobileAppQR}
-              alt="Mobile App QR Code"
-              sx={{ width: "160px", height: "160px" }}
-            />
           </Paper>
         </Box>
       </Drawer>
