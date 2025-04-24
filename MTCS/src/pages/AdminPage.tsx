@@ -33,6 +33,7 @@ import {
   ChevronLeft,
   Menu as MenuIcon,
   Settings as SettingsIcon,
+  ManageAccounts as ManageAccountsIcon,
 } from "@mui/icons-material";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
@@ -55,6 +56,7 @@ import FinanceDashboard from "../components/finance/FinanceDashboard";
 import Customers from "../components/Customers";
 import SystemConfiguration from "../components/SystemConfiguration";
 import PriceTableComponent from "../components/Price/PriceTable";
+import UserManagement from "../components/User/UserManagement";
 import Drivers from "./Drivers";
 import Tractors from "./Tractors";
 import Trailers from "./Trailers";
@@ -117,6 +119,13 @@ const AdminFinanceDashboard: React.FC = () => {
       icon: <BarChartOutlined />,
       selected: activeSideTab === "finance",
       path: "/admin/finance",
+    },
+    {
+      id: "user-management",
+      text: "Quản Lý Người Dùng",
+      icon: <ManageAccountsIcon />,
+      selected: activeSideTab === "user-management",
+      path: "/admin/user-management",
     },
     {
       id: "customers",
@@ -455,6 +464,7 @@ const AdminFinanceDashboard: React.FC = () => {
               <Route path="/trailers" element={<Trailers />} />
               <Route path="/pricing" element={<PriceTableComponent />} />
               <Route path="/system-config" element={<SystemConfiguration />} />
+              <Route path="/user-management" element={<UserManagement />} />
               <Route
                 path="/"
                 element={<Navigate to="/admin/finance" replace />}

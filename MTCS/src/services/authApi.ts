@@ -2,6 +2,15 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { ApiResponse } from "../types/api-types";
 import axiosInstance from "../utils/axiosConfig";
+import {
+  AdminUpdateUserDTO,
+  InternalUser,
+  PagedList,
+  PaginationParams,
+  UserRole,
+  UserStatus,
+  RegisterUserDTO,
+} from "../types/auth";
 
 const AUTH_BASE_PATH = "/api/Authen";
 
@@ -291,6 +300,166 @@ export const logout = () => {
   window.dispatchEvent(new Event("auth-changed"));
 };
 
+// User management functions
+export const getUsers = async (
+  paginationParams: PaginationParams,
+  keyword?: string,
+  role?: UserRole
+): Promise<ApiResponse<PagedList<InternalUser>>> => {
+  try {
+    let queryParams = new URLSearchParams();
+
+    // Add pagination parameters
+    queryParams.append("pageNumber", paginationParams.pageNumber.toString());
+    queryParams.append("pageSize", paginationParams.pageSize.toString());
+
+    // Add optional filter parameters
+    if (keyword) queryParams.append("keyword", keyword);
+    if (role !== undefined) queryParams.append("role", role.toString());
+
+    const response = await axiosInstance.get<
+      ApiResponse<PagedList<InternalUser>>
+    >(`${AUTH_BASE_PATH}/users?${queryParams.toString()}`);
+
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    throw error;
+  }
+};
+
+export const changeUserStatus = async (
+  userId: string,
+  newStatus: UserStatus
+): Promise<ApiResponse<string>> => {
+  try {
+    const response = await axiosInstance.put<ApiResponse<string>>(
+      `${AUTH_BASE_PATH}/users/${userId}/status`,
+      newStatus
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error changing user status:", error);
+    throw error;
+  }
+};
+
+export const adminUpdateUser = async (
+  userId: string,
+  updateData: AdminUpdateUserDTO
+): Promise<ApiResponse<UserProfile>> => {
+  try {
+    const response = await axiosInstance.put<ApiResponse<UserProfile>>(
+      `${AUTH_BASE_PATH}/users/${userId}/admin-update`,
+      updateData
+    );
+
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data) {
+      const responseData = error.response.data as ApiResponse<null>;
+      throw new Error(
+        responseData.messageVN ||
+          responseData.message ||
+          "Failed to update user"
+      );
+    }
+    throw new Error("Failed to update user");
+  }
+};
+
+export const registerStaff = async (
+  userData: RegisterUserDTO
+): Promise<string> => {
+  try {
+    console.log("Sending staff registration data:", JSON.stringify(userData));
+    const response = await axiosInstance.post<ApiResponse<string>>(
+      `${AUTH_BASE_PATH}/register-staff`,
+      userData
+    );
+    if (!response.data.success) {
+      throw new Error(
+        response.data.messageVN ||
+          response.data.message ||
+          "Đăng ký nhân viên thất bại"
+      );
+    }
+
+    return (
+      response.data.messageVN ||
+      response.data.message ||
+      "Đăng ký nhân viên thành công"
+    );
+  } catch (error) {
+    console.error("Staff registration failed");
+    if (axios.isAxiosError(error)) {
+      console.error("Error details:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers,
+      });
+
+      if (error.response?.data) {
+        const responseData = error.response.data as ApiResponse<string>;
+        throw new Error(
+          responseData.messageVN ||
+            responseData.message ||
+            "Đăng ký nhân viên thất bại"
+        );
+      }
+    }
+    throw error;
+  }
+};
+
+export const registerAdmin = async (
+  userData: RegisterUserDTO
+): Promise<string> => {
+  try {
+    console.log("Sending admin registration data:", JSON.stringify(userData));
+    const response = await axiosInstance.post<ApiResponse<string>>(
+      `${AUTH_BASE_PATH}/register-admin`,
+      userData
+    );
+
+    if (!response.data.success) {
+      throw new Error(
+        response.data.messageVN ||
+          response.data.message ||
+          "Đăng ký quản trị viên thất bại"
+      );
+    }
+
+    return (
+      response.data.messageVN ||
+      response.data.message ||
+      "Đăng ký quản trị viên thành công"
+    );
+  } catch (error) {
+    console.error("Admin registration failed");
+    if (axios.isAxiosError(error)) {
+      console.error("Error details:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers,
+      });
+
+      if (error.response?.data) {
+        const responseData = error.response.data as ApiResponse<string>;
+        throw new Error(
+          responseData.messageVN ||
+            responseData.message ||
+            "Đăng ký quản trị viên thất bại"
+        );
+      }
+    }
+    throw error;
+  }
+};
+
 export default {
   login,
   register,
@@ -298,4 +467,9 @@ export default {
   logout,
   getProfile,
   updateProfile,
+  getUsers,
+  changeUserStatus,
+  adminUpdateUser,
+  registerStaff,
+  registerAdmin,
 };
