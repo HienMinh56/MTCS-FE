@@ -396,8 +396,8 @@ const IncidentDetailDialog = ({
         </Box>
       </DialogContent>
       <DialogActions>
-        {/* Show button only if incident is not completed OR if incident cannot be repaired */}
-        {(incident.status === "Handling" && incident.type === 2) && (
+        {/* Show button only if incident is not completed OR if incident cannot be repaired OR requires assistance */}
+        {(incident.status === "Handling" && (incident.type === 2 || incident.type === 3)) && (
           <Button 
             variant="contained" 
             color="primary"

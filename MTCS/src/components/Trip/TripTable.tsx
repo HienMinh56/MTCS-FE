@@ -230,12 +230,12 @@ const TripTable: React.FC = () => {
         // Search by driver name or order tracking code
         const tripId = trip.tripId || ''; 
         const driverName = trip.driverName || ''; 
-        const orderId = trip.orderId || '';
+        const trackingCode = trip.trackingCode || '';
         
         return (
           tripId.toLowerCase().includes(lowerSearchTerm) ||
           driverName.toLowerCase().includes(lowerSearchTerm) ||
-          orderId.toLowerCase().includes(lowerSearchTerm)
+          trackingCode.toLowerCase().includes(lowerSearchTerm)
         );
       });
       setIsFiltering(true);
