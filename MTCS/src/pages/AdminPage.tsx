@@ -58,6 +58,9 @@ import PriceTableComponent from "../components/Price/PriceTable";
 import Drivers from "./Drivers";
 import Tractors from "./Tractors";
 import Trailers from "./Trailers";
+import StraightenIcon from "@mui/icons-material/Straighten";
+import DeliveryStatusPage from "./DeliveryStatusPage";
+
 
 const AdminFinanceDashboard: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -159,6 +162,13 @@ const AdminFinanceDashboard: React.FC = () => {
       icon: <SettingsIcon />,
       selected: activeSideTab === "system-config",
       path: "/admin/system-config",
+    },
+    {
+      id: "delivery-status",
+      text: "Trạng thái giao hàng",
+      icon: <StraightenIcon />, // You can replace this icon with a more suitable one
+      selected: activeSideTab === "delivery-status",
+      path: "/admin/delivery-status",
     },
   ];
 
@@ -455,6 +465,7 @@ const AdminFinanceDashboard: React.FC = () => {
               <Route path="/trailers" element={<Trailers />} />
               <Route path="/pricing" element={<PriceTableComponent />} />
               <Route path="/system-config" element={<SystemConfiguration />} />
+              <Route path="/delivery-status" element={<DeliveryStatusPage />} />
               <Route
                 path="/"
                 element={<Navigate to="/admin/finance" replace />}

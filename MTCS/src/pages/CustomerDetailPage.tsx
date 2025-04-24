@@ -140,10 +140,15 @@ const CustomerDetailPage = () => {
   const [openEditContractDialog, setOpenEditContractDialog] = useState(false);
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [editContractForm, setEditContractForm] = useState({
+    Summary: "",
     ContractId: "",
     StartDate: "",
     EndDate: "",
     Status: 1,
+    CreatedBy: "",
+    CreatedDate: "",
+    SignedTime: "",
+    SignedBy: "",
     FileIdsToRemove: [] as string[],
     AddedFiles: null as File[] | null,
   });
@@ -520,14 +525,16 @@ const CustomerDetailPage = () => {
         ? Number(contract.status)
         : 1;
 
-    console.log("Contract status from API:", contract.status);
-    console.log("Parsed contract status:", contractStatus);
-
     setEditContractForm({
       ContractId: contract.contractId,
       StartDate: formatDateForInput(contract.startDate),
       EndDate: formatDateForInput(contract.endDate),
       Status: contractStatus,
+      CreatedBy: contract.createdBy || "",
+      CreatedDate: formatDateForInput(contract.createdDate) || "",
+      SignedTime: formatDateForInput(contract.signedTime) || "",
+      SignedBy: contract.signedBy || "",
+      Summary: contract.summary || "",
       FileIdsToRemove: [],
       AddedFiles: null,
     });
@@ -1561,6 +1568,60 @@ const CustomerDetailPage = () => {
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <Grid container spacing={3}>
+              <Grid item xs={12} md={12}>
+                <TextField
+                  name="Summary"
+                  label="Tóm tắt hợp đồng"
+                  fullWidth
+                  value={editContractForm.Summary}
+                  margin="dense"
+                  InputProps={{ readOnly: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="SignedTime"
+                  label="Ngày ký"
+                  type="date"
+                  fullWidth
+                  value={editContractForm.SignedTime ? editContractForm.SignedTime.substring(0, 10) : ""}
+                  margin="dense"
+                  InputProps={{ readOnly: true }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="SignedBy"
+                  label="Người ký"
+                  fullWidth
+                  value={editContractForm.SignedBy}
+                  margin="dense"
+                  InputProps={{ readOnly: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="CreatedBy"
+                  label="Người tạo"
+                  fullWidth
+                  value={editContractForm.CreatedBy}
+                  margin="dense"
+                  InputProps={{ readOnly: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="CreatedDate"
+                  label="Ngày tạo"
+                  type="datetime-local"
+                  fullWidth
+                  value={editContractForm.CreatedDate}
+                  margin="dense"
+                  InputProps={{ readOnly: true }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
                   name="StartDate"
@@ -1665,19 +1726,35 @@ const CustomerDetailPage = () => {
                                 sx={{
                                   display: "flex",
                                   justifyContent: "space-between",
-                                  alignItems: "center",
+                                  alignItems: "flex-start",
                                 }}
                               >
                                 <Box>
-                                  <Typography variant="body2">
+                                  <Typography variant="body2" fontWeight="500">
                                     {file.fileName || `File ${index + 1}`}
                                   </Typography>
+                                  
+                                  {/* Display Description */}
+                                  <Box sx={{ mt: 1 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                      <strong>Mô tả:</strong> {file.description || "Không có mô tả"}
+                                    </Typography>
+                                  </Box>
+                                  
+                                  {/* Display Note */}
+                                  <Box sx={{ mt: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                      <strong>Ghi chú:</strong> {file.note || "Không có ghi chú"}
+                                    </Typography>
+                                  </Box>
+                                  
                                   {isMarkedForRemoval && (
                                     <Typography variant="caption" color="error">
                                       Đánh dấu để xóa
                                     </Typography>
                                   )}
                                 </Box>
+                                
                                 <Box>
                                   <IconButton
                                     size="small"

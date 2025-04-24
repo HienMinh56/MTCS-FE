@@ -544,10 +544,9 @@ const DeliveryStatusPage: React.FC = () => {
       disableGutters
       maxWidth={false}
       sx={{
-        height: "calc(100vh - 64px)",
+        // Remove height and overflow properties that override parent layout
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden",
         px: { xs: 1, sm: 2, md: 3, lg: 4 },
         py: { xs: 1, sm: 2 },
       }}

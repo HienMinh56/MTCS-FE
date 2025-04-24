@@ -129,13 +129,7 @@ const StaffMenu: React.FC = () => {
       text: "Rơ-moóc",
       icon: <DirectionsCarFilledIcon />,
       selected: activeTab === "trailers",
-    },
-    {
-      id: "delivery-status",
-      text: "Trạng thái giao hàng",
-      icon: <StraightenIcon />, // You can replace this icon with a more suitable one
-      selected: activeTab === "delivery-status",
-    },
+    },    
   ];
 
   const renderActiveComponent = () => {
