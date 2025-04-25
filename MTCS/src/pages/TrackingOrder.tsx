@@ -34,7 +34,7 @@ import {
 import { trackingOrder } from "../services/orderApi";
 import { getGeocodeByAddress } from "../services/mapApi";
 import { styled } from "@mui/material/styles";
-import dayjs from "dayjs";
+import dayjs from "dayjs"; // Thêm lại import dayjs
 import { useTheme } from "@mui/material/styles";
 import { useParams, useNavigate } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -218,6 +218,9 @@ const TrackingOrder: React.FC = () => {
   const driverMarkerRef = useRef<any>(null);
   const driverPathRef = useRef<any>(null);
   const pathCoordinatesRef = useRef<[number, number][]>([]);
+  // Add reference for driver to delivery route
+  const driverToDeliveryPathRef = useRef<any>(null);
+  const apiKeyRef = useRef<string>("");
 
   // Function to fetch order tracking data
   const handleTrackOrder = async () => {
@@ -402,6 +405,10 @@ const TrackingOrder: React.FC = () => {
     if (!mapRef.current) return;
 
     const map = mapRef.current;
+    const apiKey = import.meta.env.VITE_GOONG_MAP_API_KEY;
+    apiKeyRef.current = apiKey;
+    
+    console.log("Driver location updated:", { lat, lng });
     
     // Store the new coordinates in the path history
     pathCoordinatesRef.current.push([lng, lat]);
@@ -474,6 +481,89 @@ const TrackingOrder: React.FC = () => {
       }
     }
     
+    // Vẽ đường từ vị trí tài xế đến điểm giao hàng nếu có vị trí giao hàng
+    if (locations.delivery?.coordinates) {
+      const deliveryCoords = locations.delivery.coordinates;
+      console.log("Delivery coordinates:", deliveryCoords);
+      
+      // Chuẩn bị URL cho API Directions
+      // CHÚ Ý: Goong API yêu cầu origin và destination theo dạng lat,lng
+      const directionsUrl = `https://rsapi.goong.io/Direction?origin=${lat},${lng}&destination=${deliveryCoords.lat},${deliveryCoords.lng}&vehicle=car&api_key=${apiKey}`;
+
+      console.log("Calling directions API:", directionsUrl);
+      
+      // Gọi API để lấy đường đi từ vị trí tài xế đến điểm giao hàng
+      fetch(directionsUrl)
+        .then(response => {
+          console.log("Directions API response status:", response.status);
+          return response.json();
+        })
+        .then(data => {
+          console.log("Directions API response:", data);
+          
+          if (data.routes && data.routes.length > 0 && data.routes[0].overview_polyline) {
+            const polyline = data.routes[0].overview_polyline.points;
+            console.log("Got polyline:", polyline ? "Yes (length: " + polyline.length + ")" : "No");
+            
+            const decodedCoords = decodePolyline(polyline);
+            console.log("Decoded coordinates count:", decodedCoords.length);
+            
+            if (decodedCoords.length > 0) {
+              // Chuyển đổi tọa độ thành định dạng [lng, lat] cho Goong Maps
+              const routeCoordinates = decodedCoords.map(coord => [coord.lng, coord.lat]);
+              
+              // Nếu đã có layer và source, xóa chúng trước
+              if (map.getLayer('driverToDeliveryLine')) {
+                map.removeLayer('driverToDeliveryLine');
+              }
+              
+              if (map.getSource('driverToDelivery')) {
+                map.removeSource('driverToDelivery');
+                driverToDeliveryPathRef.current = null;
+              }
+              
+              // Tạo mới source và layer
+              map.addSource('driverToDelivery', {
+                type: 'geojson',
+                data: {
+                  type: 'Feature',
+                  properties: {},
+                  geometry: {
+                    type: 'LineString',
+                    coordinates: routeCoordinates
+                  }
+                }
+              });
+              
+              map.addLayer({
+                id: 'driverToDeliveryLine',
+                type: 'line',
+                source: 'driverToDelivery',
+                layout: {
+                  'line-join': 'round',
+                  'line-cap': 'round'
+                },
+                paint: {
+                  'line-color': '#FFFE00',  // Thay đổi màu thành đỏ (từ #2196F3)
+                  'line-width': 4,
+                  'line-dasharray': [1, 2]  // Kiểu đường nét đứt
+                }
+              });
+              
+              driverToDeliveryPathRef.current = 'created';
+              console.log("Driver to delivery route added to map successfully!");
+            }
+          } else {
+            console.error("Direction API error or no routes found:", data);
+          }
+        })
+        .catch(err => {
+          console.error("Error loading driver to delivery route:", err);
+        });
+    } else {
+      console.warn("No delivery coordinates available for routing");
+    }
+    
     // Animate to the new position smoothly
     if (pathCoordinatesRef.current.length === 1) {
       map.flyTo({
@@ -484,20 +574,74 @@ const TrackingOrder: React.FC = () => {
     }
   };
 
+  // Helper function to decode Google/Goong Maps encoded polylines
+  const decodePolyline = (encoded: string) => {
+    if (!encoded) return [];
+    
+    let index = 0;
+    const len = encoded.length;
+    let lat = 0;
+    let lng = 0;
+    const coordinates = [];
+    
+    while (index < len) {
+      let b;
+      let shift = 0;
+      let result = 0;
+      
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      
+      const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+      
+      shift = 0;
+      result = 0;
+      
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      
+      const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+      
+      coordinates.push({
+        lat: lat / 1e5,
+        lng: lng / 1e5
+      });
+    }
+    
+    return coordinates;
+  };
+
   // Set driver ID and auto-start tracking when tracking data loads
   useEffect(() => {
     if (trackingData?.trips?.[0]?.driverId) {
       const tripDriverId = trackingData.trips[0].driverId;
       setDriverId(tripDriverId);
       
-      // Auto-start tracking if we're not already tracking
-      if (!trackingActive && tripDriverId) {
-        console.log("Auto-starting driver tracking for:", tripDriverId);
-        connectSignalR(tripDriverId);
-        setTrackingActive(true);
+      // Check if both locations have coordinates before starting tracking
+      if (locations.pickup?.coordinates && locations.delivery?.coordinates) {
+        // Auto-start tracking if we're not already tracking
+        if (!trackingActive && tripDriverId) {
+          console.log("Auto-starting driver tracking for:", tripDriverId);
+          console.log("Pickup coordinates:", locations.pickup.coordinates);
+          console.log("Delivery coordinates:", locations.delivery.coordinates);
+          connectSignalR(tripDriverId);
+          setTrackingActive(true);
+        }
+      } else {
+        console.log("Waiting for location coordinates before starting tracking:", 
+          locations.pickup?.coordinates ? "Pickup ready" : "Pickup not ready", 
+          locations.delivery?.coordinates ? "Delivery ready" : "Delivery not ready");
       }
     }
-  }, [trackingData, trackingActive]);
+  }, [trackingData, trackingActive, locations]);
 
   // Cleanup WebSocket connection on unmount
   useEffect(() => {
@@ -613,51 +757,6 @@ const TrackingOrder: React.FC = () => {
       });
     };
 
-    // Helper function to decode Google/Goong Maps encoded polylines
-    const decodePolyline = (encoded: string) => {
-      if (!encoded) return [];
-      
-      let index = 0;
-      const len = encoded.length;
-      let lat = 0;
-      let lng = 0;
-      const coordinates = [];
-      
-      while (index < len) {
-        let b;
-        let shift = 0;
-        let result = 0;
-        
-        do {
-          b = encoded.charCodeAt(index++) - 63;
-          result |= (b & 0x1f) << shift;
-          shift += 5;
-        } while (b >= 0x20);
-        
-        const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
-        lat += dlat;
-        
-        shift = 0;
-        result = 0;
-        
-        do {
-          b = encoded.charCodeAt(index++) - 63;
-          result |= (b & 0x1f) << shift;
-          shift += 5;
-        } while (b >= 0x20);
-        
-        const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
-        lng += dlng;
-        
-        coordinates.push({
-          lat: lat / 1e5,
-          lng: lng / 1e5
-        });
-      }
-      
-      return coordinates;
-    };
-
     // If goongjs is not loaded, load it first
     if (!window.goongjs) {
       const script = document.createElement('script');
@@ -692,29 +791,82 @@ const TrackingOrder: React.FC = () => {
   const renderTripTimeline = () => {
     if (!sortedStatuses.length) return null;
 
+    // Hàm format thời gian với xử lý lỗi
+    const formatDateTime = (dateTimeString: string) => {
+      try {
+        console.log('Raw dateTimeString value:', dateTimeString);
+        
+        // Nếu chuỗi thời gian rỗng hoặc null/undefined
+        if (!dateTimeString) {
+          return 'Không có dữ liệu thời gian';
+        }
+        
+        // Thử parse ngày trực tiếp
+        let date;
+        try {
+          date = new Date(dateTimeString);
+          console.log('Parsed date:', date);
+          
+          // Kiểm tra nếu date không phải là ngày hợp lệ
+          if (isNaN(date.getTime())) {
+            console.warn('Invalid date after parsing:', dateTimeString);
+            return 'Không có dữ liệu thời gian';
+          }
+        } catch (err) {
+          console.error('Error parsing date:', err);
+          return 'Không có dữ liệu thời gian';
+        }
+        
+        // Format ngày tháng thủ công thay vì dùng dayjs
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        
+        const formattedResult = `${day}/${month}/${year} ${hours}:${minutes}`;
+        console.log('Formatted result:', formattedResult);
+        return formattedResult;
+      } catch (err) {
+        console.error('Error formatting date:', err);
+        return 'Không có dữ liệu thời gian';
+      }
+    };
+
+    // Important: Set the active step to a value LESS THAN the total status count
+    // This ensures all steps are rendered and visible
     return (
       <Box sx={{ my: 4 }}>
         <Typography variant="h6" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
-          Trip Status Timeline
+          Trạng thái vận chuyển của chuyến hàng
         </Typography>
-        <Stepper orientation="vertical" activeStep={sortedStatuses.length}>
-          {sortedStatuses.map((status, index) => (
-            <Step key={status.historyId} completed={true}>
-              <StepLabel>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  {status.statusName}
-                </Typography>
-              </StepLabel>
-              <StepContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <AccessTime sx={{ mr: 1, color: theme.palette.text.secondary }} fontSize="small" />
-                  <Typography variant="body2" color="text.secondary">
-                    {dayjs(status.startTime).format('MMM D, YYYY h:mm A')}
+        
+        {/* Fix: Change activeStep to sortedStatuses.length - 1 to properly show all steps */}
+        <Stepper orientation="vertical" activeStep={sortedStatuses.length - 1}>
+          {sortedStatuses.map((status, index) => {
+            // Format thời gian và lưu vào biến
+            const formattedTime = formatDateTime(status.startTime);
+            console.log(`Status ${index} formatted time:`, formattedTime);
+            
+            return (
+              <Step key={status.historyId} completed={true}>
+                <StepLabel>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    {status.statusName}
                   </Typography>
-                </Box>
-              </StepContent>
-            </Step>
-          ))}
+                </StepLabel>
+                <StepContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <AccessTime sx={{ mr: 1, color: theme.palette.text.secondary }} fontSize="small" />
+
+                    Bắt đầu lúc {formattedTime || 'NO TIME DATA'}
+                    
+                   
+                  </Box>
+                </StepContent>
+              </Step>
+            );
+          })}
         </Stepper>
       </Box>
     );
@@ -781,7 +933,7 @@ const TrackingOrder: React.FC = () => {
       'connected': 'Đã kết nối, đang đợi lấy vị trí...',
       'disconnected': 'Chưa kết nối',
       'connecting': 'Đang kết nối...',
-      'receiving': `Đang lấy vị trí tài xế ${driverId}`
+      'receiving': `Bạn đang quan sát vị trí của tài xế`
     };
 
     return (
