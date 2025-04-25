@@ -43,6 +43,7 @@ import {
   AdminRevenueAnalytics,
   AdminRevenuePeriodType,
   OrderSummary,
+  PeriodicRevenueItem,
 } from "../../types/admin-finance";
 import { getAdminRevenueAnalytics } from "../../services/adminFinanceApi";
 import OrdersListModal from "./OrdersListModal";
@@ -79,12 +80,31 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
   const [chartTab, setChartTab] = useState(0);
   const initialRenderRef = useRef(true);
   const dataRef = useRef(data.totalRevenue);
+  const [periodChartData, setPeriodChartData] = useState<PeriodicRevenueItem[]>(
+    []
+  );
+
+  // Process the new periodicData when it's available
+  useEffect(() => {
+    if (data?.periodicData && data.periodicData.length > 0) {
+      setPeriodChartData(data.periodicData);
+      setLoading(false);
+    }
+  }, [data?.periodicData]);
 
   useEffect(() => {
     const fetchMonthlyData = async () => {
       if (initialRenderRef.current || dataRef.current !== data.totalRevenue) {
         setLoading(true);
         dataRef.current = data.totalRevenue;
+
+        // If we have periodicData, we don't need to fetch additional data
+        if (data?.periodicData && data.periodicData.length > 0) {
+          setPeriodChartData(data.periodicData);
+          setLoading(false);
+          initialRenderRef.current = false;
+          return;
+        }
 
         try {
           const currentDate = new Date();
@@ -195,7 +215,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
     };
 
     fetchMonthlyData();
-  }, [data.totalRevenue]);
+  }, [data]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN").format(value) + " ₫";
@@ -249,8 +269,90 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
     if (value >= 1000) {
       return `${(value / 1000).toFixed(0)}K`;
     }
-    return value.toString(); // Convert number to string
+    return value.toString();
   };
+
+  // Format date labels for the chart based on periodicData
+  const formatDateLabel = (item: PeriodicRevenueItem) => {
+    // For daily data in monthly view (e.g. "01/01/2025")
+    if (item.periodLabel.includes("/")) {
+      return item.periodLabel.split("/")[1]; // Return just the day part
+    }
+
+    // For monthly data in yearly view (e.g. "January 2025")
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    const englishMonthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    const vietnameseMonthNames = [
+      "Tháng 1",
+      "Tháng 2",
+      "Tháng 3",
+      "Tháng 4",
+      "Tháng 5",
+      "Tháng 6",
+      "Tháng 7",
+      "Tháng 8",
+      "Tháng 9",
+      "Tháng 10",
+      "Tháng 11",
+      "Tháng 12",
+    ];
+
+    // Extract month name from the periodLabel (handle both English and Vietnamese formats)
+    let monthName = item.periodLabel.split(" ")[0];
+
+    // Check English month names
+    let monthIndex = englishMonthNames.findIndex((m) => m === monthName);
+    if (monthIndex === -1) {
+      // Check Vietnamese month names
+      monthIndex = vietnameseMonthNames.findIndex((m) => m === monthName);
+    }
+
+    // Return month number (1-12)
+    return monthIndex > -1 ? (monthIndex + 1).toString() : "1";
+  };
+
+  // Determine if we need to show periodic data from API or historical chart
+  const shouldUsePeriodicData =
+    data.periodicData && data.periodicData.length > 0;
+  const chartDataToUse = shouldUsePeriodicData
+    ? data.periodicData.map((item) => ({
+        period: formatDateLabel(item),
+        periodFull: item.periodLabel,
+        totalRevenue: item.totalRevenue,
+        paidRevenue: item.paidRevenue,
+        unpaidRevenue: item.unpaidRevenue,
+        paidOrders: item.paidOrders,
+        unpaidOrders: item.unpaidOrders,
+        completedOrders: item.completedOrders,
+        averageRevenuePerOrder: item.averageRevenuePerOrder,
+      }))
+    : monthlyData;
 
   return (
     <Card
@@ -606,14 +708,14 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
             <Box sx={{ width: "100%", height: 350 }}>
               {chartTab === 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={monthlyData}>
+                  <ComposedChart data={chartDataToUse}>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
                       stroke={alpha(theme.palette.divider, 0.7)}
                     />
                     <XAxis
-                      dataKey="month"
+                      dataKey={shouldUsePeriodicData ? "period" : "month"}
                       tick={{
                         fill: theme.palette.text.secondary,
                         fontSize: 12,
@@ -630,7 +732,27 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                       axisLine={{ stroke: theme.palette.divider }}
                       tickLine={false}
                     />
-                    <RechartsTooltip />
+                    <RechartsTooltip
+                      formatter={(value: number, name: string) => {
+                        if (
+                          name === "Doanh thu đã thanh toán" ||
+                          name === "Doanh thu chưa thanh toán" ||
+                          name === "Tổng doanh thu"
+                        ) {
+                          return [formatCurrency(value), name];
+                        }
+                        return [value, name];
+                      }}
+                      labelFormatter={(label) => {
+                        const item = chartDataToUse.find(
+                          (item) =>
+                            item.period === label || item.month === label
+                        );
+                        return item && shouldUsePeriodicData
+                          ? item.periodFull
+                          : label;
+                      }}
+                    />
                     <Legend
                       iconType="circle"
                       iconSize={10}
@@ -650,41 +772,57 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                       dataKey="paidRevenue"
                       name="Doanh thu đã thanh toán"
                       fill={theme.palette.success.main}
-                      barSize={32}
+                      barSize={
+                        shouldUsePeriodicData && chartDataToUse.length > 12
+                          ? 16
+                          : 32
+                      }
                       radius={[4, 4, 0, 0]}
                     />
                     <Bar
                       dataKey="unpaidRevenue"
                       name="Doanh thu chưa thanh toán"
                       fill={theme.palette.warning.main}
-                      barSize={32}
+                      barSize={
+                        shouldUsePeriodicData && chartDataToUse.length > 12
+                          ? 16
+                          : 32
+                      }
                       radius={[4, 4, 0, 0]}
                     />
                     <Line
                       type="monotone"
-                      dataKey="revenue"
+                      dataKey="totalRevenue"
                       name="Tổng doanh thu"
                       stroke={theme.palette.primary.main}
                       strokeWidth={3}
                       dot={{
-                        r: 6,
+                        r:
+                          shouldUsePeriodicData && chartDataToUse.length > 12
+                            ? 3
+                            : 6,
                         strokeWidth: 2,
                         fill: "#fff",
                       }}
-                      activeDot={{ r: 8 }}
+                      activeDot={{
+                        r:
+                          shouldUsePeriodicData && chartDataToUse.length > 12
+                            ? 5
+                            : 8,
+                      }}
                     />
                   </ComposedChart>
                 </ResponsiveContainer>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={monthlyData}>
+                  <ComposedChart data={chartDataToUse}>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
                       stroke={alpha(theme.palette.divider, 0.7)}
                     />
                     <XAxis
-                      dataKey="month"
+                      dataKey={shouldUsePeriodicData ? "period" : "month"}
                       tick={{
                         fill: theme.palette.text.secondary,
                         fontSize: 12,
@@ -712,7 +850,26 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                       axisLine={{ stroke: theme.palette.divider }}
                       tickLine={false}
                     />
-                    <RechartsTooltip />
+                    <RechartsTooltip
+                      formatter={(value: number, name: string) => {
+                        if (
+                          name === "Doanh thu đã thanh toán" ||
+                          name === "Doanh thu chưa thanh toán"
+                        ) {
+                          return [formatCurrency(value), name];
+                        }
+                        return [value, name];
+                      }}
+                      labelFormatter={(label) => {
+                        const item = chartDataToUse.find(
+                          (item) =>
+                            item.period === label || item.month === label
+                        );
+                        return item && shouldUsePeriodicData
+                          ? item.periodFull
+                          : label;
+                      }}
+                    />
                     <Legend
                       iconType="circle"
                       iconSize={10}
@@ -732,7 +889,11 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                       dataKey="paidOrders"
                       name="Số đơn đã thanh toán"
                       fill={alpha(theme.palette.success.main, 0.8)}
-                      barSize={20}
+                      barSize={
+                        shouldUsePeriodicData && chartDataToUse.length > 12
+                          ? 10
+                          : 20
+                      }
                       yAxisId="right"
                       radius={[4, 4, 0, 0]}
                     />
@@ -740,7 +901,11 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                       dataKey="unpaidOrders"
                       name="Số đơn chưa thanh toán"
                       fill={alpha(theme.palette.warning.main, 0.8)}
-                      barSize={20}
+                      barSize={
+                        shouldUsePeriodicData && chartDataToUse.length > 12
+                          ? 10
+                          : 20
+                      }
                       yAxisId="right"
                       radius={[4, 4, 0, 0]}
                     />
@@ -752,7 +917,10 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                       yAxisId="left"
                       strokeWidth={3}
                       dot={{
-                        r: 5,
+                        r:
+                          shouldUsePeriodicData && chartDataToUse.length > 12
+                            ? 3
+                            : 5,
                         strokeWidth: 2,
                         fill: "#fff",
                       }}
@@ -765,7 +933,10 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                       yAxisId="left"
                       strokeWidth={3}
                       dot={{
-                        r: 5,
+                        r:
+                          shouldUsePeriodicData && chartDataToUse.length > 12
+                            ? 3
+                            : 5,
                         strokeWidth: 2,
                         fill: "#fff",
                       }}

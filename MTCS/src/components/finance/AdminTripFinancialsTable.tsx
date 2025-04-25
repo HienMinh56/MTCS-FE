@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   Box,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -10,22 +9,12 @@ import {
   TableRow,
   Typography,
   useTheme,
-  Chip,
-  IconButton,
   TablePagination,
-  Tooltip,
   alpha,
   Card,
   Stack,
 } from "@mui/material";
-import {
-  PictureAsPdf,
-  LocalGasStation,
-  DirectionsCar,
-  FilterList,
-  Search,
-  AttachMoney,
-} from "@mui/icons-material";
+import { LocalGasStation, AttachMoney } from "@mui/icons-material";
 import { AdminTripFinancial } from "../../types/admin-finance";
 
 interface AdminTripFinancialsTableProps {
@@ -53,13 +42,6 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
   ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
-  };
-
-  const getChipColor = (percentage: number) => {
-    if (percentage >= 30) return "success";
-    if (percentage >= 20) return "info";
-    if (percentage >= 10) return "warning";
-    return "error";
   };
 
   const displayedRows = data.slice(
@@ -136,14 +118,10 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
               <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
                 Lợi Nhuận
               </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
-                Biên LN
-              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {displayedRows.map((trip) => {
-              const chipColor = getChipColor(trip.profitMarginPercentage);
               const isProfit = trip.profitMargin > 0;
 
               return (
@@ -197,15 +175,6 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
                     >
                       {trip.profitMargin.toLocaleString()}
                     </Typography>
-                  </TableCell>
-                  <TableCell align="center" sx={{ py: 2 }}>
-                    <Chip
-                      label={`${trip.profitMarginPercentage}%`}
-                      size="small"
-                      color={chipColor}
-                      sx={{ fontWeight: 600 }}
-                      className="min-w-16"
-                    />
                   </TableCell>
                 </TableRow>
               );

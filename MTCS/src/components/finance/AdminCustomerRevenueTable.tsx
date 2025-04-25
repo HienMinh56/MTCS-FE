@@ -160,7 +160,6 @@ const AdminCustomerRevenueTable: React.FC<AdminCustomerRevenueTableProps> = ({
             </TableHead>
             <TableBody>
               {data.items?.map((customer, index) => {
-                // Add highlighting for top customers
                 const isTopThree = index < 3;
 
                 return (

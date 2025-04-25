@@ -230,9 +230,7 @@ const PriceChangesComponent: React.FC<PriceChangesComponentProps> = ({
                       <Typography variant="body2" color="text.secondary">
                         {`Container ${
                           ContainerSizeMap[group.containerSize]
-                        } | ${ContainerTypeMap[group.containerType]} | ${
-                          DeliveryTypeMap[group.deliveryType]
-                        }`}
+                        } | ${ContainerTypeMap[group.containerType]}`}
                       </Typography>
                     </Box>
 

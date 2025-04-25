@@ -9,6 +9,19 @@ export interface OrderSummary {
   createdDate?: string;
 }
 
+export interface PeriodicRevenueItem {
+  periodLabel: string;
+  startDate: string;
+  endDate: string;
+  totalRevenue: number;
+  completedOrders: number;
+  averageRevenuePerOrder: number;
+  paidRevenue: number;
+  unpaidRevenue: number;
+  paidOrders: number;
+  unpaidOrders: number;
+}
+
 export interface AdminRevenueAnalytics {
   totalRevenue: number;
   completedOrders: number;
@@ -20,6 +33,7 @@ export interface AdminRevenueAnalytics {
   unpaidOrders: number;
   paidOrdersList?: OrderSummary[];
   unpaidOrdersList?: OrderSummary[];
+  periodicData?: PeriodicRevenueItem[];
 }
 
 export interface AdminCustomerRevenue {
@@ -76,7 +90,6 @@ export interface AdminProfitAnalytics {
 }
 
 export enum AdminRevenuePeriodType {
-  Weekly = "Weekly",
   Monthly = "Monthly",
   Yearly = "Yearly",
   Custom = "Custom",
