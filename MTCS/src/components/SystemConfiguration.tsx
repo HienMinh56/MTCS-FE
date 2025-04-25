@@ -150,13 +150,13 @@ const SystemConfiguration: React.FC = () => {
 
   const getConfigLabel = (key: string): string => {
     const labels: Record<string, string> = {
-      "20'_Dry_Weight": "Khối lượng container khô 20'",
-      "40'_Dry_Weight": "Khối lượng container khô 40'",
-      "20'_Reefer_Weight": "Khối lượng container lạnh 20'",
-      "40'_Reefer_Weight": "Khối lượng container lạnh 40'",
+      "20'_Dry_Weight": "Khối lượng container rỗng khô 20'",
+      "40'_Dry_Weight": "Khối lượng container rỗng khô 40'",
+      "20'_Reefer_Weight": "Khối lượng container rỗng lạnh 20'",
+      "40'_Reefer_Weight": "Khối lượng container rỗng lạnh 40'",
       Daily_Driver_WorkTime: "Thời gian làm việc trong ngày của tài xế",
       Weekly_Driver_WorkTime: "Thời gian làm việc trong tuần của tài xế",
-      Total_orders_per_day: "Số đơn tối đa trong ngày",
+      Total_orders_per_day: "Số đơn hàng tối đa nhận trong ngày",
       Maintenance_Due_Alert: "Hạn cảnh báo bảo trì",
       Registration_Expiry_Alert: "Hạn cảnh báo đăng kiểm",
     };

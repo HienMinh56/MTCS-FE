@@ -119,10 +119,6 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
     const today = dayjs();
 
     switch (newPeriodType) {
-      case AdminRevenuePeriodType.Weekly:
-        setStartDate(today.startOf("week"));
-        setEndDate(today.endOf("week"));
-        break;
       case AdminRevenuePeriodType.Monthly:
         setStartDate(today.startOf("month"));
         setEndDate(today.endOf("month"));
@@ -316,10 +312,6 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
 
   const getDateRangeDisplay = () => {
     switch (periodType) {
-      case AdminRevenuePeriodType.Weekly:
-        return `Tuần: ${startDate.format("DD/MM/YYYY")} - ${endDate.format(
-          "DD/MM/YYYY"
-        )}`;
       case AdminRevenuePeriodType.Monthly:
         return `Tháng ${startDate.format("MM/YYYY")}`;
       case AdminRevenuePeriodType.Yearly:
@@ -337,77 +329,6 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
     if (!showDatePicker) return null;
 
     switch (periodType) {
-      case AdminRevenuePeriodType.Weekly:
-        return (
-          <Paper
-            elevation={3}
-            sx={{
-              position: "absolute",
-              zIndex: 1000,
-              mt: 1,
-              p: 2,
-              borderRadius: 2,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <DateCalendar
-              value={startDate}
-              onChange={handleWeekSelection}
-              showDaysOutsideCurrentMonth
-              slots={{
-                day: (props) => {
-                  const isInSelectedWeek = props.day.isBetween(
-                    startDate,
-                    endDate,
-                    "day",
-                    "[]"
-                  );
-
-                  const isFirstDayOfSelectedWeek = props.day.isSame(
-                    startDate,
-                    "day"
-                  );
-                  const isLastDayOfSelectedWeek = props.day.isSame(
-                    endDate,
-                    "day"
-                  );
-
-                  return (
-                    <PickersDay
-                      {...props}
-                      disableMargin
-                      selected={isInSelectedWeek}
-                      sx={{
-                        ...(isInSelectedWeek && {
-                          backgroundColor: alpha(
-                            theme.palette.primary.main,
-                            0.15
-                          ),
-                          color: theme.palette.primary.main,
-                          fontWeight: 600,
-                          "&:hover": {
-                            backgroundColor: alpha(
-                              theme.palette.primary.main,
-                              0.25
-                            ),
-                          },
-                          ...(isFirstDayOfSelectedWeek && {
-                            borderTopLeftRadius: "50%",
-                            borderBottomLeftRadius: "50%",
-                          }),
-                          ...(isLastDayOfSelectedWeek && {
-                            borderTopRightRadius: "50%",
-                            borderBottomRightRadius: "50%",
-                          }),
-                        }),
-                      }}
-                    />
-                  );
-                },
-              }}
-            />
-          </Paper>
-        );
       case AdminRevenuePeriodType.Monthly:
         return (
           <Paper
@@ -474,9 +395,6 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
                   onChange={handlePeriodTypeChange}
                   sx={{ borderRadius: 1.5 }}
                 >
-                  <MenuItem value={AdminRevenuePeriodType.Weekly}>
-                    Hàng Tuần
-                  </MenuItem>
                   <MenuItem value={AdminRevenuePeriodType.Monthly}>
                     Hàng Tháng
                   </MenuItem>

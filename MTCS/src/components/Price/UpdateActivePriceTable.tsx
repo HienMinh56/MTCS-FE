@@ -255,24 +255,11 @@ const UpdateActivePriceTable: React.FC = () => {
           <Table stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>
-                  Khoảng cách (km)
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>
-                  Loại container
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>
-                  Loại giao hàng
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>
-                  Giá tối thiểu
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>
-                  Giá tối đa
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>
-                  Trạng thái
-                </TableCell>
+                <TableCell align="center">Khoảng cách (km)</TableCell>
+                <TableCell align="center">Loại container</TableCell>
+                <TableCell align="center">Giá tối thiểu</TableCell>
+                <TableCell align="center">Giá tối đa</TableCell>
+                <TableCell align="center">Trạng thái</TableCell>
                 {isAdmin && (
                   <TableCell align="center" sx={{ fontWeight: 600 }}>
                     Thao tác
@@ -301,10 +288,6 @@ const UpdateActivePriceTable: React.FC = () => {
                       <TableCell align="center">{`${price.minKm} - ${price.maxKm}`}</TableCell>
                       <TableCell align="center">
                         {ContainerTypeMap[price.containerType] ||
-                          "Không xác định"}
-                      </TableCell>
-                      <TableCell align="center">
-                        {DeliveryTypeMap[price.deliveryType] ||
                           "Không xác định"}
                       </TableCell>
                       <TableCell align="center">

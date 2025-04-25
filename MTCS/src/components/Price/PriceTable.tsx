@@ -89,12 +89,6 @@ const headCells: HeadCell[] = [
     sortable: false,
   },
   {
-    id: "deliveryType",
-    label: "Loại giao hàng",
-    numeric: false,
-    sortable: false,
-  },
-  {
     id: "minPricePerKm",
     label: "Giá tối thiểu",
     numeric: true,
@@ -149,6 +143,10 @@ const PriceTableComponent: React.FC = () => {
     undefined
   );
   const [showChanges, setShowChanges] = useState<boolean>(false);
+
+  // Add a refreshKey to force re-rendering of the PriceChanges component
+  const [refreshPriceChangesKey, setRefreshPriceChangesKey] =
+    useState<number>(0);
 
   // Import related states
   const [importDialogOpen, setImportDialogOpen] = useState<boolean>(false);
@@ -339,6 +337,7 @@ const PriceTableComponent: React.FC = () => {
         fetchPriceTables();
         handleEditDialogClose();
         setConfirmOpen(false);
+        setRefreshPriceChangesKey((prevKey) => prevKey + 1); // Update refresh key
       } else {
         setError(response.messageVN || response.message);
       }
@@ -541,8 +540,17 @@ const PriceTableComponent: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item>
-            <Stack direction="row" spacing={2}>
+          <Grid item xs={12} sm={7} md={8}>
+            <Stack direction="row" spacing={2} justifyContent="flex-end">
+              <Button
+                variant="outlined"
+                color={showChanges ? "primary" : "inherit"}
+                onClick={() => setShowChanges(!showChanges)}
+                startIcon={<InfoIcon />}
+                disabled={!selectedVersion}
+              >
+                {showChanges ? "Ẩn thay đổi" : "Xem thay đổi giá"}
+              </Button>
               <Button
                 variant="outlined"
                 color="primary"
@@ -581,7 +589,10 @@ const PriceTableComponent: React.FC = () => {
               },
             }}
           >
-            <PriceChangesComponent version={selectedVersion} />
+            <PriceChangesComponent
+              version={selectedVersion}
+              key={refreshPriceChangesKey}
+            />
           </Paper>
         </Fade>
       )}
@@ -726,10 +737,6 @@ const PriceTableComponent: React.FC = () => {
                             <TableCell align="center">{`${price.minKm} - ${price.maxKm}`}</TableCell>
                             <TableCell align="center">
                               {ContainerTypeMap[price.containerType] ||
-                                "Không xác định"}
-                            </TableCell>
-                            <TableCell align="center">
-                              {DeliveryTypeMap[price.deliveryType] ||
                                 "Không xác định"}
                             </TableCell>
                             <TableCell align="center">
@@ -958,10 +965,6 @@ const PriceTableComponent: React.FC = () => {
                                 "Không xác định"}
                             </TableCell>
                             <TableCell align="center">
-                              {DeliveryTypeMap[price.deliveryType] ||
-                                "Không xác định"}
-                            </TableCell>
-                            <TableCell align="center">
                               <Box
                                 sx={{
                                   display: "flex",
@@ -1059,8 +1062,6 @@ const PriceTableComponent: React.FC = () => {
                   Container {ContainerSizeMap[editingPrice.containerSize]}
                   {" • "}
                   {ContainerTypeMap[editingPrice.containerType]}
-                  {" • "}
-                  {DeliveryTypeMap[editingPrice.deliveryType]}
                   {" • "}
                   {editingPrice.minKm} - {editingPrice.maxKm} km
                 </>
