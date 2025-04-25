@@ -107,6 +107,24 @@ interface DriverLocation {
   timestamp?: string;
 }
 
+// Function to get status display in Vietnamese
+const getStatusDisplay = (status: string) => {
+  switch (status) {
+    case "Pending":
+      return { label: "Chờ xử lý", color: "warning" };
+    case "Scheduled":
+      return { label: "Đã lên lịch", color: "info" };
+    case "Delivering":
+      return { label: "Đang giao hàng", color: "info" };
+    case "Shipped":
+      return { label: "Đã giao hàng", color: "info" };
+    case "Completed":
+      return { label: "Hoàn thành", color: "success" };
+    default:
+      return { label: status || "Không xác định", color: "default" };
+  }
+};
+
 // Styled components for better visuals
 const StatusChip = styled(Chip)(({ theme, status }: { theme: any, status: string }) => ({
   fontWeight: 600,
@@ -204,7 +222,7 @@ const TrackingOrder: React.FC = () => {
   // Function to fetch order tracking data
   const handleTrackOrder = async () => {
     if (!trackingCode.trim()) {
-      setError("Please enter a tracking code");
+      setError("Vui lòng hãy nhập mã vận chuyển");
       return;
     }
 
@@ -524,14 +542,14 @@ const TrackingOrder: React.FC = () => {
         new window.goongjs.Marker({ color: '#4CAF50' })
           .setLngLat(pickupCoords)
           .setPopup(new window.goongjs.Popup({ offset: 25 })
-            .setHTML(`<h3>Pickup Location</h3><p>${locations.pickup!.name}</p>`))
+            .setHTML(`<h3>Nơi lấy hàng</h3><p>${locations.pickup!.name}</p>`))
           .addTo(map);
 
         // Add delivery marker
         new window.goongjs.Marker({ color: '#F44336' })
           .setLngLat(deliveryCoords)
           .setPopup(new window.goongjs.Popup({ offset: 25 })
-            .setHTML(`<h3>Delivery Location</h3><p>${locations.delivery!.name}</p>`))
+            .setHTML(`<h3>Nơi giao hàng</h3><p>${locations.delivery!.name}</p>`))
           .addTo(map);
 
         // Fit the map to show both markers
@@ -760,16 +778,16 @@ const TrackingOrder: React.FC = () => {
   // Render driver tracking controls that overlay on the map
   const renderDriverTrackingControls = () => {
     const statusLabels = {
-      'connected': 'Connected, waiting for location...',
-      'disconnected': 'Not tracking',
-      'connecting': 'Connecting...',
+      'connected': 'Đã kết nối, đang đợi lấy vị trí...',
+      'disconnected': 'Chưa kết nối',
+      'connecting': 'Đang kết nối...',
       'receiving': `Đang lấy vị trí tài xế ${driverId}`
     };
 
     return (
       <MapControlsContainer>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Driver Location Tracker</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Trạng thái dò tìm vị trí tài xế</Typography>
         </Box>
         
         {/* <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1 }}>
@@ -849,7 +867,7 @@ const TrackingOrder: React.FC = () => {
           <TextField
             fullWidth
             variant="outlined"
-            label="Enter Tracking Code"
+            label="Nhập mã vận chuyển của bạn"
             value={trackingCode}
             onChange={(e) => setTrackingCode(e.target.value)}
             placeholder="e.g., TRAK_20250411_091440_9489"
@@ -923,10 +941,11 @@ const TrackingOrder: React.FC = () => {
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <StatusChip
-                      label={trackingData.status}
-                      status={trackingData.status}
-                      icon={trackingData.status === 'Completed' ? <CheckCircle /> : undefined}
+                    <Chip
+                      size="medium"
+                      label={getStatusDisplay(trackingData.status).label}
+                      color={getStatusDisplay(trackingData.status).color as any}
+                      sx={{ fontWeight: 600 }}
                     />
                   </Grid>
                 </Grid>
@@ -947,7 +966,7 @@ const TrackingOrder: React.FC = () => {
                       <LocationOn sx={{ mt: 0.5, mr: 1, color: theme.palette.success.main }} />
                       <Box>
                         <Typography variant="subtitle2" color="text.secondary">
-                          Pickup Location
+                          Nơi lấy hàng
                         </Typography>
                         <Typography variant="body1" sx={{ fontWeight: 500 }}>
                           {trackingData.pickUpLocation}
@@ -966,7 +985,7 @@ const TrackingOrder: React.FC = () => {
                       <LocationOn sx={{ mt: 0.5, mr: 1, color: theme.palette.error.main }} />
                       <Box>
                         <Typography variant="subtitle2" color="text.secondary">
-                          Delivery Location
+                          Nơi giao hàng
                         </Typography>
                         <Typography variant="body1" sx={{ fontWeight: 500 }}>
                           {trackingData.deliveryLocation}
@@ -986,7 +1005,7 @@ const TrackingOrder: React.FC = () => {
               {/* Right Column: Map */}
               <Grid item xs={12} md={7}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                  Delivery Route
+                  Tuyến đường vận chuyển
                 </Typography>
                 <MapContainer>
                   <div id="tracking-map" style={{ width: '100%', height: '100%' }}></div>
