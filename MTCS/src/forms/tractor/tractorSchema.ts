@@ -38,7 +38,9 @@ export const tractorSchema = z
       .refine((date) => !date || date <= new Date(), {
         message: "Ngày bảo dưỡng cuối không được trong tương lai",
       }),
-    nextMaintenanceDate: z.date(),
+    nextMaintenanceDate: z.date().refine((date) => date > new Date(), {
+      message: "Ngày bảo dưỡng tiếp theo phải là ngày trong tương lai",
+    }),
     registrationDate: z.date().refine((date) => date <= new Date(), {
       message: "Ngày đăng ký không được trong tương lai",
     }),

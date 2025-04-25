@@ -39,6 +39,8 @@ import { useTheme } from "@mui/material/styles";
 import { useParams, useNavigate } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import StraightenIcon from "@mui/icons-material/Straighten";
+// Add SignalR client import
+import * as signalR from "@microsoft/signalr";
 // Define types based on the response structure
 interface Driver {
   driverId: string;
@@ -193,7 +195,7 @@ const TrackingOrder: React.FC = () => {
   const [driverId, setDriverId] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'receiving'>('disconnected');
   const [trackingActive, setTrackingActive] = useState<boolean>(false);
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<signalR.HubConnection | null>(null);
   const mapRef = useRef<any>(null);
   const driverMarkerRef = useRef<any>(null);
   const driverPathRef = useRef<any>(null);
@@ -240,7 +242,7 @@ const TrackingOrder: React.FC = () => {
       if (err.message === "ORDER_COMPLETED") {
         setError("Đơn hàng đã hoàn thành không thể tiến hành theo dõi.");
       } else {
-        setError("Unable to find order with this tracking code. Please check and try again.");
+        setError("Không thể tìm thấy mã vận chuyển của bạn. Vui lòng kiểm tra xem mã có đã đúng hay đơn hàng đã hoàn thành.");
       }
       setTrackingData(null);
     } finally {
@@ -269,7 +271,18 @@ const TrackingOrder: React.FC = () => {
   const handleStopTracking = () => {
     // Stop tracking
     if (socketRef.current) {
-      socketRef.current.close();
+      // First unsubscribe from the user's location updates if connected
+      if (socketRef.current.state === signalR.HubConnectionState.Connected && driverId) {
+        socketRef.current.invoke("Unsubscribe", driverId)
+          .catch(err => {
+            console.error("Error unsubscribing from driver location:", err);
+          });
+      }
+
+      // Then stop the connection
+      socketRef.current.stop().catch(err => {
+        console.error("Error stopping SignalR connection:", err);
+      });
       socketRef.current = null;
     }
 
@@ -292,84 +305,78 @@ const TrackingOrder: React.FC = () => {
     setTrackingActive(false);
   };
 
-  // Function to connect to WebSocket server
-  const connectWebSocket = (userId: string) => {
+  // Function to connect to SignalR hub
+  const connectSignalR = (userId: string) => {
     // Close existing connection if any
     if (socketRef.current) {
-      socketRef.current.close();
+      socketRef.current.stop();
     }
     
     setConnectionStatus('connecting');
-    console.log(`Connecting to WebSocket for driver: ${userId}`);
+    console.log(`Connecting to SignalR hub for driver: ${userId}`);
     
-    // Connect to WebSocket server as subscriber
-    const wsUrl = `wss://mtcs-server.azurewebsites.net/ws?userId=${userId}&action=subscribe`;
-    console.log(`WebSocket URL: ${wsUrl}`);
+    // Connect to SignalR hub with proper configuration
+    socketRef.current = new signalR.HubConnectionBuilder()
+      .withUrl("https://mtcs-server.azurewebsites.net/locationHub", {
+        skipNegotiation: true,
+        transport: signalR.HttpTransportType.WebSockets
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 15000, 30000])
+      .configureLogging(signalR.LogLevel.Information)
+      .build();
+
+    // Handle location updates
+    socketRef.current.on("ReceiveLocation", (receivedUserId: string, latitude: number, longitude: number) => {
+      console.log(`SignalR message received for user ${receivedUserId}:`, { latitude, longitude });
+      
+      // Only update if the location is for our driver
+      if (receivedUserId === userId) {
+        updateDriverLocation(latitude, longitude);
+        setConnectionStatus('receiving');
+      }
+    });
     
-    try {
-      socketRef.current = new WebSocket(wsUrl);
+    // Start the connection and subscribe to the user's location updates
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    function attemptConnection() {
+      retryCount++;
+      console.log(`SignalR connection attempt ${retryCount}/${maxRetries}`);
       
-      socketRef.current.onopen = () => {
-        console.log(`WebSocket connection opened for driver: ${userId}`);
-        setConnectionStatus('connected');
-      };
-      
-      socketRef.current.onmessage = (event) => {
-        console.log(`WebSocket message received:`, event.data);
-        try {
-          const data = JSON.parse(event.data);
-          console.log(`Parsed WebSocket data:`, data);
+      socketRef.current!.start()
+        .then(() => {
+          console.log(`SignalR connection opened for driver: ${userId}`);
+          setConnectionStatus('connected');
           
-          // Extended debugging to check all potential location data formats
-          console.log(`Data properties:`, Object.keys(data));
+          // Subscribe to the user location updates
+          return socketRef.current!.invoke("Subscribe", userId);
+        })
+        .then(() => {
+          console.log(`Successfully subscribed to location updates for driver: ${userId}`);
+        })
+        .catch(err => {
+          console.error("Error connecting to SignalR hub:", err);
+          setConnectionStatus('disconnected');
           
-          // Check for standard formats
-          if (data.Latitude !== undefined && data.Longitude !== undefined) {
-            console.log(`Location found in format 1: Lat=${data.Latitude}, Lng=${data.Longitude}`);
-            updateDriverLocation(data.Latitude, data.Longitude);
-            setConnectionStatus('receiving');
-          } 
-          // Check alternative format
-          else if (data.lat !== undefined && data.lng !== undefined) {
-            console.log(`Location found in format 2: lat=${data.lat}, lng=${data.lng}`);
-            updateDriverLocation(data.lat, data.lng);
-            setConnectionStatus('receiving');
+          if (retryCount < maxRetries) {
+            console.log(`Retry attempt ${retryCount} failed. Trying again in 3 seconds...`);
+            setTimeout(attemptConnection, 3000);
+          } else {
+            console.log(`Failed to connect after ${maxRetries} attempts`);
+            setTrackingActive(false);
           }
-          // Check if data is nested under a location object
-          else if (data.location && (data.location.lat !== undefined && data.location.lng !== undefined)) {
-            console.log(`Location found in nested format: lat=${data.location.lat}, lng=${data.location.lng}`);
-            updateDriverLocation(data.location.lat, data.location.lng);
-            setConnectionStatus('receiving');
-          }
-          // Check for alternate capitalization
-          else if (data.latitude !== undefined && data.longitude !== undefined) {
-            console.log(`Location found in lowercase format: lat=${data.latitude}, lng=${data.longitude}`);
-            updateDriverLocation(data.latitude, data.longitude);
-            setConnectionStatus('receiving');
-          }
-          else {
-            console.warn(`No recognized location format found in message:`, data);
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error, 'Raw data:', event.data);
-        }
-      };
-      
-      socketRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setConnectionStatus('disconnected');
-      };
-      
-      socketRef.current.onclose = (event) => {
-        console.log(`WebSocket closed with code: ${event.code}, reason: ${event.reason}`);
-        setConnectionStatus('disconnected');
-        setTrackingActive(false);
-      };
-    } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
+        });
+    }
+    
+    attemptConnection();
+    
+    // Handle connection closed
+    socketRef.current.onclose = (error) => {
+      console.log('SignalR connection closed:', error);
       setConnectionStatus('disconnected');
       setTrackingActive(false);
-    }
+    };
   };
 
   // Function to update driver marker position on the map
@@ -468,7 +475,7 @@ const TrackingOrder: React.FC = () => {
       // Auto-start tracking if we're not already tracking
       if (!trackingActive && tripDriverId) {
         console.log("Auto-starting driver tracking for:", tripDriverId);
-        connectWebSocket(tripDriverId);
+        connectSignalR(tripDriverId);
         setTrackingActive(true);
       }
     }
@@ -478,7 +485,7 @@ const TrackingOrder: React.FC = () => {
   useEffect(() => {
     return () => {
       if (socketRef.current) {
-        socketRef.current.close();
+        socketRef.current.stop();
       }
     };
   }, []);
@@ -756,7 +763,7 @@ const TrackingOrder: React.FC = () => {
       'connected': 'Connected, waiting for location...',
       'disconnected': 'Not tracking',
       'connecting': 'Connecting...',
-      'receiving': `Receiving location for ${driverId}`
+      'receiving': `Đang lấy vị trí tài xế ${driverId}`
     };
 
     return (
