@@ -101,6 +101,13 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
       } else if (response.status == -1) {
         // Keep isSuccess as false to allow retrying
         setIsSuccess(false);
+
+        setSnackbar({
+          open: true,
+          message: "Tạo đơn hàng thất bại!",
+          severity: "success",
+          duration: 3000,
+        });
       
         // Show error message
         setSnackbar({

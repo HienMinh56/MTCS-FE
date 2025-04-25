@@ -29,7 +29,7 @@ export const orderSchema = z.object({
     .max(40, 'Nhiệt độ không được cao hơn 40°C')
     .nullable(),
   weight: z.number()
-    .min(0.1, 'Trọng lượng phải lớn hơn 0')
+    .min(0.1, 'Trọng lượng phải lớn hơn 0 tấn')
     .max(100, 'Trọng lượng không được vượt quá 100 tấn'),
   pickUpDate: z.date().or(z.string()).nullable(),
   deliveryDate: z.date().or(z.string()).nullable(),
@@ -92,10 +92,10 @@ export const orderSchema = z.object({
   containerNumber: z.string()
     .min(1, 'Số container là bắt buộc')
     .max(20, 'Số container không được vượt quá 20 ký tự')
-    .regex(containerNumberPattern, 'Số container phải có định dạng XXX-U-YYYYY-Z, trong đó XXX là mã công ty, U là ký hiệu cố định, YYYYY là mã số container, Z là số kiểm tra'),
+    .regex(containerNumberPattern, 'Số container phải có định dạng XXX-U-YYYYYY-Z, trong đó XXX là mã công ty, U là ký hiệu loại hàng hóa, YYYYYY là mã số container, Z là số kiểm tra'),
   completeTime: z.string()
     .min(1, 'Thời gian ước tính hoàn thành vận chuyển là bắt buộc')
-    .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Định dạng thời gian phải là HH:MM'),
+    .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Định dạng thời gian phải là HH:MM (giờ:phút'),
   orderPlacer: z.string()
     .min(1, 'Người đặt hàng là bắt buộc')
     .max(50, 'Người đặt hàng không được vượt quá 50 ký tự')
@@ -105,6 +105,17 @@ export const orderSchema = z.object({
     .refine(val => !/\s{2,}/.test(val), {
       message: 'Người đặt hàng không được chứa nhiều hơn một dấu cách giữa các từ',
     }),
+}).refine(data => {
+  // Validate that deliveryDate is after pickUpDate
+  if (data.pickUpDate && data.deliveryDate) {
+    const pickUp = dayjs(data.pickUpDate);
+    const delivery = dayjs(data.deliveryDate);
+    return delivery.isAfter(pickUp) || delivery.isSame(pickUp);
+  }
+  return true; // Skip validation if either date is null
+}, {
+  message: 'Ngày giao hàng phải sau ngày lấy hàng',
+  path: ['deliveryDate'], // This will show the error on the deliveryDate field
 });
 
 // Cập nhật kiểu dữ liệu từ schema

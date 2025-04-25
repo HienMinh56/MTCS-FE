@@ -269,7 +269,7 @@ const TripDetailPage: React.FC = () => {
         console.log("Processed trip details:", tripDetails);
 
         if (!tripDetails) {
-          setError("No trip data found");
+          setError("Không thể tải thông tin chuyến đi");
           setLoading(false);
           return;
         }
