@@ -29,6 +29,7 @@ import {
   CircularProgress,
   Alert,
   Fade,
+  Snackbar,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
@@ -98,6 +99,7 @@ const IncidentDetailDialog = ({
 }) => {
   const [openReplaceTripModal, setOpenReplaceTripModal] = useState(false);
   const [createTripSuccess, setCreateTripSuccess] = useState(false);
+  const [createTripError, setCreateTripError] = useState(false); // Add error state
   const [tripReplaced, setTripReplaced] = useState(false);
   const navigate = useNavigate();
   
@@ -108,11 +110,18 @@ const IncidentDetailDialog = ({
   const invoiceFiles = incident.incidentReportsFiles?.filter(file => file.type === 2) || [];
   const transferFiles = incident.incidentReportsFiles?.filter(file => file.type === 3) || [];
   
-  const handleReplaceTripSuccess = () => {
-    setCreateTripSuccess(true);
-    setTripReplaced(true); // Set flag to indicate trip has been replaced
-    // Reset success message after 3 seconds
-    setTimeout(() => setCreateTripSuccess(false), 2000);
+  // Updated to handle both success and failure cases
+  const handleReplaceTripSuccess = (success: boolean = true) => {
+    if (success) {
+      setCreateTripSuccess(true);
+      setTripReplaced(true); // Set flag to indicate trip has been replaced
+      // Reset success message after 3 seconds
+      setTimeout(() => setCreateTripSuccess(false), 3000);
+    } else {
+      setCreateTripError(true);
+      // Reset error message after 3 seconds
+      setTimeout(() => setCreateTripError(false), 3000);
+    }
   };
 
   // Handler for image clicks - use onImagePreview prop instead of direct link
@@ -138,11 +147,43 @@ const IncidentDetailDialog = ({
         </Box>
       </DialogTitle>
       <DialogContent dividers>
-        {createTripSuccess && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+        {/* Success toast notification */}
+        <Snackbar
+          open={createTripSuccess}
+          autoHideDuration={3000}
+          onClose={() => setCreateTripSuccess(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          sx={{ top: 24 }}
+        >
+          <Alert 
+            onClose={() => setCreateTripSuccess(false)} 
+            severity="success" 
+            variant="filled"
+            elevation={6}
+            sx={{ width: '100%' }}
+          >
             Đã tạo chuyến thay thế thành công!
           </Alert>
-        )}
+        </Snackbar>
+        
+        {/* Error toast notification */}
+        <Snackbar
+          open={createTripError}
+          autoHideDuration={3000}
+          onClose={() => setCreateTripError(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          sx={{ top: 24 }}
+        >
+          <Alert 
+            onClose={() => setCreateTripError(false)} 
+            severity="error" 
+            variant="filled"
+            elevation={6}
+            sx={{ width: '100%' }}
+          >
+            Không thể tạo chuyến thay thế. Vui lòng thử lại!
+          </Alert>
+        </Snackbar>
         
         {/* Main content structure */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -421,13 +462,14 @@ const IncidentDetailDialog = ({
         <Button onClick={onClose}>Đóng</Button>
       </DialogActions>
 
-      {/* Replacement Trip Modal */}
+      {/* Update the ReplaceTripModal to handle both success and error cases */}
       <ReplaceTripModal
         open={openReplaceTripModal}
         onClose={() => setOpenReplaceTripModal(false)}
         tripId={incident.tripId}
-        orderId={incident.trip.order.orderId} // Thêm orderId để lọc tractor theo containerType
-        onSuccess={handleReplaceTripSuccess}
+        orderId={incident.trip.order.orderId}
+        onSuccess={() => handleReplaceTripSuccess(true)}
+        onError={() => handleReplaceTripSuccess(false)}
         vehicleType={incident.vehicleType}
       />
     </Dialog>
@@ -449,7 +491,7 @@ const IncidentManagement = () => {
     open: boolean;
     src: string;
     title: string;
-  }>({
+  }>( {
     open: false,
     src: "",
     title: "",
