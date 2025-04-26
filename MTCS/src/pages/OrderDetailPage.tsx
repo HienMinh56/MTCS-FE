@@ -775,6 +775,9 @@ const OrderDetailPage: React.FC = () => {
         color: deliveryStatuses[status].color 
       };
     }
+    
+    // Fallback if status is not found in deliveryStatuses
+    return { label: status, color: "default" };
   };
 
   const formatDateTime = (dateTimeString: string | null) => {

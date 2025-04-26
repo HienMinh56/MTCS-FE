@@ -519,6 +519,7 @@ const IncidentManagement = () => {
     try {
       setLoading(true);
       const incidentData = await getIncidentReportById(reportId);
+      console.log(incidentData);
       setSelectedIncident(incidentData);
       setOpenDialog(true);
     } catch (error) {

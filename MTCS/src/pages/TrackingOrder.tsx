@@ -211,6 +211,7 @@ const TrackingOrder: React.FC = () => {
 
   // Add state for driver tracking
   const [driverId, setDriverId] = useState<string>("");
+  const [driverName, setDriverName] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'receiving'>('disconnected');
   const [trackingActive, setTrackingActive] = useState<boolean>(false);
   const socketRef = useRef<signalR.HubConnection | null>(null);
@@ -221,6 +222,48 @@ const TrackingOrder: React.FC = () => {
   // Add reference for driver to delivery route
   const driverToDeliveryPathRef = useRef<any>(null);
   const apiKeyRef = useRef<string>("");
+
+  // Create refs for markers to access them later for focusing
+  const pickupMarkerRef = useRef<any>(null);
+  const deliveryMarkerRef = useRef<any>(null);
+  
+  // Function to focus map on a specific marker
+  const focusMapOnMarker = (marker: any, zoom: number = 16) => {
+    if (!mapRef.current || !marker) return;
+    
+    const map = mapRef.current;
+    map.flyTo({
+      center: marker.getLngLat(),
+      zoom: zoom,
+      duration: 1000
+    });
+    
+    // Open the marker's popup if it has one
+    if (marker.getPopup) {
+      marker.togglePopup();
+    }
+  };
+  
+  // Function to focus on driver's current location
+  const focusOnDriverLocation = () => {
+    if (!driverMarkerRef.current || !mapRef.current) return;
+    
+    focusMapOnMarker(driverMarkerRef.current, 16);
+  };
+  
+  // Function to focus on pickup location
+  const focusOnPickupLocation = () => {
+    if (!pickupMarkerRef.current || !mapRef.current) return;
+    
+    focusMapOnMarker(pickupMarkerRef.current);
+  };
+  
+  // Function to focus on delivery location
+  const focusOnDeliveryLocation = () => {
+    if (!deliveryMarkerRef.current || !mapRef.current) return;
+    
+    focusMapOnMarker(deliveryMarkerRef.current);
+  };
 
   // Function to fetch order tracking data
   const handleTrackOrder = async () => {
@@ -434,7 +477,7 @@ const TrackingOrder: React.FC = () => {
       
       driverMarkerRef.current.setPopup(
         new window.goongjs.Popup({ offset: 25 })
-          .setHTML(`<h3>Driver Location</h3><p>Driver ID: ${driverId}</p>`)
+          .setHTML(`<h3>Vị trí tài xế</h3><p>Tên tài xế: ${driverName}</p>`)
       );
       
       // Create path polyline
@@ -623,7 +666,9 @@ const TrackingOrder: React.FC = () => {
   useEffect(() => {
     if (trackingData?.trips?.[0]?.driverId) {
       const tripDriverId = trackingData.trips[0].driverId;
+      const driverName = trackingData.trips[0].driver.fullName;
       setDriverId(tripDriverId);
+      setDriverName(driverName);
       
       // Check if both locations have coordinates before starting tracking
       if (locations.pickup?.coordinates && locations.delivery?.coordinates) {
@@ -683,14 +728,14 @@ const TrackingOrder: React.FC = () => {
       // Add markers when the map is loaded
       map.on('load', () => {
         // Add pickup marker
-        new window.goongjs.Marker({ color: '#4CAF50' })
+        pickupMarkerRef.current = new window.goongjs.Marker({ color: '#4CAF50' })
           .setLngLat(pickupCoords)
           .setPopup(new window.goongjs.Popup({ offset: 25 })
             .setHTML(`<h3>Nơi lấy hàng</h3><p>${locations.pickup!.name}</p>`))
           .addTo(map);
 
         // Add delivery marker
-        new window.goongjs.Marker({ color: '#F44336' })
+        deliveryMarkerRef.current = new window.goongjs.Marker({ color: '#F44336' })
           .setLngLat(deliveryCoords)
           .setPopup(new window.goongjs.Popup({ offset: 25 })
             .setHTML(`<h3>Nơi giao hàng</h3><p>${locations.delivery!.name}</p>`))
@@ -787,7 +832,7 @@ const TrackingOrder: React.FC = () => {
     };
   }, [locations]);
 
-  // JSX for rendering trip status history as a stepper
+  // JSX for rendering trip status history as a horizontal timeline
   const renderTripTimeline = () => {
     if (!sortedStatuses.length) return null;
 
@@ -833,41 +878,88 @@ const TrackingOrder: React.FC = () => {
       }
     };
 
-    // Important: Set the active step to a value LESS THAN the total status count
-    // This ensures all steps are rendered and visible
+    // Sử dụng horizontal timeline
     return (
       <Box sx={{ my: 4 }}>
         <Typography variant="h6" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
           Trạng thái vận chuyển của chuyến hàng
         </Typography>
         
-        {/* Fix: Change activeStep to sortedStatuses.length - 1 to properly show all steps */}
-        <Stepper orientation="vertical" activeStep={sortedStatuses.length - 1}>
+        {/* Container cho timeline ngang */}
+        <Box sx={{ 
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          width: '100%',
+          overflowX: 'auto',
+          pb: 2
+        }}>
+          {/* Đường kẻ ngang kết nối các điểm */}
+          <Box sx={{ 
+            position: 'absolute',
+            top: 16, // Căn giữa điểm timeline
+            left: 0,
+            right: 20, // padding để đảm bảo đường kẻ không kéo dài quá mức
+            height: 2,
+            backgroundColor: theme.palette.primary.main,
+            zIndex: 1
+          }} />
+
           {sortedStatuses.map((status, index) => {
             // Format thời gian và lưu vào biến
             const formattedTime = formatDateTime(status.startTime);
             console.log(`Status ${index} formatted time:`, formattedTime);
             
             return (
-              <Step key={status.historyId} completed={true}>
-                <StepLabel>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              <Box 
+                key={status.historyId} 
+                sx={{ 
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  minWidth: '180px', // Đảm bảo mỗi trạng thái có kích thước tối thiểu
+                  maxWidth: '250px', // Giới hạn kích thước tối đa
+                  px: 2,
+                  flexShrink: 0, // Ngăn không bị co lại khi không đủ không gian
+                  zIndex: 2 // Hiển thị trên đường kẻ ngang
+                }}
+              >
+                {/* Điểm tròn trên timeline */}
+                <Box sx={{ 
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  backgroundColor: theme.palette.primary.main,
+                  border: `4px solid ${theme.palette.background.paper}`,
+                  boxShadow: `0 0 0 1px ${theme.palette.divider}`,
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>
+                    {index + 1}
+                  </Typography>
+                </Box>
+                
+                {/* Chi tiết trạng thái */}
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
                     {status.statusName}
                   </Typography>
-                </StepLabel>
-                <StepContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <AccessTime sx={{ mr: 1, color: theme.palette.text.secondary }} fontSize="small" />
-
-                    Bắt đầu lúc {formattedTime || 'NO TIME DATA'}
-                    
-                   
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                    <AccessTime sx={{ mr: 0.5, color: theme.palette.text.secondary, fontSize: 'small' }} />
+                    <Typography variant="caption" color="text.secondary">
+                      {formattedTime || 'Không có dữ liệu thời gian'}
+                    </Typography>
                   </Box>
-                </StepContent>
-              </Step>
+                </Box>
+              </Box>
             );
           })}
-        </Stepper>
+        </Box>
       </Box>
     );
   };
@@ -879,7 +971,20 @@ const TrackingOrder: React.FC = () => {
     const { driver, tractor, trailer } = trackingData.trips[0];
     
     return (
-      <Card sx={{ mb: 3, bgcolor: theme.palette.background.default }}>
+      <Card 
+        sx={{ 
+          mb: 3, 
+          bgcolor: theme.palette.background.default,
+          cursor: 'pointer',
+          transition: 'transform 0.3s ease-in-out',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: theme.shadows[4],
+            backgroundColor: theme.palette.action.hover,
+          }
+        }}
+        onClick={focusOnDriverLocation}
+      >
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <Avatar sx={{ bgcolor: theme.palette.primary.main, mr: 2 }}>
@@ -1106,13 +1211,22 @@ const TrackingOrder: React.FC = () => {
 
             {/* Content Grid */}
             <Grid container spacing={4}>
-              {/* Left Column: Timeline and Details */}
+              {/* Left Column: Driver Info and Location Details */}
               <Grid item xs={12} md={5}>
                 {/* Driver and Vehicle Card */}
                 {renderDriverVehicleDetails()}
 
                 {/* Location Cards */}
-                <LocationCard elevation={2}>
+                <LocationCard 
+                  elevation={2}
+                  onClick={focusOnPickupLocation}
+                  sx={{ 
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: theme.palette.action.hover,
+                    }
+                  }}
+                >
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
                       <LocationOn sx={{ mt: 0.5, mr: 1, color: theme.palette.success.main }} />
@@ -1131,7 +1245,16 @@ const TrackingOrder: React.FC = () => {
                   </CardContent>
                 </LocationCard>
 
-                <LocationCard elevation={2}>
+                <LocationCard 
+                  elevation={2}
+                  onClick={focusOnDeliveryLocation}
+                  sx={{ 
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: theme.palette.action.hover,
+                    }
+                  }}
+                >
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
                       <LocationOn sx={{ mt: 0.5, mr: 1, color: theme.palette.error.main }} />
@@ -1149,9 +1272,6 @@ const TrackingOrder: React.FC = () => {
                     </Box>
                   </CardContent>
                 </LocationCard>
-
-                {/* Trip Timeline */}
-                {renderTripTimeline()}
               </Grid>
 
               {/* Right Column: Map */}
@@ -1180,6 +1300,11 @@ const TrackingOrder: React.FC = () => {
                   )}
                   {locations.pickup?.coordinates && locations.delivery?.coordinates && renderDriverTrackingControls()}
                 </MapContainer>
+              </Grid>
+              
+              {/* Full Width Timeline below the map */}
+              <Grid item xs={12}>
+                {renderTripTimeline()}
               </Grid>
             </Grid>
           </>
