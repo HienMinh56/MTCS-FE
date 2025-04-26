@@ -63,7 +63,6 @@ import Trailers from "./Trailers";
 import StraightenIcon from "@mui/icons-material/Straighten";
 import DeliveryStatusPage from "./DeliveryStatusPage";
 
-
 const AdminFinanceDashboard: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -125,7 +124,7 @@ const AdminFinanceDashboard: React.FC = () => {
     },
     {
       id: "user-management",
-      text: "Quản Lý Người Dùng",
+      text: "Quản Lý Nhân Sự",
       icon: <ManageAccountsIcon />,
       selected: activeSideTab === "user-management",
       path: "/admin/user-management",

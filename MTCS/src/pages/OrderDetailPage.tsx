@@ -41,10 +41,10 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import DirectionsIcon from "@mui/icons-material/Directions";
 import InfoIcon from "@mui/icons-material/Info";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
-import FolderIcon from '@mui/icons-material/Folder';
-import ContactsIcon from '@mui/icons-material/Contacts';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import PaymentIcon from '@mui/icons-material/Payment';
+import FolderIcon from "@mui/icons-material/Folder";
+import ContactsIcon from "@mui/icons-material/Contacts";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import PaymentIcon from "@mui/icons-material/Payment";
 import ImageIcon from "@mui/icons-material/Image";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import CloseIcon from "@mui/icons-material/Close";
@@ -60,9 +60,17 @@ import {
   IsPay,
   OrderFile,
 } from "../types/order";
-import { getOrderDetails, updateOrder, updatePaymentStatus } from "../services/orderApi";
+import {
+  getOrderDetails,
+  updateOrder,
+  updatePaymentStatus,
+} from "../services/orderApi";
 import { getContracts, createContract } from "../services/contractApi";
-import { getTrip, manualCreateTrip, autoScheduleTrip } from "../services/tripApi";
+import {
+  getTrip,
+  manualCreateTrip,
+  autoScheduleTrip,
+} from "../services/tripApi";
 import { trip } from "../types/trip";
 import { ContractFile } from "../types/contract";
 import { format } from "date-fns";
@@ -77,7 +85,7 @@ import { Driver } from "../types/driver";
 import { Tractor } from "../types/tractor";
 import { Trailer } from "../types/trailer";
 import { getDeliveryStatus } from "../services/deliveryStatus";
-import useAuth from "../hooks/useAuth"; // Thêm import useAuth
+import { useAuth } from "../contexts/AuthContext"; // Thêm import useAuth
 
 const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -100,8 +108,12 @@ const OrderDetailPage: React.FC = () => {
   const [newStatus, setNewStatus] = useState<OrderStatus | "">("");
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
   const [autoScheduleLoading, setAutoScheduleLoading] = useState(false);
-  const [autoScheduleError, setAutoScheduleError] = useState<string | null>(null);
-  const [autoScheduleSuccess, setAutoScheduleSuccess] = useState<string | null>(null);
+  const [autoScheduleError, setAutoScheduleError] = useState<string | null>(
+    null
+  );
+  const [autoScheduleSuccess, setAutoScheduleSuccess] = useState<string | null>(
+    null
+  );
   const [editFormData, setEditFormData] = useState({
     note: "",
     price: 0,
@@ -121,7 +133,9 @@ const OrderDetailPage: React.FC = () => {
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
   const [fileNotes, setFileNotes] = useState<string[]>([]);
   const [statusesLoaded, setStatusesLoaded] = useState<boolean>(false);
-  const [deliveryStatuses, setDeliveryStatuses] = useState<{[key: string]: {statusName: string, color: string}} | null>(null);
+  const [deliveryStatuses, setDeliveryStatuses] = useState<{
+    [key: string]: { statusName: string; color: string };
+  } | null>(null);
   const [openCreateTripDialog, setOpenCreateTripDialog] = useState(false);
   const [createTripData, setCreateTripData] = useState({
     orderId: "",
@@ -155,7 +169,7 @@ const OrderDetailPage: React.FC = () => {
     open: false,
     message: "",
     severity: "info",
-    autoHideDuration: 3000
+    autoHideDuration: 3000,
   });
   const [paymentConfirmationOpen, setPaymentConfirmationOpen] = useState(false);
   const [confirmCheckbox1, setConfirmCheckbox1] = useState(false);
@@ -372,39 +386,51 @@ const OrderDetailPage: React.FC = () => {
 
   // Define a more specific validation schema for the edit form
   const editOrderSchema = z.object({
-    note: z.string()
-    .min(1, 'Ghi chú là bắt buộc')
-    .max(500, 'Ghi chú không được vượt quá 500 ký tự')
-    .refine(val => !/^\s/.test(val) && !/\s$/.test(val), {
-      message: 'Ghi chú không được bắt đầu hoặc kết thúc bằng dấu cách',
-    })
-    .refine(val => !/\s{2,}/.test(val), {
-      message: 'Ghi chú không được chứa nhiều hơn một dấu cách giữa các từ',
-    }),
-    price: z.number()
+    note: z
+      .string()
+      .min(1, "Ghi chú là bắt buộc")
+      .max(500, "Ghi chú không được vượt quá 500 ký tự")
+      .refine((val) => !/^\s/.test(val) && !/\s$/.test(val), {
+        message: "Ghi chú không được bắt đầu hoặc kết thúc bằng dấu cách",
+      })
+      .refine((val) => !/\s{2,}/.test(val), {
+        message: "Ghi chú không được chứa nhiều hơn một dấu cách giữa các từ",
+      }),
+    price: z
+      .number()
       .min(0, "Giá không được âm")
       .max(1000000000, "Giá không được vượt quá 1 tỷ VND"),
-    contactPerson: z.string()
+    contactPerson: z
+      .string()
       .min(1, "Tên người liên hệ là bắt buộc")
       .max(50, "Tên người liên hệ không được vượt quá 50 ký tự")
-      .refine(val => !/^\s/.test(val) && !/\s$/.test(val), {
-        message: "Tên người liên hệ không được bắt đầu hoặc kết thúc bằng dấu cách",
+      .refine((val) => !/^\s/.test(val) && !/\s$/.test(val), {
+        message:
+          "Tên người liên hệ không được bắt đầu hoặc kết thúc bằng dấu cách",
       }),
-    containerNumber: z.string()
+    containerNumber: z
+      .string()
       .min(1, "Số container là bắt buộc")
       .max(20, "Số container không được vượt quá 20 ký tự")
-      .regex(/^[A-Z]{3}[UJZ]\d{7}$/, "Số container phải có định dạng hợp lệ (ví dụ: SEGU5593802)"),
-    contactPhone: z.string()
+      .regex(
+        /^[A-Z]{3}[UJZ]\d{7}$/,
+        "Số container phải có định dạng hợp lệ (ví dụ: SEGU5593802)"
+      ),
+    contactPhone: z
+      .string()
       .min(10, "Số điện thoại phải có ít nhất 10 số")
       .max(15, "Số điện thoại không được vượt quá 15 số")
       .regex(/^\d+$/, "Số điện thoại chỉ được chứa các chữ số"),
-    orderPlacer: z.string()
+    orderPlacer: z
+      .string()
       .min(1, "Người đặt hàng là bắt buộc")
       .max(50, "Người đặt hàng không được vượt quá 50 ký tự")
-      .refine(val => !/^\s/.test(val) && !/\s$/.test(val), {
-        message: "Người đặt hàng không được bắt đầu hoặc kết thúc bằng dấu cách",
+      .refine((val) => !/^\s/.test(val) && !/\s$/.test(val), {
+        message:
+          "Người đặt hàng không được bắt đầu hoặc kết thúc bằng dấu cách",
       }),
-    temperature: z.number()
+    temperature: z
+      .number()
       .min(-30, "Nhiệt độ không được thấp hơn -30°C")
       .max(40, "Nhiệt độ không được cao hơn 40°C")
       .nullable(),
@@ -414,13 +440,13 @@ const OrderDetailPage: React.FC = () => {
   type EditOrderFormValues = z.infer<typeof editOrderSchema>;
 
   // Setup form with react-hook-form
-  const { 
-    register, 
-    handleSubmit, 
-    formState: { errors }, 
-    setValue, 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
     watch,
-    reset 
+    reset,
   } = useForm<EditOrderFormValues>({
     resolver: zodResolver(editOrderSchema),
     defaultValues: {
@@ -446,7 +472,7 @@ const OrderDetailPage: React.FC = () => {
         orderPlacer: orderDetails.orderPlacer || "",
         temperature: orderDetails.temperature || null,
       });
-      
+
       // Set the state for payment status which is handled separately
       setEditFormData({
         ...editFormData,
@@ -585,19 +611,20 @@ const OrderDetailPage: React.FC = () => {
 
       // Call the update API
       updateOrder(updateData)
-        .then(result => {
+        .then((result) => {
           console.log("Order updated successfully:", result);
           setUpdateSuccess("Đơn hàng đã được cập nhật thành công");
           handleCloseEditDialog();
           fetchData();
-          
+
           setTimeout(() => {
             setUpdateSuccess(null);
           }, 5000);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Error updating order:", err);
-          let errorMessage = "Không thể cập nhật đơn hàng. Vui lòng thử lại sau.";
+          let errorMessage =
+            "Không thể cập nhật đơn hàng. Vui lòng thử lại sau.";
           if (err.response && err.response.data && err.response.data.message) {
             errorMessage = err.response.data.message;
           }
@@ -703,49 +730,51 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
-    // Fetch delivery statuses
-    useEffect(() => {
-      const fetchDeliveryStatuses = async () => {
-        try {
-          setLoading(true); // Show loading state while fetching both resources
-          const statusData = await getDeliveryStatus();
-          
-          // Convert to a lookup map for easier use
-          const statusMap: {[key: string]: {statusName: string, color: string}} = {};
-          
-          if (Array.isArray(statusData)) {
-            statusData.forEach((status) => {
-              // Use status.statusId as key and provide statusName with default color of "default"
-              // You can modify this to map different colors based on status if needed
-              statusMap[status.statusId] = {
-                statusName: status.statusName,
-                color: getStatusColor(status.statusId)
-              };
-            });
-          } else if (statusData && typeof statusData === 'object') {
-            // Handle if response is an object with a data property
-            const dataArray = statusData.data || [];
-            dataArray.forEach((status) => {
-              statusMap[status.statusId] = {
-                statusName: status.statusName,
-                color: getStatusColor(status.statusId)
-              };
-            });
-          }
-          
-          setDeliveryStatuses(statusMap);
-          setStatusesLoaded(true);
-        } catch (error) {
-          console.error("Failed to fetch delivery statuses:", error);
-          // Continue without delivery statuses - will fall back to hardcoded values
-          setStatusesLoaded(true);
-        }
-      };
-      
-      fetchDeliveryStatuses();
-    }, []);
+  // Fetch delivery statuses
+  useEffect(() => {
+    const fetchDeliveryStatuses = async () => {
+      try {
+        setLoading(true); // Show loading state while fetching both resources
+        const statusData = await getDeliveryStatus();
 
-    // Helper function to assign color based on status
+        // Convert to a lookup map for easier use
+        const statusMap: {
+          [key: string]: { statusName: string; color: string };
+        } = {};
+
+        if (Array.isArray(statusData)) {
+          statusData.forEach((status) => {
+            // Use status.statusId as key and provide statusName with default color of "default"
+            // You can modify this to map different colors based on status if needed
+            statusMap[status.statusId] = {
+              statusName: status.statusName,
+              color: getStatusColor(status.statusId),
+            };
+          });
+        } else if (statusData && typeof statusData === "object") {
+          // Handle if response is an object with a data property
+          const dataArray = statusData.data || [];
+          dataArray.forEach((status) => {
+            statusMap[status.statusId] = {
+              statusName: status.statusName,
+              color: getStatusColor(status.statusId),
+            };
+          });
+        }
+
+        setDeliveryStatuses(statusMap);
+        setStatusesLoaded(true);
+      } catch (error) {
+        console.error("Failed to fetch delivery statuses:", error);
+        // Continue without delivery statuses - will fall back to hardcoded values
+        setStatusesLoaded(true);
+      }
+    };
+
+    fetchDeliveryStatuses();
+  }, []);
+
+  // Helper function to assign color based on status
   const getStatusColor = (statusId: string) => {
     switch (statusId) {
       case "not_started":
@@ -767,12 +796,12 @@ const OrderDetailPage: React.FC = () => {
 
   const getTripStatusDisplay = (status: string | null) => {
     if (!status) return { label: "Không xác định", color: "default" };
-    
+
     // Check if we have dynamic statuses from API and if this status exists in our map
     if (deliveryStatuses && deliveryStatuses[status]) {
-      return { 
-        label: deliveryStatuses[status].statusName, 
-        color: deliveryStatuses[status].color 
+      return {
+        label: deliveryStatuses[status].statusName,
+        color: deliveryStatuses[status].color,
       };
     }
     
@@ -898,9 +927,11 @@ const OrderDetailPage: React.FC = () => {
         if (orderDetails.containerType === ContainerType["Container Lạnh"]) {
           // Nếu là container lạnh (type 2), chỉ lấy những tractor có containerType là 2
           combinedTractors = combinedTractors.filter(
-            tractor => tractor.containerType === 2
+            (tractor) => tractor.containerType === 2
           );
-        } else if (orderDetails.containerType === ContainerType["Container Khô"]) {
+        } else if (
+          orderDetails.containerType === ContainerType["Container Khô"]
+        ) {
           // Nếu là container khô (type 1), lấy cả tractor loại 1 và loại 2
           // Không cần lọc gì thêm vì đã lấy tất cả
         }
@@ -1044,13 +1075,13 @@ const OrderDetailPage: React.FC = () => {
     setAutoScheduleLoading(true);
     setAutoScheduleError(null);
     setAutoScheduleSuccess(null);
-    
+
     // Show loading notification when starting the process
     setLoadingSnackbar({
       open: true,
       message: "Đang xếp chuyến tự động...",
       severity: "info",
-      autoHideDuration: 1500
+      autoHideDuration: 1500,
     });
 
     try {
@@ -1065,7 +1096,7 @@ const OrderDetailPage: React.FC = () => {
       if (result.status == 1) {
         // Use the message from API response for success message
         setAutoScheduleSuccess("Đã tạo chuyến cho đơn hàng!");
-      
+
         // Show success notification
         // setLoadingSnackbar({
         //   open: true,
@@ -1073,7 +1104,7 @@ const OrderDetailPage: React.FC = () => {
         //   severity: "success",
         //   autoHideDuration: 5000
         // });
-      
+
         setTimeout(() => {
           setAutoScheduleSuccess(null);
         }, 5000);
@@ -1081,31 +1112,31 @@ const OrderDetailPage: React.FC = () => {
         fetchData(); // Refresh trip data
       } else {
         // Use the message from API response for success message
-        setAutoScheduleError("Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!");
-      
+        setAutoScheduleError(
+          "Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!"
+        );
+
         // Show success notification
         setLoadingSnackbar({
           open: true,
           message: "Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!",
           severity: "error",
-          autoHideDuration: 5000
+          autoHideDuration: 5000,
         });
-      
+
         setTimeout(() => {
           setAutoScheduleError(null);
         }, 5000);
       }
-      
     } catch (error: string | null) {
-      
       setAutoScheduleError(error);
-    
+
       // Show error notification
       setLoadingSnackbar({
         open: true,
         message: `${error} Vui lòng tạo chuyến thủ công.`,
         severity: "error",
-        autoHideDuration: 6000
+        autoHideDuration: 6000,
       });
     } finally {
       setAutoScheduleLoading(false);
@@ -1122,19 +1153,22 @@ const OrderDetailPage: React.FC = () => {
     setIsSubmitting(true);
     // Clear any existing error first
     setError(null);
-    
+
     try {
       console.log("Updating payment status for order:", orderId);
       const result = await updatePaymentStatus(orderId);
       console.log("Payment status updated successfully:", result);
 
-      const statusText = orderDetails.isPay === IsPay.Yes ? "Chưa thanh toán" : "Đã thanh toán";
-      setUpdateSuccess(`Trạng thái thanh toán đã được cập nhật thành công: ${statusText}`);
+      const statusText =
+        orderDetails.isPay === IsPay.Yes ? "Chưa thanh toán" : "Đã thanh toán";
+      setUpdateSuccess(
+        `Trạng thái thanh toán đã được cập nhật thành công: ${statusText}`
+      );
       fetchData();
-      
+
       // Close the confirmation dialog after successful update
       setPaymentConfirmationOpen(false);
-      
+
       // Reset checkbox states for next time
       setConfirmCheckbox1(false);
       setConfirmCheckbox2(false);
@@ -1144,7 +1178,9 @@ const OrderDetailPage: React.FC = () => {
       }, 5000);
     } catch (err) {
       console.error("Error updating payment status:", err);
-      setError("Không thể cập nhật trạng thái thanh toán. Vui lòng thử lại sau.");
+      setError(
+        "Không thể cập nhật trạng thái thanh toán. Vui lòng thử lại sau."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -1271,22 +1307,29 @@ const OrderDetailPage: React.FC = () => {
             color={getStatusDisplay(orderDetails.status).color as any}
           />
           {/* Show update info button only for Pending orders and Staff role */}
-          {orderDetails.status === OrderStatus.Pending && user?.role === "Staff" && (
-            <Button
-              variant="outlined"
-              color="primary"
-              startIcon={<EditIcon />}
-              onClick={handleOpenEditDialog}
-            >
-              Cập nhật thông tin
-            </Button>
-          )}
+          {orderDetails.status === OrderStatus.Pending &&
+            user?.role === "Staff" && (
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<EditIcon />}
+                onClick={handleOpenEditDialog}
+              >
+                Cập nhật thông tin
+              </Button>
+            )}
           {/* Show payment status button for all orders except those already paid */}
           {orderDetails.isPay !== IsPay.Yes && user?.role === "Staff" && (
             <Button
               variant="outlined"
               color={orderDetails.isPay === IsPay.Yes ? "success" : "warning"}
-              startIcon={orderDetails.isPay === IsPay.Yes ? <CheckCircleIcon /> : <PaymentIcon />}
+              startIcon={
+                orderDetails.isPay === IsPay.Yes ? (
+                  <CheckCircleIcon />
+                ) : (
+                  <PaymentIcon />
+                )
+              }
               onClick={() => setPaymentConfirmationOpen(true)}
             >
               Cập nhật Thanh Toán
@@ -1518,9 +1561,9 @@ const OrderDetailPage: React.FC = () => {
                     Người chỉnh sửa
                   </Typography>
                   <Typography variant="body1" gutterBottom>
-                    {(orderDetails.modifiedBy) || "N/A"}
+                    {orderDetails.modifiedBy || "N/A"}
                   </Typography>
-                </Grid>                
+                </Grid>
 
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">
@@ -1743,7 +1786,12 @@ const OrderDetailPage: React.FC = () => {
                                     cursor: "pointer",
                                     borderRadius: 1,
                                   }}
-                                  onClick={() => openImagePreview(fileUrl, fileName || `Order file ${index + 1}`)}
+                                  onClick={() =>
+                                    openImagePreview(
+                                      fileUrl,
+                                      fileName || `Order file ${index + 1}`
+                                    )
+                                  }
                                 />
                                 <Typography
                                   variant="caption"
@@ -1854,8 +1902,7 @@ const OrderDetailPage: React.FC = () => {
                       file.fileType === "Archive";
                     const description =
                       typeof file === "string" ? null : file.description;
-                    const notes =
-                      typeof file === "string" ? null : file.note;
+                    const notes = typeof file === "string" ? null : file.note;
 
                     const isImage =
                       file.fileType === "Image" ||
@@ -1887,8 +1934,14 @@ const OrderDetailPage: React.FC = () => {
                                     cursor: "pointer",
                                     borderRadius: 1,
                                   }}
-                                  onClick={() => openImagePreview(file.fileUrl, file.fileName || `Contract image ${index + 1}`)}
-                                />                                
+                                  onClick={() =>
+                                    openImagePreview(
+                                      file.fileUrl,
+                                      file.fileName ||
+                                        `Contract image ${index + 1}`
+                                    )
+                                  }
+                                />
                                 <Typography
                                   variant="caption"
                                   display="block"
@@ -2057,32 +2110,34 @@ const OrderDetailPage: React.FC = () => {
                   contractFiles &&
                   contractFiles.length > 0 ? (
                     <Box display="flex" justifyContent="space-between">
-                    {user?.role === "Staff" && (
-                      <>
-                      <Box display="flex" justifyContent="center" mt={2}>
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          startIcon={<AddIcon />}
-                          onClick={handleAutoScheduleTrip}
-                          disabled={autoScheduleLoading}
-                        >
-                          {autoScheduleLoading ? "Đang xếp chuyến..." : "Hệ thống xếp chuyến"}
-                        </Button>
-                      </Box>
+                      {user?.role === "Staff" && (
+                        <>
+                          <Box display="flex" justifyContent="center" mt={2}>
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              startIcon={<AddIcon />}
+                              onClick={handleAutoScheduleTrip}
+                              disabled={autoScheduleLoading}
+                            >
+                              {autoScheduleLoading
+                                ? "Đang xếp chuyến..."
+                                : "Hệ thống xếp chuyến"}
+                            </Button>
+                          </Box>
 
-                      <Box display="flex" justifyContent="center" mt={2}>
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          startIcon={<AddIcon />}
-                          onClick={handleOpenCreateTripDialog}
-                        >
-                          Tạo chuyến thủ công
-                        </Button>
-                      </Box>
-                      </>
-                    )}
+                          <Box display="flex" justifyContent="center" mt={2}>
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              startIcon={<AddIcon />}
+                              onClick={handleOpenCreateTripDialog}
+                            >
+                              Tạo chuyến thủ công
+                            </Button>
+                          </Box>
+                        </>
+                      )}
                     </Box>
                   ) : (
                     <Alert severity="warning" sx={{ mt: 2 }}>
@@ -2321,12 +2376,14 @@ const OrderDetailPage: React.FC = () => {
                     required
                     disabled={isSubmitting}
                     inputProps={{
-                      style: { textTransform: 'uppercase' }
+                      style: { textTransform: "uppercase" },
                     }}
                     onChange={(e) => {
                       const value = e.target.value.toUpperCase();
-                      const formatted = value.replace(/[^A-Z0-9]/g, '');
-                      setValue("containerNumber",formatted, { shouldValidate: true });
+                      const formatted = value.replace(/[^A-Z0-9]/g, "");
+                      setValue("containerNumber", formatted, {
+                        shouldValidate: true,
+                      });
                     }}
                   />
                 </Grid>
@@ -2344,7 +2401,8 @@ const OrderDetailPage: React.FC = () => {
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  {orderDetails?.containerType === ContainerType["Container Lạnh"] && (
+                  {orderDetails?.containerType ===
+                    ContainerType["Container Lạnh"] && (
                     <TextField
                       fullWidth
                       label="Nhiệt độ (°C)"
@@ -2353,7 +2411,10 @@ const OrderDetailPage: React.FC = () => {
                       error={!!errors.temperature}
                       helperText={errors.temperature?.message}
                       margin="normal"
-                      required={orderDetails?.containerType === ContainerType["Container Lạnh"]}
+                      required={
+                        orderDetails?.containerType ===
+                        ContainerType["Container Lạnh"]
+                      }
                       disabled={isSubmitting}
                     />
                   )}
@@ -2403,7 +2464,8 @@ const OrderDetailPage: React.FC = () => {
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
 
-                  {orderDetails?.orderFiles && orderDetails.orderFiles.length > 0 ? (
+                  {orderDetails?.orderFiles &&
+                  orderDetails.orderFiles.length > 0 ? (
                     <Box mb={3}>
                       <Typography variant="subtitle2" gutterBottom>
                         Tài liệu hiện tại
@@ -2411,7 +2473,9 @@ const OrderDetailPage: React.FC = () => {
                       <List>
                         {orderDetails.orderFiles.map((fileObj, index) => {
                           const fileUrl =
-                            typeof fileObj === "string" ? fileObj : fileObj.fileUrl;
+                            typeof fileObj === "string"
+                              ? fileObj
+                              : fileObj.fileUrl;
                           const fileName =
                             typeof fileObj === "string"
                               ? `Tài liệu ${index + 1}`
@@ -2499,7 +2563,9 @@ const OrderDetailPage: React.FC = () => {
                                 mb: 2,
                               }}
                             >
-                              <Typography variant="body2">{file.name}</Typography>
+                              <Typography variant="body2">
+                                {file.name}
+                              </Typography>
                               <IconButton
                                 size="small"
                                 color="error"
@@ -2513,7 +2579,12 @@ const OrderDetailPage: React.FC = () => {
                             <TextField
                               label="Mô tả file"
                               value={fileDescriptions[index] || ""}
-                              onChange={(e) => handleFileDescriptionChange(index, e.target.value)}
+                              onChange={(e) =>
+                                handleFileDescriptionChange(
+                                  index,
+                                  e.target.value
+                                )
+                              }
                               fullWidth
                               margin="normal"
                               size="small"
@@ -2523,7 +2594,9 @@ const OrderDetailPage: React.FC = () => {
                             <TextField
                               label="Ghi chú file"
                               value={fileNotes[index] || ""}
-                              onChange={(e) => handleFileNoteChange(index, e.target.value)}
+                              onChange={(e) =>
+                                handleFileNoteChange(index, e.target.value)
+                              }
                               fullWidth
                               margin="normal"
                               size="small"
@@ -2538,7 +2611,14 @@ const OrderDetailPage: React.FC = () => {
               </Grid>
 
               {/* Buttons for submission and cancel */}
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3, gap: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  mt: 3,
+                  gap: 2,
+                }}
+              >
                 <Button onClick={handleCloseEditDialog}>Hủy</Button>
                 <Button
                   variant="contained"
@@ -2758,7 +2838,8 @@ const OrderDetailPage: React.FC = () => {
         <DialogTitle>Xác nhận cập nhật trạng thái thanh toán</DialogTitle>
         <DialogContent sx={{ pt: 1, width: 400 }}>
           <Typography variant="body2" gutterBottom>
-            Vui lòng xác nhận các điều kiện sau trước khi cập nhật trạng thái thanh toán:
+            Vui lòng xác nhận các điều kiện sau trước khi cập nhật trạng thái
+            thanh toán:
           </Typography>
           <FormControlLabel
             control={
@@ -2813,9 +2894,7 @@ const OrderDetailPage: React.FC = () => {
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent
-          sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}
-        >
+        <DialogContent sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}>
           <img
             src={imagePreview.src}
             alt={imagePreview.title}
@@ -2854,8 +2933,8 @@ const OrderDetailPage: React.FC = () => {
         onClose={handleCloseLoadingSnackbar}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert 
-          severity={loadingSnackbar.severity} 
+        <Alert
+          severity={loadingSnackbar.severity}
           onClose={handleCloseLoadingSnackbar}
           sx={{ width: "100%" }}
         >

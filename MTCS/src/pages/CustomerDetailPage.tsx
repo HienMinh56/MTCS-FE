@@ -66,14 +66,12 @@ import {
   updateCustomer,
   deleteCustomer,
 } from "../services/customerApi";
-import {
-  OrderStatus
-} from "../types/order";
+import { OrderStatus } from "../types/order";
 import { updateContract } from "../services/contractApi";
 import { CustomerDetail } from "../types/customer";
 import { ContractFile } from "../types/contract";
 import AddContractFileModal from "../components/contract/AddContractFileModal";
-import useAuth from "../hooks/useAuth"; // Thêm import useAuth
+import { useAuth } from "../contexts/AuthContext"; // Thêm import useAuth
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -176,21 +174,21 @@ const CustomerDetailPage = () => {
   const [contractsRowsPerPage, setContractsRowsPerPage] = useState(5);
 
   const getStatusDisplay = (status: OrderStatus) => {
-      switch (status) {
-        case OrderStatus.Pending:
-          return { label: "Chờ xử lý", color: "warning" };
-        case OrderStatus.Scheduled:
-          return { label: "Đã lên lịch", color: "info" };
-        case OrderStatus.Delivering:
-          return { label: "Đang giao hàng", color: "info" };
-        case OrderStatus.Shipped:
-          return { label: "Đã giao hàng", color: "info" };
-        case OrderStatus.Completed:
-          return { label: "Hoàn thành", color: "success" };
-        default:
-          return { label: "Không xác định", color: "default" };
-      }
-    };
+    switch (status) {
+      case OrderStatus.Pending:
+        return { label: "Chờ xử lý", color: "warning" };
+      case OrderStatus.Scheduled:
+        return { label: "Đã lên lịch", color: "info" };
+      case OrderStatus.Delivering:
+        return { label: "Đang giao hàng", color: "info" };
+      case OrderStatus.Shipped:
+        return { label: "Đã giao hàng", color: "info" };
+      case OrderStatus.Completed:
+        return { label: "Hoàn thành", color: "success" };
+      default:
+        return { label: "Không xác định", color: "default" };
+    }
+  };
 
   useEffect(() => {
     const fetchCustomerDetails = async () => {
@@ -944,15 +942,20 @@ const CustomerDetailPage = () => {
                           <TableCell>{orderId}</TableCell>
                           <TableCell>{createdDate}</TableCell>
                           <TableCell align="right">{price}</TableCell>
-                          <TableCell align="center" sx={{
-                                                fontWeight: "medium",
-                                                color:
-                                                  order.status === OrderStatus.Completed
-                                                    ? "success.main"
-                                                    : order.status === OrderStatus.Scheduled
-                                                    ? "info.main"
-                                                    : "warning.main",
-                                              }}>{getStatusDisplay(order.status).label}</TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{
+                              fontWeight: "medium",
+                              color:
+                                order.status === OrderStatus.Completed
+                                  ? "success.main"
+                                  : order.status === OrderStatus.Scheduled
+                                  ? "info.main"
+                                  : "warning.main",
+                            }}
+                          >
+                            {getStatusDisplay(order.status).label}
+                          </TableCell>
                           <TableCell align="center">
                             <IconButton
                               size="small"
@@ -1612,7 +1615,11 @@ const CustomerDetailPage = () => {
                   label="Ngày ký"
                   type="date"
                   fullWidth
-                  value={editContractForm.SignedTime ? editContractForm.SignedTime.substring(0, 10) : ""}
+                  value={
+                    editContractForm.SignedTime
+                      ? editContractForm.SignedTime.substring(0, 10)
+                      : ""
+                  }
                   margin="dense"
                   InputProps={{ readOnly: true }}
                   InputLabelProps={{ shrink: true }}
@@ -1761,28 +1768,38 @@ const CustomerDetailPage = () => {
                                   <Typography variant="body2" fontWeight="500">
                                     {file.fileName || `File ${index + 1}`}
                                   </Typography>
-                                  
+
                                   {/* Display Description */}
                                   <Box sx={{ mt: 1 }}>
-                                    <Typography variant="caption" color="text.secondary" display="block">
-                                      <strong>Mô tả:</strong> {file.description || "Không có mô tả"}
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      display="block"
+                                    >
+                                      <strong>Mô tả:</strong>{" "}
+                                      {file.description || "Không có mô tả"}
                                     </Typography>
                                   </Box>
-                                  
+
                                   {/* Display Note */}
                                   <Box sx={{ mt: 0.5 }}>
-                                    <Typography variant="caption" color="text.secondary" display="block">
-                                      <strong>Ghi chú:</strong> {file.note || "Không có ghi chú"}
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      display="block"
+                                    >
+                                      <strong>Ghi chú:</strong>{" "}
+                                      {file.note || "Không có ghi chú"}
                                     </Typography>
                                   </Box>
-                                  
+
                                   {isMarkedForRemoval && (
                                     <Typography variant="caption" color="error">
                                       Đánh dấu để xóa
                                     </Typography>
                                   )}
                                 </Box>
-                                
+
                                 <Box>
                                   <IconButton
                                     size="small"

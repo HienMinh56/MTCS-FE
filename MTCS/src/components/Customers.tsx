@@ -38,7 +38,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import { useNavigate } from "react-router-dom";
 import { getCustomers, createCustomer } from "../services/customerApi";
 import { Customer } from "../types/customer";
-import useAuth from "../hooks/useAuth"; // Add useAuth import
+import { useAuth } from "../contexts/AuthContext"; // Add useAuth import
 
 const Customers = () => {
   const { user } = useAuth(); // Use the useAuth hook to get user information
@@ -53,60 +53,58 @@ const Customers = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error'
+    message: "",
+    severity: "success" as "success" | "error",
   });
 
   const navigate = useNavigate();
 
   // Form state
   const [formData, setFormData] = useState({
-    companyName: '',
-    email: '',
-    phoneNumber: '',
-    taxNumber: '',
-    address: ''
+    companyName: "",
+    email: "",
+    phoneNumber: "",
+    taxNumber: "",
+    address: "",
   });
 
   // Form validation errors
   const [errors, setErrors] = useState({
-    companyName: '',
-    email: '',
-    phoneNumber: '',
-    taxNumber: '',
-    address: ''
+    companyName: "",
+    email: "",
+    phoneNumber: "",
+    taxNumber: "",
+    address: "",
   });
 
   useEffect(() => {
     const fetchCustomers = async () => {
       setLoading(true);
       try {
-        const result = await getCustomers(
-          page + 1,
-          rowsPerPage,
-          searchTerm
-        );
+        const result = await getCustomers(page + 1, rowsPerPage, searchTerm);
 
         console.log("Customer API response:", result);
 
         if (result && result.status === 1 && Array.isArray(result.data)) {
           // Process customers with direct response from API
-          const processedCustomers = result.data.map(customer => ({
+          const processedCustomers = result.data.map((customer) => ({
             customerId: customer.customerId,
             companyName: customer.companyName,
             email: customer.email,
             phoneNumber: customer.phoneNumber,
             createdDate: customer.createdDate,
             // Calculate totalOrders from the orders array
-            totalOrders: Array.isArray(customer.orders) ? customer.orders.length : 0
+            totalOrders: Array.isArray(customer.orders)
+              ? customer.orders.length
+              : 0,
           }));
-          
+
           setCustomers(processedCustomers);
           setTotalCustomers(processedCustomers.length);
-          
+
           // Calculate total orders across all customers
           const orderSum = processedCustomers.reduce(
-            (sum, customer) => sum + customer.totalOrders, 
+            (sum, customer) => sum + customer.totalOrders,
             0
           );
           setTotalOrders(orderSum);
@@ -116,7 +114,7 @@ const Customers = () => {
           setTotalCustomers(result.orders.totalCount || 0);
 
           const orderSum = result.orders.items.reduce(
-            (sum, customer) => sum + (customer.totalOrders || 0), 
+            (sum, customer) => sum + (customer.totalOrders || 0),
             0
           );
           setTotalOrders(orderSum);
@@ -148,21 +146,26 @@ const Customers = () => {
 
   const transformCustomerData = (data: any): Customer[] => {
     if (Array.isArray(data)) {
-      return data.map(customer => ({
+      return data.map((customer) => ({
         customerId: customer.customerId,
         companyName: customer.companyName,
         email: customer.email,
         phoneNumber: customer.phoneNumber,
         createdDate: customer.createdDate,
         // Count the number of orders from the orders array
-        totalOrders: Array.isArray(customer.orders) ? customer.orders.length : 0
+        totalOrders: Array.isArray(customer.orders)
+          ? customer.orders.length
+          : 0,
       }));
     }
     return [];
   };
 
   const countTotalOrders = (customers: Customer[]): number => {
-    return customers.reduce((sum, customer) => sum + (customer.totalOrders || 0), 0);
+    return customers.reduce(
+      (sum, customer) => sum + (customer.totalOrders || 0),
+      0
+    );
   };
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -182,21 +185,24 @@ const Customers = () => {
   };
 
   const clearSearch = () => {
-    setSearchTerm('');
+    setSearchTerm("");
   };
 
   const filteredCustomers = customers.filter((customer) => {
     if (!searchTerm.trim()) return true;
-    
+
     const lowerSearchTerm = searchTerm.toLowerCase();
-    
+
     return (
       // Search by Company Name
-      (customer.companyName && customer.companyName.toLowerCase().includes(lowerSearchTerm)) ||
+      (customer.companyName &&
+        customer.companyName.toLowerCase().includes(lowerSearchTerm)) ||
       // Search by Email
-      (customer.email && customer.email.toLowerCase().includes(lowerSearchTerm)) ||
+      (customer.email &&
+        customer.email.toLowerCase().includes(lowerSearchTerm)) ||
       // Search by Phone Number
-      (customer.phoneNumber && customer.phoneNumber.toLowerCase().includes(lowerSearchTerm))
+      (customer.phoneNumber &&
+        customer.phoneNumber.toLowerCase().includes(lowerSearchTerm))
     );
   });
 
@@ -214,18 +220,18 @@ const Customers = () => {
 
   const handleOpenCreateDialog = () => {
     setFormData({
-      companyName: '',
-      email: '',
-      phoneNumber: '',
-      taxNumber: '',
-      address: ''
+      companyName: "",
+      email: "",
+      phoneNumber: "",
+      taxNumber: "",
+      address: "",
     });
     setErrors({
-      companyName: '',
-      email: '',
-      phoneNumber: '',
-      taxNumber: '',
-      address: ''
+      companyName: "",
+      email: "",
+      phoneNumber: "",
+      taxNumber: "",
+      address: "",
     });
     setOpenDialog(true);
   };
@@ -238,13 +244,13 @@ const Customers = () => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
 
     if (errors[name as keyof typeof errors]) {
       setErrors({
         ...errors,
-        [name]: ''
+        [name]: "",
       });
     }
   };
@@ -255,66 +261,76 @@ const Customers = () => {
 
     // Kiểm tra tên công ty
     if (!formData.companyName.trim()) {
-      newErrors.companyName = 'Tên công ty là bắt buộc';
+      newErrors.companyName = "Tên công ty là bắt buộc";
       isValid = false;
     } else if (formData.companyName.trim().length < 2) {
-      newErrors.companyName = 'Tên công ty phải có ít nhất 2 ký tự';
+      newErrors.companyName = "Tên công ty phải có ít nhất 2 ký tự";
       isValid = false;
-    } else if (/^\s/.test(formData.companyName) || /\s$/.test(formData.companyName)) {
-      newErrors.companyName = 'Tên công ty không được bắt đầu hoặc kết thúc bằng dấu cách';
+    } else if (
+      /^\s/.test(formData.companyName) ||
+      /\s$/.test(formData.companyName)
+    ) {
+      newErrors.companyName =
+        "Tên công ty không được bắt đầu hoặc kết thúc bằng dấu cách";
       isValid = false;
     } else if (/\s{2,}/.test(formData.companyName)) {
-      newErrors.companyName = 'Tên công ty không được chứa nhiều hơn một dấu cách giữa các từ';
+      newErrors.companyName =
+        "Tên công ty không được chứa nhiều hơn một dấu cách giữa các từ";
       isValid = false;
     }
 
     // Kiểm tra email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email.trim()) {
-      newErrors.email = 'Email là bắt buộc';
+      newErrors.email = "Email là bắt buộc";
       isValid = false;
     } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
+      newErrors.email = "Email không hợp lệ";
       isValid = false;
     }
 
     // Kiểm tra số điện thoại
     const phoneRegex = /^[0-9]+$/;
     if (!formData.phoneNumber.trim()) {
-      newErrors.phoneNumber = 'Số điện thoại là bắt buộc';
+      newErrors.phoneNumber = "Số điện thoại là bắt buộc";
       isValid = false;
     } else if (!phoneRegex.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = 'Số điện thoại chỉ được chứa số';
+      newErrors.phoneNumber = "Số điện thoại chỉ được chứa số";
       isValid = false;
-    } else if (formData.phoneNumber.length < 10 || formData.phoneNumber.length > 15) {
-      newErrors.phoneNumber = 'Số điện thoại phải từ 10 đến 15 số';
+    } else if (
+      formData.phoneNumber.length < 10 ||
+      formData.phoneNumber.length > 15
+    ) {
+      newErrors.phoneNumber = "Số điện thoại phải từ 10 đến 15 số";
       isValid = false;
     }
 
     // Kiểm tra mã số thuế
     if (!formData.taxNumber.trim()) {
-      newErrors.taxNumber = 'Mã số thuế là bắt buộc';
+      newErrors.taxNumber = "Mã số thuế là bắt buộc";
       isValid = false;
     } else if (!phoneRegex.test(formData.taxNumber)) {
-      newErrors.taxNumber = 'Mã số thuế chỉ được chứa số';
+      newErrors.taxNumber = "Mã số thuế chỉ được chứa số";
       isValid = false;
     } else if (formData.taxNumber.length < 10) {
-      newErrors.taxNumber = 'Mã số thuế phải có ít nhất 10 số';
+      newErrors.taxNumber = "Mã số thuế phải có ít nhất 10 số";
       isValid = false;
     }
 
     // Kiểm tra địa chỉ
     if (!formData.address.trim()) {
-      newErrors.address = 'Địa chỉ là bắt buộc';
+      newErrors.address = "Địa chỉ là bắt buộc";
       isValid = false;
     } else if (formData.address.trim().length < 5) {
-      newErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
+      newErrors.address = "Địa chỉ phải có ít nhất 5 ký tự";
       isValid = false;
     } else if (/^\s/.test(formData.address) || /\s$/.test(formData.address)) {
-      newErrors.address = 'Địa chỉ không được bắt đầu hoặc kết thúc bằng dấu cách';
+      newErrors.address =
+        "Địa chỉ không được bắt đầu hoặc kết thúc bằng dấu cách";
       isValid = false;
     } else if (/\s{2,}/.test(formData.address)) {
-      newErrors.address = 'Địa chỉ không được chứa nhiều hơn một dấu cách giữa các từ';
+      newErrors.address =
+        "Địa chỉ không được chứa nhiều hơn một dấu cách giữa các từ";
       isValid = false;
     }
 
@@ -331,57 +347,57 @@ const Customers = () => {
 
     setIsSubmitting(true);
     let success = false; // Flag to track if operation was successful
-    
+
     try {
       // Make the API request and store the response
       const response = await createCustomer(formData);
       console.log("Customer created successfully:", response);
-      
+
       // Check if the response indicates an error
-      if (response && typeof response === 'object' && response.status === 400) {
+      if (response && typeof response === "object" && response.status === 400) {
         // This is an error response from the server with status 400
         const errorMessage = response.message || "Lỗi dữ liệu không hợp lệ";
         throw new Error(errorMessage);
       }
-      
+
       // If we get here, it was successful
       success = true;
-      
+
       // Show success message
       setSnackbar({
         open: true,
-        message: 'Tạo khách hàng thành công!',
-        severity: 'success'
+        message: "Tạo khách hàng thành công!",
+        severity: "success",
       });
 
       // Reload the customer list
       refreshCustomerList();
-      
     } catch (error: any) {
       success = false; // Ensure the success flag is false
       console.error("Error creating customer:", error);
-      
+
       // Get the error message
-      const errorMessage = error.message || "Lỗi khi tạo khách hàng. Vui lòng thử lại sau.";
-      
+      const errorMessage =
+        error.message || "Lỗi khi tạo khách hàng. Vui lòng thử lại sau.";
+
       // Highlight fields based on error message
-      if (errorMessage.includes('Số điện thoại')) {
-        setErrors(prev => ({
+      if (errorMessage.includes("Số điện thoại")) {
+        setErrors((prev) => ({
           ...prev,
-          phoneNumber: 'Số điện thoại đã được sử dụng bởi khách hàng khác'
+          phoneNumber: "Số điện thoại đã được sử dụng bởi khách hàng khác",
         }));
-      } else if (errorMessage.includes('Mã số thuế')) {
-        setErrors(prev => ({
+      } else if (errorMessage.includes("Mã số thuế")) {
+        setErrors((prev) => ({
           ...prev,
-          taxNumber: 'Mã số thuế đã được sử dụng bởi khách hàng khác'
+          taxNumber: "Mã số thuế đã được sử dụng bởi khách hàng khác",
         }));
       }
-      
+
       // Show error message
       setSnackbar({
         open: true,
         message: errorMessage,
-        severity: 'error'
+        severity: "error",
       });
     } finally {
       // Only close the dialog if the operation was successful
@@ -399,9 +415,12 @@ const Customers = () => {
       if (result && result.orders && result.orders.items) {
         setCustomers(result.orders.items);
         setTotalCustomers(result.orders.totalCount || 0);
-        setTotalOrders(result.orders.items.reduce(
-          (sum, customer) => sum + (customer.totalOrders || 0), 0
-        ));
+        setTotalOrders(
+          result.orders.items.reduce(
+            (sum, customer) => sum + (customer.totalOrders || 0),
+            0
+          )
+        );
       } else if (Array.isArray(result)) {
         const processedCustomers = transformCustomerData(result);
         setCustomers(processedCustomers);
@@ -414,15 +433,15 @@ const Customers = () => {
   };
 
   const handleCloseSnackbar = () => {
-    setSnackbar({...snackbar, open: false});
+    setSnackbar({ ...snackbar, open: false });
   };
 
   const getNewCustomersCount = () => {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    return customers.filter(customer => {
-      const createdDate = new Date(customer.createdDate || '');
+    return customers.filter((customer) => {
+      const createdDate = new Date(customer.createdDate || "");
       return createdDate >= oneWeekAgo;
     }).length;
   };
@@ -458,11 +477,18 @@ const Customers = () => {
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Tổng số: {totalCustomers} khách hàng
-                {searchTerm.trim() !== '' && ` (Đã lọc: ${filteredCustomers.length} kết quả)`}
+                {searchTerm.trim() !== "" &&
+                  ` (Đã lọc: ${filteredCustomers.length} kết quả)`}
               </Typography>
             </Box>
-            <Box sx={{ display: "flex", gap: 1, width: { xs: "100%", sm: "auto" } }}>
-              {user?.role?.toLowerCase() !== 'admin' && (
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                width: { xs: "100%", sm: "auto" },
+              }}
+            >
+              {user?.role?.toLowerCase() !== "admin" && (
                 <Button
                   variant="contained"
                   color="primary"
@@ -542,18 +568,26 @@ const Customers = () => {
                       <TableRow
                         key={customer.customerId}
                         hover
-                        onClick={() => handleViewCustomerDetail(customer.customerId)}
+                        onClick={() =>
+                          handleViewCustomerDetail(customer.customerId)
+                        }
                         sx={{ cursor: "pointer" }}
                       >
-                        <TableCell align="center">{customer.companyName}</TableCell>
+                        <TableCell align="center">
+                          {customer.companyName}
+                        </TableCell>
                         <TableCell align="center">{customer.email}</TableCell>
                         <TableCell>{customer.phoneNumber}</TableCell>
                         <TableCell align="center">
-                          {customer.createdDate 
-                            ? new Date(customer.createdDate).toLocaleDateString('vi-VN') 
-                            : 'N/A'}
+                          {customer.createdDate
+                            ? new Date(customer.createdDate).toLocaleDateString(
+                                "vi-VN"
+                              )
+                            : "N/A"}
                         </TableCell>
-                        <TableCell align="center">{customer.totalOrders || 0}</TableCell>
+                        <TableCell align="center">
+                          {customer.totalOrders || 0}
+                        </TableCell>
                       </TableRow>
                     ))
                 ) : (
@@ -585,8 +619,8 @@ const Customers = () => {
         </Box>
       </Paper>
 
-      <Dialog 
-        open={openDialog} 
+      <Dialog
+        open={openDialog}
         onClose={handleCloseDialog}
         fullWidth
         maxWidth="sm"
@@ -666,31 +700,32 @@ const Customers = () => {
             </Grid>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button 
-              onClick={handleCloseDialog} 
-              variant="outlined"
-            >
+            <Button onClick={handleCloseDialog} variant="outlined">
               Hủy
             </Button>
-            <Button 
-              type="submit" 
-              variant="contained" 
+            <Button
+              type="submit"
+              variant="contained"
               disabled={isSubmitting}
               startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
             >
-              {isSubmitting ? 'Đang lưu...' : 'Lưu'}
+              {isSubmitting ? "Đang lưu..." : "Lưu"}
             </Button>
           </DialogActions>
         </form>
       </Dialog>
 
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
