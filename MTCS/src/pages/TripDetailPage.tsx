@@ -25,6 +25,15 @@ import {
   Avatar,
   IconButton,
   Tooltip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  TextField,
+  Snackbar,
+  SnackbarContent,
+  Fade,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DirectionsIcon from "@mui/icons-material/Directions";
@@ -39,22 +48,148 @@ import ReportIcon from "@mui/icons-material/Report";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import GasMeterIcon from "@mui/icons-material/GasMeter";
+import CancelIcon from "@mui/icons-material/Cancel";
+import ImageIcon from "@mui/icons-material/Image";
+import CloseIcon from "@mui/icons-material/Close";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import { useAuth } from "../contexts/AuthContext";
 
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { tripDetail, tripStatusHistory } from "../types/trip";
-import { getTripDetail } from "../services/tripApi"; // Import getTripDetail
+import { getTripDetail, CancelTrip } from "../services/tripApi"; // Import getTripDetail and CancelTrip
 import { getDeliveryStatus } from "../services/deliveryStatus";
 
 const TripDetailPage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "Admin";
 
   const [tripData, setTripData] = useState<tripDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [deliveryStatuses, setDeliveryStatuses] = useState<{[key: string]: {statusName: string, color: string}} | null>(null);
+  const [deliveryStatuses, setDeliveryStatuses] = useState<{
+    [key: string]: { statusName: string; color: string };
+  } | null>(null);
   const [statusesLoaded, setStatusesLoaded] = useState<boolean>(false);
+
+  // Add states for cancel trip functionality
+  const [cancelModalOpen, setCancelModalOpen] = useState<boolean>(false);
+  const [confirmCancelModalOpen, setConfirmCancelModalOpen] =
+    useState<boolean>(false);
+  const [cancelNote, setCancelNote] = useState<string>("");
+  const [noteError, setNoteError] = useState<string>("");
+  const [cancelLoading, setCancelLoading] = useState<boolean>(false);
+  const [cancelSuccess, setCancelSuccess] = useState<boolean>(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  // Add state for image preview
+  const [imagePreview, setImagePreview] = useState<{
+    open: boolean;
+    src: string;
+    title: string;
+  }>({
+    open: false,
+    src: "",
+    title: "",
+  });
+
+  // Add validation function for note
+  const validateNote = (note: string): string => {
+    const trimmedNote = note.trim();
+
+    // Check if note is empty
+    if (!trimmedNote) {
+      return "Vui lòng nhập lý do hủy chuyến";
+    }
+
+    // Check if note starts and ends with valid characters (not whitespace)
+    // Valid characters: letters, numbers, or punctuation marks
+    if (/^\s/.test(trimmedNote) || /\s$/.test(trimmedNote)) {
+      return "Lý do không được bắt đầu hoặc kết thúc bằng dấu cách";
+    }
+
+    // Check for multiple spaces between words
+    if (/\s{2,}/.test(trimmedNote)) {
+      return "Lý do không được chứa nhiều hơn một dấu cách giữa các từ";
+    }
+
+    return "";
+  };
+
+  // Handle note change with validation
+  const handleNoteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCancelNote(value);
+    setNoteError(validateNote(value));
+  };
+
+  // Handle first modal submission
+  const handleCancelSubmit = () => {
+    const error = validateNote(cancelNote);
+    setNoteError(error);
+
+    if (!error) {
+      setCancelModalOpen(false);
+      setConfirmCancelModalOpen(true);
+    }
+  };
+
+  // Handle final confirmation and API call
+  const handleConfirmCancel = async () => {
+    if (!tripId) return;
+
+    setCancelLoading(true);
+    setCancelError(null);
+
+    try {
+      const result = await CancelTrip({
+        tripId,
+        note: cancelNote.trim(),
+      });
+
+      setCancelSuccess(true);
+      setConfirmCancelModalOpen(false);
+
+      // Reload the data after a short delay to show the updated trip status
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (error: any) {
+      console.error("Error cancelling trip:", error);
+      setCancelError(error.message || "Có lỗi xảy ra khi hủy chuyến");
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  // Close modals and reset form
+  const handleCancelModalClose = () => {
+    setCancelModalOpen(false);
+    setCancelNote("");
+    setNoteError("");
+  };
+
+  const handleConfirmModalClose = () => {
+    setConfirmCancelModalOpen(false);
+  };
+
+  // Add functions to handle image preview
+  const openImagePreview = (src: string, title: string = "Image Preview") => {
+    setImagePreview({
+      open: true,
+      src,
+      title,
+    });
+  };
+
+  const closeImagePreview = () => {
+    setImagePreview({
+      ...imagePreview,
+      open: false,
+    });
+  };
 
   // Fetch delivery statuses
   useEffect(() => {
@@ -62,30 +197,32 @@ const TripDetailPage: React.FC = () => {
       try {
         setLoading(true); // Show loading state while fetching both resources
         const statusData = await getDeliveryStatus();
-        
+
         // Convert to a lookup map for easier use
-        const statusMap: {[key: string]: {statusName: string, color: string}} = {};
-        
+        const statusMap: {
+          [key: string]: { statusName: string; color: string };
+        } = {};
+
         if (Array.isArray(statusData)) {
           statusData.forEach((status) => {
             // Use status.statusId as key and provide statusName with default color of "default"
             // You can modify this to map different colors based on status if needed
             statusMap[status.statusId] = {
               statusName: status.statusName,
-              color: getStatusColor(status.statusId)
+              color: getStatusColor(status.statusId),
             };
           });
-        } else if (statusData && typeof statusData === 'object') {
+        } else if (statusData && typeof statusData === "object") {
           // Handle if response is an object with a data property
           const dataArray = statusData.data || [];
           dataArray.forEach((status) => {
             statusMap[status.statusId] = {
               statusName: status.statusName,
-              color: getStatusColor(status.statusId)
+              color: getStatusColor(status.statusId),
             };
           });
         }
-        
+
         setDeliveryStatuses(statusMap);
         setStatusesLoaded(true);
       } catch (error) {
@@ -94,7 +231,7 @@ const TripDetailPage: React.FC = () => {
         setStatusesLoaded(true);
       }
     };
-    
+
     fetchDeliveryStatuses();
   }, []);
 
@@ -132,7 +269,7 @@ const TripDetailPage: React.FC = () => {
         console.log("Processed trip details:", tripDetails);
 
         if (!tripDetails) {
-          setError("No trip data found");
+          setError("Không thể tải thông tin chuyến đi");
           setLoading(false);
           return;
         }
@@ -147,8 +284,8 @@ const TripDetailPage: React.FC = () => {
     };
 
     fetchTripDetails();
-  }, [tripId, statusesLoaded]);  
-  
+  }, [tripId, statusesLoaded]);
+
   // Helper function to assign color based on status
   const getStatusColor = (statusId: string) => {
     switch (statusId) {
@@ -162,6 +299,8 @@ const TripDetailPage: React.FC = () => {
         return "info";
       case "completed":
         return "success";
+      case "canceled":
+        return "error"; // Sử dụng màu đỏ (error) cho trạng thái hủy
       case "delaying":
         return "warning";
       default:
@@ -172,12 +311,12 @@ const TripDetailPage: React.FC = () => {
   // Helper function to format trip status
   const getTripStatusDisplay = (status: string | null) => {
     if (!status) return { label: "Không xác định", color: "default" };
-    
+
     // Check if we have dynamic statuses from API and if this status exists in our map
     if (deliveryStatuses && deliveryStatuses[status]) {
-      return { 
-        label: deliveryStatuses[status].statusName, 
-        color: deliveryStatuses[status].color 
+      return {
+        label: deliveryStatuses[status].statusName,
+        color: deliveryStatuses[status].color,
       };
     }
   };
@@ -204,6 +343,28 @@ const TripDetailPage: React.FC = () => {
     }
   };
 
+  // Check if trip is canceled (either by main status or in history)
+  const isTripcanceled = () => {
+    // Check main trip status
+    if (tripData?.status === "canceled") {
+      return true;
+    }
+
+    // Check if there's any canceled status in history
+    if (
+      tripData?.tripStatusHistories &&
+      tripData.tripStatusHistories.length > 0
+    ) {
+      return tripData.tripStatusHistories.some(
+        (history) =>
+          history.statusId === "canceled" ||
+          getTripStatusDisplay(history.statusId)?.label === "Đã hủy chuyến"
+      );
+    }
+
+    return false;
+  };
+
   // Get icon for each status step
   const getStatusIcon = (statusId: string | null) => {
     switch (statusId) {
@@ -225,7 +386,7 @@ const TripDetailPage: React.FC = () => {
       case "completed":
         return <CheckCircleIcon />;
       case "delaying":
-        return <ReportIcon color="warning" />;
+        return <ReportIcon color="white" />;
       default:
         return <DirectionsIcon />;
     }
@@ -396,7 +557,7 @@ const TripDetailPage: React.FC = () => {
                         color: "primary.dark",
                       },
                     }}
-                    onClick={() => handleOrderClick(tripData.trackingCode)}
+                    onClick={() => handleOrderClick(tripData.orderId)}
                   >
                     {tripData.trackingCode || "N/A"}
                   </Typography>
@@ -440,15 +601,6 @@ const TripDetailPage: React.FC = () => {
               <Grid item xs={12} md={6}>
                 <Box mb={2}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Ghép bởi
-                  </Typography>
-                  <Typography variant="body1">{tripData.matchBy}</Typography>
-                </Box>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <Box mb={2}>
-                  <Typography variant="subtitle2" color="text.secondary">
                     Thời gian ghép nối
                   </Typography>
                   <Box display="flex" alignItems="center">
@@ -471,6 +623,15 @@ const TripDetailPage: React.FC = () => {
                   <Typography variant="body1">
                     {tripData.matchType == 1 ? "Staff" : "Hệ thống"}
                   </Typography>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Người ghép
+                  </Typography>
+                  <Typography variant="body1">{tripData.matchBy}</Typography>
                 </Box>
               </Grid>
             </Grid>
@@ -589,6 +750,7 @@ const TripDetailPage: React.FC = () => {
                         <TableRow>
                           <TableCell>Thời gian</TableCell>
                           <TableCell align="center">Ghi chú</TableCell>
+                          <TableCell align="center">Ảnh</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -599,6 +761,53 @@ const TripDetailPage: React.FC = () => {
                             </TableCell>
                             <TableCell align="center">
                               {report.notes || "N/A"}
+                            </TableCell>
+                            <TableCell
+                              align="center"
+                              sx={{
+                                textAlign: "center",
+                                verticalAlign: "middle",
+                              }}
+                            >
+                              {report.deliveryReportsFiles &&
+                              Array.isArray(report.deliveryReportsFiles) &&
+                              report.deliveryReportsFiles.length > 0 ? (
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    gap: 1,
+                                    flexWrap: "wrap",
+                                    justifyContent: "center", // Center the image container horizontally
+                                    alignItems: "center", // Center items vertically
+                                  }}
+                                >
+                                  {report.deliveryReportsFiles.map(
+                                    (file: any, fileIndex: number) => (
+                                      <Box
+                                        key={fileIndex}
+                                        component="img"
+                                        src={file.fileUrl}
+                                        alt="Ảnh biên bản"
+                                        sx={{
+                                          width: 80,
+                                          height: 60,
+                                          objectFit: "cover",
+                                          cursor: "pointer",
+                                          borderRadius: 1,
+                                        }}
+                                        onClick={() =>
+                                          openImagePreview(
+                                            file.fileUrl,
+                                            "Ảnh biên bản"
+                                          )
+                                        }
+                                      />
+                                    )
+                                  )}
+                                </Box>
+                              ) : (
+                                "Không có hoá đơn"
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -681,7 +890,10 @@ const TripDetailPage: React.FC = () => {
                                           borderRadius: 1,
                                         }}
                                         onClick={() =>
-                                          window.open(file.fileUrl, "_blank")
+                                          openImagePreview(
+                                            file.fileUrl,
+                                            "Hoá đơn nhiên liệu"
+                                          )
                                         }
                                       />
                                     )
@@ -729,12 +941,12 @@ const TripDetailPage: React.FC = () => {
                             <Chip
                               size="small"
                               label={
-                                report.status === "resolved"
+                                report.status === "Resolved"
                                   ? "Đã xử lý"
                                   : "Chưa xử lý"
                               }
                               color={
-                                report.status === "resolved"
+                                report.status === "Resolved"
                                   ? "success"
                                   : "warning"
                               }
@@ -1135,10 +1347,173 @@ const TripDetailPage: React.FC = () => {
                   Xem thông tin tài xế
                 </Button>
               )}
+
+              {/* Cancel Trip Button */}
+              {!isAdmin &&
+                !isTripcanceled() &&
+                tripData.status !== "completed" && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    fullWidth
+                    startIcon={<CancelIcon />}
+                    onClick={() => setCancelModalOpen(true)}
+                  >
+                    Hủy chuyến
+                  </Button>
+                )}
             </Box>
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Cancel Trip Modal */}
+      <Dialog
+        open={cancelModalOpen}
+        onClose={handleCancelModalClose}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Hủy chuyến</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Vui lòng nhập lý do hủy chuyến.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Lý do hủy chuyến"
+            fullWidth
+            value={cancelNote}
+            onChange={handleNoteChange}
+            error={!!noteError}
+            helperText={noteError}
+            multiline
+            rows={5}
+            variant="outlined"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                fontSize: "1.1rem",
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelModalClose} color="primary">
+            Đóng
+          </Button>
+          <Button
+            onClick={handleCancelSubmit}
+            color="error"
+            disabled={!!noteError}
+          >
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirm Cancel Modal */}
+      <Dialog open={confirmCancelModalOpen} onClose={handleConfirmModalClose}>
+        <DialogTitle>Xác nhận hủy chuyến</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Bạn có chắc chắn muốn hủy chuyến này? Hành động này không thể hoàn
+            tác.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleConfirmModalClose} color="primary">
+            Đóng
+          </Button>
+          <Button
+            onClick={handleConfirmCancel}
+            color="error"
+            disabled={cancelLoading}
+          >
+            {cancelLoading ? "Đang xử lý..." : "Hủy chuyến"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog
+        open={imagePreview.open}
+        onClose={closeImagePreview}
+        maxWidth="lg"
+        fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
+          <ImageIcon sx={{ mr: 1 }} color="primary" />
+          {imagePreview.title}
+          <IconButton
+            onClick={closeImagePreview}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}>
+          <img
+            src={imagePreview.src}
+            alt={imagePreview.title}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+              padding: 16,
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            component="a"
+            href={imagePreview.src}
+            target="_blank"
+            rel="noopener noreferrer"
+            startIcon={<OpenInNewIcon />}
+            variant="outlined"
+          >
+            Mở trong cửa sổ mới
+          </Button>
+          <Button
+            onClick={closeImagePreview}
+            color="primary"
+            variant="contained"
+          >
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Cancel Success Snackbar */}
+      <Snackbar
+        open={cancelSuccess}
+        autoHideDuration={3000}
+        onClose={() => setCancelSuccess(false)}
+      >
+        <SnackbarContent
+          message="Chuyến đi đã được hủy thành công."
+          sx={{ backgroundColor: "success.main", color: "white" }}
+        />
+      </Snackbar>
+
+      {/* Cancel Error Snackbar */}
+      <Snackbar
+        open={!!cancelError}
+        autoHideDuration={3000}
+        onClose={() => setCancelError(null)}
+      >
+        <SnackbarContent
+          message={cancelError}
+          sx={{ backgroundColor: "error.main", color: "white" }}
+        />
+      </Snackbar>
     </Box>
   );
 };

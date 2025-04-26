@@ -130,12 +130,12 @@ export const createOrder = async (orderData: {
       // Ensure descriptions and notes arrays have same length as files
       const descriptions = orderData.description || [];
       const notes = orderData.notes || [];
-      
+
       // Log the counts to help diagnose issues
       console.log("Files count:", orderData.files.length);
       console.log("Descriptions count:", descriptions.length);
       console.log("Notes count:", notes.length);
-      
+
       // Add files to formData
       orderData.files.forEach((file, index) => {
         formData.append("files", file);
@@ -143,7 +143,10 @@ export const createOrder = async (orderData: {
 
       // Add descriptions - ensure we have enough for each file
       for (let i = 0; i < orderData.files.length; i++) {
-        formData.append("descriptions", i < descriptions.length ? descriptions[i] : "");
+        formData.append(
+          "descriptions",
+          i < descriptions.length ? descriptions[i] : ""
+        );
       }
 
       // Add notes - ensure we have enough for each file
@@ -155,7 +158,13 @@ export const createOrder = async (orderData: {
     // Log the actual form data entries
     console.log("FormData entries:");
     for (let pair of formData.entries()) {
-      console.log(pair[0] + ': ' + (pair[1] instanceof File ? `File: ${(pair[1] as File).name}` : pair[1]));
+      console.log(
+        pair[0] +
+          ": " +
+          (pair[1] instanceof File
+            ? `File: ${(pair[1] as File).name}`
+            : pair[1])
+      );
     }
 
     const response = await axiosInstance.post("/api/order", formData, {
@@ -199,7 +208,7 @@ export const updateOrder = async (orderData: {
   try {
     // Always use FormData for all scenarios to match backend [FromForm] attribute
     const formData = new FormData();
-    
+
     // Add basic fields - using the exact case that the backend expects
     formData.append("orderId", orderData.orderId);
     formData.append("status", orderData.status.toString());
@@ -210,23 +219,32 @@ export const updateOrder = async (orderData: {
     formData.append("ContactPhone", orderData.contactPhone || "");
     formData.append("OrderPlacer", orderData.orderPlacer || ""); // Changed from OrderPlace to OrderPlacer to match backend
     formData.append("IsPay", orderData.isPay.toString());
-    
+
     // Only add temperature if it's not null
     if (orderData.temperature !== null) {
       formData.append("Temperature", orderData.temperature.toString());
     }
 
     // Only add description fields for new files
-    if (orderData.filesToAdd && orderData.filesToAdd.length > 0 && orderData.description) {
+    if (
+      orderData.filesToAdd &&
+      orderData.filesToAdd.length > 0 &&
+      orderData.description
+    ) {
       // Make sure we have descriptions for each file
       for (let i = 0; i < orderData.filesToAdd.length; i++) {
-        const desc = i < orderData.description.length ? orderData.description[i] : "";
+        const desc =
+          i < orderData.description.length ? orderData.description[i] : "";
         formData.append("Descriptions", desc);
       }
     }
 
     // Only add notes fields for new files
-    if (orderData.filesToAdd && orderData.filesToAdd.length > 0 && orderData.notes) {
+    if (
+      orderData.filesToAdd &&
+      orderData.filesToAdd.length > 0 &&
+      orderData.notes
+    ) {
       // Make sure we have notes for each file
       for (let i = 0; i < orderData.filesToAdd.length; i++) {
         const note = i < orderData.notes.length ? orderData.notes[i] : "";
@@ -247,11 +265,17 @@ export const updateOrder = async (orderData: {
         formData.append("AddedFiles", file);
       });
     }
-    
+
     // Log form data entries for debugging
     console.log("FormData entries:");
     for (let pair of formData.entries()) {
-      console.log(pair[0] + ': ' + (pair[1] instanceof File ? `File: ${(pair[1] as File).name}` : pair[1]));
+      console.log(
+        pair[0] +
+          ": " +
+          (pair[1] instanceof File
+            ? `File: ${(pair[1] as File).name}`
+            : pair[1])
+      );
     }
 
     const response = await axiosInstance.put(
@@ -276,54 +300,60 @@ export const updateOrder = async (orderData: {
   }
 };
 
-export const exportExcel = async (fromDateStr: string | null, toDateStr: string | null) => {
+export const exportExcel = async (
+  fromDateStr: string | null,
+  toDateStr: string | null
+) => {
   try {
     // Format dates from YYYY-MM-DD to DD/MM/YYYY format which the backend expects
     const formatDateForApi = (dateStr: string | null): string | null => {
       if (!dateStr) return null;
       // Parse the input date string (expected format: YYYY-MM-DD)
-      const [year, month, day] = dateStr.split('-');
+      const [year, month, day] = dateStr.split("-");
       // Return in DD/MM/YYYY format
       return `${day}/${month}/${year}`;
     };
 
     const formattedFromDate = formatDateForApi(fromDateStr);
     const formattedToDate = formatDateForApi(toDateStr);
-    
+
     // Use params property for GET requests to send query parameters
-    const response = await axiosInstance.get(`/api/order/export-excel?fromDateStr=${formattedFromDate}&toDateStr=${formattedToDate}`, {
-      responseType: 'blob', // Set response type to blob for file downloads
-    });
-    
+    const response = await axiosInstance.get(
+      `/api/order/export-excel?fromDateStr=${formattedFromDate}&toDateStr=${formattedToDate}`,
+      {
+        responseType: "blob", // Set response type to blob for file downloads
+      }
+    );
+
     // Create a URL for the blob
-    const blob = new Blob([response.data], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     const url = window.URL.createObjectURL(blob);
-    
+
     // Create a temporary link to trigger the download
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    
+
     // Generate filename with current date if not provided in response headers
-    const contentDisposition = response.headers['content-disposition'];
-    let filename = 'orders-export.xlsx';
-    
+    const contentDisposition = response.headers["content-disposition"];
+    let filename = "orders-export.xlsx";
+
     if (contentDisposition) {
       const filenameMatch = contentDisposition.match(/filename="(.+)"/);
       if (filenameMatch && filenameMatch.length > 1) {
         filename = filenameMatch[1];
       }
     }
-    
-    link.setAttribute('download', filename);
+
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
-    
+
     // Clean up
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
-    
+
     return { success: true };
   } catch (error) {
     console.error("===== ORDER API ERROR =====");
@@ -334,18 +364,21 @@ export const exportExcel = async (fromDateStr: string | null, toDateStr: string 
 
 export const updatePaymentStatus = async (orderId: string) => {
   try {
-    const response = await axiosInstance.patch(`/api/order/${orderId}/toggle-is-pay`);
+    const response = await axiosInstance.patch(
+      `/api/order/${orderId}/toggle-is-pay`
+    );
     return response;
-  }
-  catch (error: any) {
+  } catch (error: any) {
     console.error("Payment status update response:", error);
-    
+
     // Check if this is the specific 400 error from the toggle-is-pay endpoint
     // but the operation was actually successful
-    if (error.response && 
-        error.response.status === 400 && 
-        error.config && 
-        error.config.url.includes('toggle-is-pay')) {
+    if (
+      error.response &&
+      error.response.status === 400 &&
+      error.config &&
+      error.config.url.includes("toggle-is-pay")
+    ) {
       console.log("Treating 400 response as success for payment toggle");
       // Return a fake successful response
       return {
@@ -353,10 +386,10 @@ export const updatePaymentStatus = async (orderId: string) => {
         data: { success: true, message: "Payment status updated successfully" },
         statusText: "OK",
         headers: {},
-        config: error.config
+        config: error.config,
       };
     }
-    
+
     // For other errors, rethrow
     throw error;
   }
@@ -365,16 +398,40 @@ export const updatePaymentStatus = async (orderId: string) => {
 export const trackingOrder = async (trackingCode: string) => {
   try {
     const response = await axiosInstance.get(`/api/order/${trackingCode}`);
-    
+
     // Check if the order is completed
     if (response.data && response.data.status === OrderStatus.Completed) {
       throw new Error("ORDER_COMPLETED");
     }
-    
+
     return response;
-  }
-  catch (error) {
+  } catch (error) {
     console.error("Failed to get tracking Order", error);
+    throw error;
+  }
+};
+
+export const getOrdersByCustomerId = async (
+  customerId: string
+): Promise<OrderDetails[]> => {
+  try {
+    // Call the API endpoint that now supports filtering by customer ID
+    const response = await axiosInstance.get<ApiResponse<OrderDetails[]>>(
+      `/api/order/orders`,
+      {
+        params: {
+          userId: customerId, // Use userId parameter as mentioned in API signature
+        },
+      }
+    );
+
+    if (response.data.status === 1 && Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Error fetching orders by customer ID:", error);
     throw error;
   }
 };

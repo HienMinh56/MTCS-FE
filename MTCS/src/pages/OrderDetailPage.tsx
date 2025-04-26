@@ -30,6 +30,8 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Checkbox,
+  Snackbar,
+  Fade,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
@@ -43,6 +45,12 @@ import FolderIcon from '@mui/icons-material/Folder';
 import ContactsIcon from '@mui/icons-material/Contacts';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PaymentIcon from '@mui/icons-material/Payment';
+import ImageIcon from "@mui/icons-material/Image";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import CloseIcon from "@mui/icons-material/Close";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   OrderDetails,
   ContainerType,
@@ -54,7 +62,7 @@ import {
 } from "../types/order";
 import { getOrderDetails, updateOrder, updatePaymentStatus } from "../services/orderApi";
 import { getContracts, createContract } from "../services/contractApi";
-import { getTrip, manualCreateTrip } from "../services/tripApi";
+import { getTrip, manualCreateTrip, autoScheduleTrip } from "../services/tripApi";
 import { trip } from "../types/trip";
 import { ContractFile } from "../types/contract";
 import { format } from "date-fns";
@@ -68,10 +76,13 @@ import { getTrailers } from "../services/trailerApi";
 import { Driver } from "../types/driver";
 import { Tractor } from "../types/tractor";
 import { Trailer } from "../types/trailer";
+import { getDeliveryStatus } from "../services/deliveryStatus";
+import useAuth from "../hooks/useAuth"; // Thêm import useAuth
 
 const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth(); // Lấy thông tin user từ useAuth hook
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [contractFiles, setContractFiles] = useState<ContractFile[] | null>(
     null
@@ -88,6 +99,9 @@ const OrderDetailPage: React.FC = () => {
   const [statusUpdateOpen, setStatusUpdateOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<OrderStatus | "">("");
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+  const [autoScheduleLoading, setAutoScheduleLoading] = useState(false);
+  const [autoScheduleError, setAutoScheduleError] = useState<string | null>(null);
+  const [autoScheduleSuccess, setAutoScheduleSuccess] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState({
     note: "",
     price: 0,
@@ -106,7 +120,8 @@ const OrderDetailPage: React.FC = () => {
   const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
   const [fileNotes, setFileNotes] = useState<string[]>([]);
-
+  const [statusesLoaded, setStatusesLoaded] = useState<boolean>(false);
+  const [deliveryStatuses, setDeliveryStatuses] = useState<{[key: string]: {statusName: string, color: string}} | null>(null);
   const [openCreateTripDialog, setOpenCreateTripDialog] = useState(false);
   const [createTripData, setCreateTripData] = useState({
     orderId: "",
@@ -131,6 +146,37 @@ const OrderDetailPage: React.FC = () => {
   const [trailerMaxLoadWeight, setTrailerMaxLoadWeight] = useState<
     number | null
   >(null);
+  const [loadingSnackbar, setLoadingSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity?: "success" | "error" | "info" | "warning";
+    autoHideDuration?: number;
+  }>({
+    open: false,
+    message: "",
+    severity: "info",
+    autoHideDuration: 3000
+  });
+  const [paymentConfirmationOpen, setPaymentConfirmationOpen] = useState(false);
+  const [confirmCheckbox1, setConfirmCheckbox1] = useState(false);
+  const [confirmCheckbox2, setConfirmCheckbox2] = useState(false);
+  const [imagePreview, setImagePreview] = useState<{
+    open: boolean;
+    src: string;
+    title: string;
+  }>({
+    open: false,
+    src: "",
+    title: "",
+  });
+
+  // Close loading snackbar
+  const handleCloseLoadingSnackbar = () => {
+    setLoadingSnackbar({
+      ...loadingSnackbar,
+      open: false,
+    });
+  };
 
   const fetchData = async () => {
     try {
@@ -324,17 +370,87 @@ const OrderDetailPage: React.FC = () => {
     setOpenAddContractModal(false);
   };
 
+  // Define a more specific validation schema for the edit form
+  const editOrderSchema = z.object({
+    note: z.string()
+    .min(1, 'Ghi chú là bắt buộc')
+    .max(500, 'Ghi chú không được vượt quá 500 ký tự')
+    .refine(val => !/^\s/.test(val) && !/\s$/.test(val), {
+      message: 'Ghi chú không được bắt đầu hoặc kết thúc bằng dấu cách',
+    })
+    .refine(val => !/\s{2,}/.test(val), {
+      message: 'Ghi chú không được chứa nhiều hơn một dấu cách giữa các từ',
+    }),
+    price: z.number()
+      .min(0, "Giá không được âm")
+      .max(1000000000, "Giá không được vượt quá 1 tỷ VND"),
+    contactPerson: z.string()
+      .min(1, "Tên người liên hệ là bắt buộc")
+      .max(50, "Tên người liên hệ không được vượt quá 50 ký tự")
+      .refine(val => !/^\s/.test(val) && !/\s$/.test(val), {
+        message: "Tên người liên hệ không được bắt đầu hoặc kết thúc bằng dấu cách",
+      }),
+    containerNumber: z.string()
+      .min(1, "Số container là bắt buộc")
+      .max(20, "Số container không được vượt quá 20 ký tự")
+      .regex(/^[A-Z]{3}[UJZ]\d{7}$/, "Số container phải có định dạng hợp lệ (ví dụ: SEGU5593802)"),
+    contactPhone: z.string()
+      .min(10, "Số điện thoại phải có ít nhất 10 số")
+      .max(15, "Số điện thoại không được vượt quá 15 số")
+      .regex(/^\d+$/, "Số điện thoại chỉ được chứa các chữ số"),
+    orderPlacer: z.string()
+      .min(1, "Người đặt hàng là bắt buộc")
+      .max(50, "Người đặt hàng không được vượt quá 50 ký tự")
+      .refine(val => !/^\s/.test(val) && !/\s$/.test(val), {
+        message: "Người đặt hàng không được bắt đầu hoặc kết thúc bằng dấu cách",
+      }),
+    temperature: z.number()
+      .min(-30, "Nhiệt độ không được thấp hơn -30°C")
+      .max(40, "Nhiệt độ không được cao hơn 40°C")
+      .nullable(),
+  });
+
+  // Define the type for our form
+  type EditOrderFormValues = z.infer<typeof editOrderSchema>;
+
+  // Setup form with react-hook-form
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors }, 
+    setValue, 
+    watch,
+    reset 
+  } = useForm<EditOrderFormValues>({
+    resolver: zodResolver(editOrderSchema),
+    defaultValues: {
+      note: "",
+      price: 0,
+      contactPerson: "",
+      containerNumber: "",
+      contactPhone: "",
+      orderPlacer: "",
+      temperature: null,
+    },
+  });
+
   const handleOpenEditDialog = () => {
     if (orderDetails) {
-      setEditFormData({
+      // Reset form with current order details
+      reset({
         note: orderDetails.note || "",
         price: orderDetails.price || 0,
         contactPerson: orderDetails.contactPerson || "",
         containerNumber: orderDetails.containerNumber || "",
         contactPhone: orderDetails.contactPhone || "",
         orderPlacer: orderDetails.orderPlacer || "",
-        isPay: orderDetails.isPay || IsPay.No,
         temperature: orderDetails.temperature || null,
+      });
+      
+      // Set the state for payment status which is handled separately
+      setEditFormData({
+        ...editFormData,
+        isPay: orderDetails.isPay || IsPay.No,
         filesToRemove: [],
         filesToAdd: [],
         description: [],
@@ -424,7 +540,7 @@ const OrderDetailPage: React.FC = () => {
     setFileNotes(newNotes);
   };
 
-  const handleUpdateOrder = async () => {
+  const onSubmitEditForm = (data: EditOrderFormValues) => {
     if (!orderDetails || !orderId) return;
 
     setIsSubmitting(true);
@@ -433,6 +549,7 @@ const OrderDetailPage: React.FC = () => {
       console.log("Current files to delete:", filesToDelete);
       console.log("Current new files:", newFiles);
 
+      // Process files and their metadata
       if (newFiles.length > 0) {
         while (fileDescriptions.length < newFiles.length) {
           fileDescriptions.push("");
@@ -446,16 +563,16 @@ const OrderDetailPage: React.FC = () => {
       const updateData = {
         orderId: orderId,
         status: orderDetails.status,
-        note: editFormData.note || "",
-        price: editFormData.price,
-        contactPerson: editFormData.contactPerson || "",
-        containerNumber: editFormData.containerNumber || "",
-        contactPhone: editFormData.contactPhone || "",
-        orderPlacer: editFormData.orderPlacer || "",
+        note: data.note || "",
+        price: data.price,
+        contactPerson: data.contactPerson || "",
+        containerNumber: data.containerNumber || "",
+        contactPhone: data.contactPhone || "",
+        orderPlacer: data.orderPlacer || "",
         isPay: editFormData.isPay,
         temperature:
           orderDetails.containerType === ContainerType["Container Lạnh"]
-            ? editFormData.temperature
+            ? data.temperature
             : null,
         description:
           newFiles.length > 0 ? fileDescriptions.slice(0, newFiles.length) : [],
@@ -466,30 +583,32 @@ const OrderDetailPage: React.FC = () => {
 
       console.log("Sending update data:", updateData);
 
-      const result = await updateOrder(updateData);
-      console.log("Order updated successfully:", result);
-
-      setUpdateSuccess("Đơn hàng đã được cập nhật thành công");
-      handleCloseEditDialog();
-      fetchData();
-
-      setTimeout(() => {
-        setUpdateSuccess(null);
-      }, 5000);
+      // Call the update API
+      updateOrder(updateData)
+        .then(result => {
+          console.log("Order updated successfully:", result);
+          setUpdateSuccess("Đơn hàng đã được cập nhật thành công");
+          handleCloseEditDialog();
+          fetchData();
+          
+          setTimeout(() => {
+            setUpdateSuccess(null);
+          }, 5000);
+        })
+        .catch(err => {
+          console.error("Error updating order:", err);
+          let errorMessage = "Không thể cập nhật đơn hàng. Vui lòng thử lại sau.";
+          if (err.response && err.response.data && err.response.data.message) {
+            errorMessage = err.response.data.message;
+          }
+          setError(errorMessage);
+        })
+        .finally(() => {
+          setIsSubmitting(false);
+        });
     } catch (err) {
-      console.error("Error updating order:", err);
-
-      let errorMessage = "Không thể cập nhật đơn hàng. Vui lòng thử lại sau.";
-
-      if (err.response) {
-        console.error("API response error:", err.response.data);
-        if (err.response.data && err.response.data.message) {
-          errorMessage = err.response.data.message;
-        }
-      }
-
-      setError(errorMessage);
-    } finally {
+      console.error("Error in update process:", err);
+      setError("Không thể cập nhật đơn hàng. Vui lòng thử lại sau.");
       setIsSubmitting(false);
     }
   };
@@ -584,37 +703,77 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+    // Fetch delivery statuses
+    useEffect(() => {
+      const fetchDeliveryStatuses = async () => {
+        try {
+          setLoading(true); // Show loading state while fetching both resources
+          const statusData = await getDeliveryStatus();
+          
+          // Convert to a lookup map for easier use
+          const statusMap: {[key: string]: {statusName: string, color: string}} = {};
+          
+          if (Array.isArray(statusData)) {
+            statusData.forEach((status) => {
+              // Use status.statusId as key and provide statusName with default color of "default"
+              // You can modify this to map different colors based on status if needed
+              statusMap[status.statusId] = {
+                statusName: status.statusName,
+                color: getStatusColor(status.statusId)
+              };
+            });
+          } else if (statusData && typeof statusData === 'object') {
+            // Handle if response is an object with a data property
+            const dataArray = statusData.data || [];
+            dataArray.forEach((status) => {
+              statusMap[status.statusId] = {
+                statusName: status.statusName,
+                color: getStatusColor(status.statusId)
+              };
+            });
+          }
+          
+          setDeliveryStatuses(statusMap);
+          setStatusesLoaded(true);
+        } catch (error) {
+          console.error("Failed to fetch delivery statuses:", error);
+          // Continue without delivery statuses - will fall back to hardcoded values
+          setStatusesLoaded(true);
+        }
+      };
+      
+      fetchDeliveryStatuses();
+    }, []);
+
+    // Helper function to assign color based on status
+  const getStatusColor = (statusId: string) => {
+    switch (statusId) {
+      case "not_started":
+        return "default";
+      case "going_to_port":
+      case "pick_up_container":
+      case "is_delivering":
+      case "at_delivery_point":
+      case "going_to_port/depot":
+        return "info";
+      case "completed":
+        return "success";
+      case "delaying":
+        return "warning";
+      default:
+        return "default";
+    }
+  };
+
   const getTripStatusDisplay = (status: string | null) => {
     if (!status) return { label: "Không xác định", color: "default" };
-
-    switch (status) {
-      case "completed":
-        return { label: "Hoàn thành", color: "success" };
-      case "delaying":
-        return { label: "Tạm dừng", color: "warning" };
-      case "going_to_port":
-        return { label: "Đang di chuyển đến cảng", color: "info" };
-      case "0":
-        return { label: "Chưa bắt đầu", color: "default" };
-      case "1":
-        return { label: "Đang di chuyển đến điểm lấy hàng", color: "info" };
-      case "2":
-        return { label: "Đã đến điểm lấy hàng", color: "info" };
-      case "3":
-        return { label: "Đang di chuyển đến điểm giao hàng", color: "info" };
-      case "4":
-        return { label: "Đã đến điểm giao hàng", color: "info" };
-      case "5":
-        return {
-          label: "Đang di chuyển đến điểm trả container",
-          color: "info",
-        };
-      case "6":
-        return { label: "Đã đến điểm trả container", color: "success" };
-      case "7":
-        return { label: "Hoàn thành", color: "success" };
-      default:
-        return { label: status, color: "default" };
+    
+    // Check if we have dynamic statuses from API and if this status exists in our map
+    if (deliveryStatuses && deliveryStatuses[status]) {
+      return { 
+        label: deliveryStatuses[status].statusName, 
+        color: deliveryStatuses[status].color 
+      };
     }
   };
 
@@ -878,6 +1037,82 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+  const handleAutoScheduleTrip = async () => {
+    setAutoScheduleLoading(true);
+    setAutoScheduleError(null);
+    setAutoScheduleSuccess(null);
+    
+    // Show loading notification when starting the process
+    setLoadingSnackbar({
+      open: true,
+      message: "Đang xếp chuyến tự động...",
+      severity: "info",
+      autoHideDuration: 1500
+    });
+
+    try {
+      if (!orderId) {
+        throw new Error("Không tìm thấy mã đơn hàng");
+      }
+
+      console.log("Auto scheduling trip for order:", orderId);
+      const result = await autoScheduleTrip(orderId);
+      console.log("Auto scheduling result:", result);
+
+      if (result.status == 1) {
+        // Use the message from API response for success message
+        setAutoScheduleSuccess("Đã tạo chuyến cho đơn hàng!");
+      
+        // Show success notification
+        // setLoadingSnackbar({
+        //   open: true,
+        //   message: result.message,
+        //   severity: "success",
+        //   autoHideDuration: 5000
+        // });
+      
+        setTimeout(() => {
+          setAutoScheduleSuccess(null);
+        }, 5000);
+
+        fetchData(); // Refresh trip data
+      } else {
+        // Use the message from API response for success message
+        setAutoScheduleError("Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!");
+      
+        // Show success notification
+        setLoadingSnackbar({
+          open: true,
+          message: "Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!",
+          severity: "error",
+          autoHideDuration: 5000
+        });
+      
+        setTimeout(() => {
+          setAutoScheduleError(null);
+        }, 5000);
+      }
+      
+    } catch (error: string | null) {
+      
+      setAutoScheduleError(error);
+    
+      // Show error notification
+      setLoadingSnackbar({
+        open: true,
+        message: `${error} Vui lòng tạo chuyến thủ công.`,
+        severity: "error",
+        autoHideDuration: 6000
+      });
+    } finally {
+      setAutoScheduleLoading(false);
+    }
+
+    setTimeout(() => {
+      setAutoScheduleError(null);
+    }, 5000);
+  };
+
   const handleUpdatePaymentStatus = async () => {
     if (!orderDetails || !orderId) return;
 
@@ -893,6 +1128,13 @@ const OrderDetailPage: React.FC = () => {
       const statusText = orderDetails.isPay === IsPay.Yes ? "Chưa thanh toán" : "Đã thanh toán";
       setUpdateSuccess(`Trạng thái thanh toán đã được cập nhật thành công: ${statusText}`);
       fetchData();
+      
+      // Close the confirmation dialog after successful update
+      setPaymentConfirmationOpen(false);
+      
+      // Reset checkbox states for next time
+      setConfirmCheckbox1(false);
+      setConfirmCheckbox2(false);
 
       setTimeout(() => {
         setUpdateSuccess(null);
@@ -903,6 +1145,21 @@ const OrderDetailPage: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const openImagePreview = (src: string, title: string = "Image Preview") => {
+    setImagePreview({
+      open: true,
+      src,
+      title,
+    });
+  };
+
+  const closeImagePreview = () => {
+    setImagePreview({
+      ...imagePreview,
+      open: false,
+    });
   };
 
   if (loading) {
@@ -1010,8 +1267,8 @@ const OrderDetailPage: React.FC = () => {
             label={getStatusDisplay(orderDetails.status).label}
             color={getStatusDisplay(orderDetails.status).color as any}
           />
-          {/* Show update info button only for Pending orders */}
-          {orderDetails.status === OrderStatus.Pending && (
+          {/* Show update info button only for Pending orders and Staff role */}
+          {orderDetails.status === OrderStatus.Pending && user?.role === "Staff" && (
             <Button
               variant="outlined"
               color="primary"
@@ -1022,14 +1279,14 @@ const OrderDetailPage: React.FC = () => {
             </Button>
           )}
           {/* Show payment status button for all orders except those already paid */}
-          {orderDetails.isPay !== IsPay.Yes && (
+          {orderDetails.isPay !== IsPay.Yes && user?.role === "Staff" && (
             <Button
               variant="outlined"
               color={orderDetails.isPay === IsPay.Yes ? "success" : "warning"}
               startIcon={orderDetails.isPay === IsPay.Yes ? <CheckCircleIcon /> : <PaymentIcon />}
-              onClick={handleUpdatePaymentStatus}
+              onClick={() => setPaymentConfirmationOpen(true)}
             >
-              Câp nhật Thanh Toán
+              Cập nhật Thanh Toán
             </Button>
           )}
         </Box>
@@ -1219,19 +1476,19 @@ const OrderDetailPage: React.FC = () => {
 
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Ngày tạo
+                    Ước lượng thời gian tài xế chạy
                   </Typography>
                   <Typography variant="body1" gutterBottom>
-                    {formatDate(orderDetails.createdDate)}
+                    {orderDetails.completionTime || "N/A"}
                   </Typography>
                 </Grid>
 
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Ước lượng thời gian tài xế chạy
+                    Ngày tạo
                   </Typography>
                   <Typography variant="body1" gutterBottom>
-                    {orderDetails.completionTime || "N/A"}
+                    {formatDateTime(orderDetails.createdDate)}
                   </Typography>
                 </Grid>
 
@@ -1243,6 +1500,24 @@ const OrderDetailPage: React.FC = () => {
                     {orderDetails.createdBy || "N/A"}
                   </Typography>
                 </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Ngày chỉnh sửa
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {formatDateTime(orderDetails.modifiedDate)}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Người chỉnh sửa
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {(orderDetails.modifiedBy) || "N/A"}
+                  </Typography>
+                </Grid>                
 
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">
@@ -1465,7 +1740,7 @@ const OrderDetailPage: React.FC = () => {
                                     cursor: "pointer",
                                     borderRadius: 1,
                                   }}
-                                  onClick={() => window.open(fileUrl, "_blank")}
+                                  onClick={() => openImagePreview(fileUrl, fileName || `Order file ${index + 1}`)}
                                 />
                                 <Typography
                                   variant="caption"
@@ -1574,6 +1849,10 @@ const OrderDetailPage: React.FC = () => {
                       file.fileType === "PowerPoint Presentation" ||
                       file.fileType === "Text Document" ||
                       file.fileType === "Archive";
+                    const description =
+                      typeof file === "string" ? null : file.description;
+                    const notes =
+                      typeof file === "string" ? null : file.note;
 
                     const isImage =
                       file.fileType === "Image" ||
@@ -1605,10 +1884,8 @@ const OrderDetailPage: React.FC = () => {
                                     cursor: "pointer",
                                     borderRadius: 1,
                                   }}
-                                  onClick={() =>
-                                    window.open(file.fileUrl, "_blank")
-                                  }
-                                />
+                                  onClick={() => openImagePreview(file.fileUrl, file.fileName || `Contract image ${index + 1}`)}
+                                />                                
                                 <Typography
                                   variant="caption"
                                   display="block"
@@ -1639,6 +1916,58 @@ const OrderDetailPage: React.FC = () => {
                                     `Tài liệu hợp đồng ${index + 1}`}
                                 </a>
                               </Typography>
+                            )}
+
+                            {(description || notes) && (
+                              <Box
+                                mt={1}
+                                pt={1}
+                                sx={{
+                                  borderTop: "1px dashed rgba(0, 0, 0, 0.12)",
+                                  maxHeight: "80px",
+                                  overflow: "auto",
+                                }}
+                              >
+                                {description && (
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      component="span"
+                                      sx={{ fontWeight: "medium" }}
+                                    >
+                                      Mô tả:
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      component="span"
+                                      sx={{ ml: 0.5 }}
+                                    >
+                                      {description}
+                                    </Typography>
+                                  </Box>
+                                )}
+
+                                {notes && (
+                                  <Box mt={0.5}>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      component="span"
+                                      sx={{ fontWeight: "medium" }}
+                                    >
+                                      Ghi chú:
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      component="span"
+                                      sx={{ ml: 0.5 }}
+                                    >
+                                      {notes}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              </Box>
                             )}
                           </CardContent>
                         </Card>
@@ -1688,6 +2017,18 @@ const OrderDetailPage: React.FC = () => {
               </Alert>
             )}
 
+            {autoScheduleSuccess && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {autoScheduleSuccess}
+              </Alert>
+            )}
+
+            {autoScheduleError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {autoScheduleError}
+              </Alert>
+            )}
+
             {tripLoading && (
               <Box display="flex" justifyContent="center" p={2}>
                 <CircularProgress size={24} />
@@ -1712,15 +2053,33 @@ const OrderDetailPage: React.FC = () => {
                   orderDetails.orderFiles.length > 0 &&
                   contractFiles &&
                   contractFiles.length > 0 ? (
-                    <Box display="flex" justifyContent="center" mt={2}>
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleOpenCreateTripDialog}
-                      >
-                        Tạo chuyến đi
-                      </Button>
+                    <Box display="flex" justifyContent="space-between">
+                    {user?.role === "Staff" && (
+                      <>
+                      <Box display="flex" justifyContent="center" mt={2}>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<AddIcon />}
+                          onClick={handleAutoScheduleTrip}
+                          disabled={autoScheduleLoading}
+                        >
+                          {autoScheduleLoading ? "Đang xếp chuyến..." : "Hệ thống xếp chuyến"}
+                        </Button>
+                      </Box>
+
+                      <Box display="flex" justifyContent="center" mt={2}>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<AddIcon />}
+                          onClick={handleOpenCreateTripDialog}
+                        >
+                          Tạo chuyến thủ công
+                        </Button>
+                      </Box>
+                      </>
+                    )}
                     </Box>
                   ) : (
                     <Alert severity="warning" sx={{ mt: 2 }}>
@@ -1922,179 +2281,203 @@ const OrderDetailPage: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Người liên hệ"
-                  name="contactPerson"
-                  value={editFormData.contactPerson}
-                  onChange={handleInputChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Số điện thoại liên hệ"
-                  name="contactPhone"
-                  value={editFormData.contactPhone}
-                  onChange={handleInputChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Số container"
-                  name="containerNumber"
-                  value={editFormData.containerNumber}
-                  onChange={handleInputChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Giá (VNĐ)"
-                  type="number"
-                  name="price"
-                  value={editFormData.price}
-                  onChange={handleInputChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {orderDetails?.containerType ===
-                  ContainerType["Container Lạnh"] && (
+            <form onSubmit={handleSubmit(onSubmitEditForm)}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="Nhiệt độ (°C)"
-                    type="number"
-                    name="temperature"
-                    value={editFormData.temperature || ""}
-                    onChange={handleInputChange}
+                    label="Người liên hệ"
+                    {...register("contactPerson")}
+                    error={!!errors.contactPerson}
+                    helperText={errors.contactPerson?.message}
                     margin="normal"
+                    required
+                    disabled={isSubmitting}
                   />
-                )}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Người đặt hàng"
-                  name="orderPlacer"
-                  value={editFormData.orderPlacer}
-                  onChange={handleInputChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Ghi chú"
-                  name="note"
-                  multiline
-                  rows={3}
-                  value={editFormData.note}
-                  onChange={handleInputChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={editFormData.isPay === IsPay.Yes}
-                      onChange={handleSwitchChange}
-                      color="primary"
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Số điện thoại liên hệ"
+                    {...register("contactPhone")}
+                    error={!!errors.contactPhone}
+                    helperText={errors.contactPhone?.message}
+                    margin="normal"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Số container"
+                    {...register("containerNumber")}
+                    error={!!errors.containerNumber}
+                    helperText={errors.containerNumber?.message}
+                    margin="normal"
+                    required
+                    disabled={isSubmitting}
+                    inputProps={{
+                      style: { textTransform: 'uppercase' }
+                    }}
+                    onChange={(e) => {
+                      const value = e.target.value.toUpperCase();
+                      const formatted = value.replace(/[^A-Z0-9]/g, '');
+                      setValue("containerNumber",formatted, { shouldValidate: true });
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Giá (VNĐ)"
+                    type="number"
+                    {...register("price", { valueAsNumber: true })}
+                    error={!!errors.price}
+                    helperText={errors.price?.message}
+                    margin="normal"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  {orderDetails?.containerType === ContainerType["Container Lạnh"] && (
+                    <TextField
+                      fullWidth
+                      label="Nhiệt độ (°C)"
+                      type="number"
+                      {...register("temperature", { valueAsNumber: true })}
+                      error={!!errors.temperature}
+                      helperText={errors.temperature?.message}
+                      margin="normal"
+                      required={orderDetails?.containerType === ContainerType["Container Lạnh"]}
+                      disabled={isSubmitting}
                     />
-                  }
-                  label="Đã thanh toán"
-                />
-              </Grid>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Người đặt hàng"
+                    {...register("orderPlacer")}
+                    error={!!errors.orderPlacer}
+                    helperText={errors.orderPlacer?.message}
+                    margin="normal"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Ghi chú"
+                    {...register("note")}
+                    error={!!errors.note}
+                    helperText={errors.note?.message}
+                    multiline
+                    rows={3}
+                    margin="normal"
+                    disabled={isSubmitting}
+                  />
+                </Grid>
+                {/* <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={editFormData.isPay === IsPay.Yes}
+                        onChange={handleSwitchChange}
+                        color="primary"
+                      />
+                    }
+                    label="Đã thanh toán"
+                    disabled={isSubmitting}
+                  />
+                </Grid> */}
 
-              <Grid item xs={12}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Quản lý tài liệu đơn hàng
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-
-                {orderDetails?.orderFiles &&
-                orderDetails.orderFiles.length > 0 ? (
-                  <Box mb={3}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Tài liệu hiện tại
-                    </Typography>
-                    <List>
-                      {orderDetails.orderFiles.map((fileObj, index) => {
-                        const fileUrl =
-                          typeof fileObj === "string"
-                            ? fileObj
-                            : fileObj.fileUrl;
-                        const fileName =
-                          typeof fileObj === "string"
-                            ? `Tài liệu ${index + 1}`
-                            : fileObj.fileName || `Tài liệu ${index + 1}`;
-
-                        return (
-                          <ListItem key={index} dense>
-                            <ListItemText
-                              primary={fileName}
-                              secondary={
-                                filesToDelete.includes(fileUrl)
-                                  ? "Sẽ bị xóa"
-                                  : ""
-                              }
-                            />
-                            <ListItemSecondaryAction>
-                              <Checkbox
-                                edge="end"
-                                onChange={() => handleFileToggle(fileUrl)}
-                                checked={filesToDelete.includes(fileUrl)}
-                                color="error"
-                              />
-                              <IconButton
-                                size="small"
-                                href={fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <AttachFileIcon fontSize="small" />
-                              </IconButton>
-                            </ListItemSecondaryAction>
-                          </ListItem>
-                        );
-                      })}
-                    </List>
-                  </Box>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Không có tài liệu hiện tại
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Quản lý tài liệu đơn hàng
                   </Typography>
-                )}
+                  <Divider sx={{ mb: 2 }} />
 
-                <Box mt={3}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Thêm tài liệu mới
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<AttachFileIcon />}
-                    sx={{ mb: 2 }}
-                  >
-                    Chọn tệp
-                    <input
-                      type="file"
-                      hidden
-                      multiple
-                      onChange={handleNewFileChange}
-                    />
-                  </Button>
-
-                  {newFiles.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
+                  {orderDetails?.orderFiles && orderDetails.orderFiles.length > 0 ? (
+                    <Box mb={3}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Tài liệu hiện tại
+                      </Typography>
                       <List>
+                        {orderDetails.orderFiles.map((fileObj, index) => {
+                          const fileUrl =
+                            typeof fileObj === "string" ? fileObj : fileObj.fileUrl;
+                          const fileName =
+                            typeof fileObj === "string"
+                              ? `Tài liệu ${index + 1}`
+                              : fileObj.fileName || `Tài liệu ${index + 1}`;
+
+                          return (
+                            <ListItem key={index} dense>
+                              <ListItemText
+                                primary={fileName}
+                                secondary={
+                                  filesToDelete.includes(fileUrl)
+                                    ? "Sẽ bị xóa"
+                                    : ""
+                                }
+                              />
+                              <ListItemSecondaryAction>
+                                <Checkbox
+                                  edge="end"
+                                  onChange={() => handleFileToggle(fileUrl)}
+                                  checked={filesToDelete.includes(fileUrl)}
+                                  color="error"
+                                  disabled={isSubmitting}
+                                />
+                                <IconButton
+                                  size="small"
+                                  href={fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <AttachFileIcon fontSize="small" />
+                                </IconButton>
+                              </ListItemSecondaryAction>
+                            </ListItem>
+                          );
+                        })}
+                      </List>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Không có tài liệu hiện tại
+                    </Typography>
+                  )}
+
+                  <Box mt={3}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Thêm tài liệu mới
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<AttachFileIcon />}
+                      sx={{ mb: 2 }}
+                      disabled={isSubmitting}
+                    >
+                      Chọn tệp
+                      <input
+                        type="file"
+                        hidden
+                        multiple
+                        onChange={handleNewFileChange}
+                        disabled={isSubmitting}
+                      />
+                    </Button>
+
+                    {newFiles.length > 0 && (
+                      <Paper variant="outlined" sx={{ p: 2, mt: 1 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Tệp đã chọn:
+                        </Typography>
                         {newFiles.map((file, index) => (
                           <Box
                             key={index}
@@ -2113,13 +2496,12 @@ const OrderDetailPage: React.FC = () => {
                                 mb: 2,
                               }}
                             >
-                              <Typography variant="body2">
-                                {file.name}
-                              </Typography>
+                              <Typography variant="body2">{file.name}</Typography>
                               <IconButton
                                 size="small"
                                 color="error"
                                 onClick={() => handleRemoveNewFile(index)}
+                                disabled={isSubmitting}
                               >
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
@@ -2128,48 +2510,45 @@ const OrderDetailPage: React.FC = () => {
                             <TextField
                               label="Mô tả file"
                               value={fileDescriptions[index] || ""}
-                              onChange={(e) =>
-                                handleFileDescriptionChange(
-                                  index,
-                                  e.target.value
-                                )
-                              }
+                              onChange={(e) => handleFileDescriptionChange(index, e.target.value)}
                               fullWidth
                               margin="normal"
                               size="small"
+                              disabled={isSubmitting}
                             />
 
                             <TextField
                               label="Ghi chú file"
                               value={fileNotes[index] || ""}
-                              onChange={(e) =>
-                                handleFileNoteChange(index, e.target.value)
-                              }
+                              onChange={(e) => handleFileNoteChange(index, e.target.value)}
                               fullWidth
                               margin="normal"
                               size="small"
+                              disabled={isSubmitting}
                             />
                           </Box>
                         ))}
-                      </List>
-                    </Box>
-                  )}
-                </Box>
+                      </Paper>
+                    )}
+                  </Box>
+                </Grid>
               </Grid>
-            </Grid>
+
+              {/* Buttons for submission and cancel */}
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3, gap: 2 }}>
+                <Button onClick={handleCloseEditDialog}>Hủy</Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  type="submit"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Đang cập nhật..." : "Lưu thay đổi"}
+                </Button>
+              </Box>
+            </form>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCloseEditDialog}>Hủy</Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleUpdateOrder}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Đang cập nhật..." : "Lưu thay đổi"}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       <Dialog
@@ -2365,6 +2744,121 @@ const OrderDetailPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog
+        open={paymentConfirmationOpen}
+        onClose={() => setPaymentConfirmationOpen(false)}
+        PaperProps={{
+          sx: { borderRadius: 2 },
+        }}
+      >
+        <DialogTitle>Xác nhận cập nhật trạng thái thanh toán</DialogTitle>
+        <DialogContent sx={{ pt: 1, width: 400 }}>
+          <Typography variant="body2" gutterBottom>
+            Vui lòng xác nhận các điều kiện sau trước khi cập nhật trạng thái thanh toán:
+          </Typography>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={confirmCheckbox1}
+                onChange={(e) => setConfirmCheckbox1(e.target.checked)}
+              />
+            }
+            label="Tôi đã kiểm tra và xác nhận thông tin thanh toán là chính xác."
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={confirmCheckbox2}
+                onChange={(e) => setConfirmCheckbox2(e.target.checked)}
+              />
+            }
+            label="Tôi hiểu rằng việc cập nhật trạng thái thanh toán là không thể hoàn tác."
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPaymentConfirmationOpen(false)}>Hủy</Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdatePaymentStatus}
+            disabled={!confirmCheckbox1 || !confirmCheckbox2 || isSubmitting}
+          >
+            {isSubmitting ? "Đang xử lý..." : "Xác nhận"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={imagePreview.open}
+        onClose={closeImagePreview}
+        maxWidth="lg"
+        fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
+          <ImageIcon sx={{ mr: 1 }} color="primary" />
+          {imagePreview.title}
+          <IconButton
+            onClick={closeImagePreview}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}
+        >
+          <img
+            src={imagePreview.src}
+            alt={imagePreview.title}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+              padding: 16,
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            component="a"
+            href={imagePreview.src}
+            target="_blank"
+            rel="noopener noreferrer"
+            startIcon={<OpenInNewIcon />}
+            variant="outlined"
+          >
+            Mở trong cửa sổ mới
+          </Button>
+          <Button
+            onClick={closeImagePreview}
+            color="primary"
+            variant="contained"
+          >
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={loadingSnackbar.open}
+        autoHideDuration={loadingSnackbar.autoHideDuration}
+        onClose={handleCloseLoadingSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert 
+          severity={loadingSnackbar.severity} 
+          onClose={handleCloseLoadingSnackbar}
+          sx={{ width: "100%" }}
+        >
+          {loadingSnackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

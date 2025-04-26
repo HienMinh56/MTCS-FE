@@ -23,12 +23,16 @@ import { createTripReplace } from "../services/tripApi";
 import { getDriverList } from "../services/DriverApi";
 import { getTractors } from "../services/tractorApi";
 import { getTrailers } from "../services/trailerApi";
+import { getOrderDetails } from "../services/orderApi";
+import { ContainerType } from "../types/order";
 
 interface ReplaceTripModalProps {
   open: boolean;
   onClose: () => void;
   tripId: string;
+  orderId?: string; // Add orderId prop to get order details
   onSuccess?: () => void;
+  vehicleType?: number; // Thêm prop vehicleType để xác định loại phương tiện hư hỏng
 }
 
 // Driver option interface
@@ -44,6 +48,7 @@ interface TractorOption {
   licensePlate: string;
   brand: string;
   maxLoadWeight?: number;
+  containerType?: number;
 }
 
 // Trailer option interface
@@ -54,7 +59,7 @@ interface TrailerOption {
   maxLoadWeight?: number;
 }
 
-const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModalProps) => {
+const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleType }: ReplaceTripModalProps) => {
   const [formData, setFormData] = useState({
     driverId: "",
     tractorId: "",
@@ -66,11 +71,14 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
   const [loadingDrivers, setLoadingDrivers] = useState(false);
   const [loadingTractors, setLoadingTractors] = useState(false);
   const [loadingTrailers, setLoadingTrailers] = useState(false);
+  const [loadingOrder, setLoadingOrder] = useState(false);
   
   // Options for dropdown selects
   const [drivers, setDrivers] = useState<DriverOption[]>([]);
   const [tractors, setTractors] = useState<TractorOption[]>([]);
+  const [filteredTractors, setFilteredTractors] = useState<TractorOption[]>([]);
   const [trailers, setTrailers] = useState<TrailerOption[]>([]);
+  const [orderContainerType, setOrderContainerType] = useState<number | null>(null);
   
   const [error, setError] = useState("");
   
@@ -78,14 +86,63 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
   const [tractorMaxLoadWeight, setTractorMaxLoadWeight] = useState<number | null>(null);
   const [trailerMaxLoadWeight, setTrailerMaxLoadWeight] = useState<number | null>(null);
 
+  // Kiểm tra xem có nên hiển thị phần chọn trailer hay không
+  const shouldShowTrailer = vehicleType === 2 || vehicleType === undefined;
+
+  // Fetch order details if orderId is provided
+  useEffect(() => {
+    if (open && orderId) {
+      fetchOrderDetails(orderId);
+    }
+  }, [open, orderId]);
+
   // Fetch data when modal opens
   useEffect(() => {
     if (open) {
       fetchDrivers();
       fetchTractors();
-      fetchTrailers();
+      // Chỉ tải dữ liệu trailer nếu cần hiển thị phần chọn trailer
+      if (shouldShowTrailer) {
+        fetchTrailers();
+      }
     }
-  }, [open]);
+  }, [open, shouldShowTrailer]);
+
+  // Effect to filter tractors based on order containerType
+  useEffect(() => {
+    if (tractors.length > 0 && orderContainerType !== null) {
+      let filtered = [...tractors];
+      
+      // Nếu container type là 2 (container lạnh), chỉ hiển thị đầu kéo loại 2
+      if (orderContainerType === 2) {
+        filtered = tractors.filter(tractor => tractor.containerType === 2);
+        console.log("Filtering for refrigerated container, found:", filtered.length, "tractors");
+      }
+      // Nếu container type là 1 (container khô), hiển thị tất cả đầu kéo (loại 1 và 2)
+      
+      setFilteredTractors(filtered);
+    } else {
+      setFilteredTractors(tractors);
+    }
+  }, [tractors, orderContainerType]);
+
+  // Fetch order details to get containerType
+  const fetchOrderDetails = async (orderId: string) => {
+    setLoadingOrder(true);
+    try {
+      const orderDetails = await getOrderDetails(orderId);
+      if (orderDetails) {
+        // Set container type
+        setOrderContainerType(orderDetails.containerType);
+        console.log("Order container type:", orderDetails.containerType);
+      }
+    } catch (err) {
+      console.error("Error fetching order details:", err);
+      setError("Không thể tải thông tin đơn hàng");
+    } finally {
+      setLoadingOrder(false);
+    }
+  };
 
   // Fetch drivers from API
   const fetchDrivers = async () => {
@@ -99,7 +156,6 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
           phoneNumber: driver.phoneNumber || "",
         }));
         setDrivers(driverOptions);
-        console.log(driverOptions);
       }
     } catch (err) {
       console.error("Error fetching drivers:", err);
@@ -120,8 +176,10 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
           licensePlate: tractor.licensePlate,
           brand: tractor.brand || "",
           maxLoadWeight: tractor.maxLoadWeight || null,
+          containerType: tractor.containerType,
         }));
         setTractors(tractorOptions);
+        console.log("Fetched total tractors:", tractorOptions.length);
       }
     } catch (err) {
       console.error("Error fetching tractors:", err);
@@ -190,7 +248,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
         tripId,
         driverId: formData.driverId || null,
         tractorId: formData.tractorId || null,
-        trailerId: formData.trailerId || null // This can be null
+        trailerId: formData.trailerId || null // Có thể được điền hoặc không tùy vào việc hiển thị
       };
 
       await createTripReplace(tripReplaceData);
@@ -209,7 +267,14 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
     }
   };
 
-  const isLoading = loadingDrivers || loadingTractors || loadingTrailers;
+  const isLoading = loadingDrivers || loadingTractors || loadingTrailers || loadingOrder;
+
+  // Trả về tên loại container dựa trên giá trị
+  const getContainerTypeText = (type: number | null) => {
+    if (type === 1) return "Container Khô";
+    if (type === 2) return "Container Lạnh";
+    return "Không xác định";
+  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -227,6 +292,19 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
               <Typography variant="subtitle2" gutterBottom>
                 Mã chuyến đi cần thay thế: {tripId}
               </Typography>
+              {/* {vehicleType && (
+                <Typography variant="subtitle2" color="primary" gutterBottom>
+                  Phương tiện hư hỏng: {vehicleType === 1 ? "Đầu kéo" : vehicleType === 2 ? "Rơ-moóc" : "Không xác định"}
+                </Typography>
+              )}
+              {orderContainerType !== null && (
+                <Typography variant="subtitle2" color="secondary" gutterBottom>
+                  Loại container: {getContainerTypeText(orderContainerType)}
+                  {orderContainerType === 2 && (
+                    <span> (Chỉ hiển thị đầu kéo container lạnh)</span>
+                  )}
+                </Typography>
+              )} */}
             </Grid>
             
             {/* Driver Dropdown */}
@@ -258,7 +336,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
             {/* Tractor Dropdown */}
             <Grid item xs={12} md={9}>
               <Autocomplete
-                options={tractors}
+                options={filteredTractors}
                 getOptionLabel={(option) => `${option.licensePlate} (${option.brand})`}
                 loading={loadingTractors}
                 onChange={handleTractorChange}
@@ -286,7 +364,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
                 variant="outlined"
                 size="small"
                 fullWidth
-                value={tractorMaxLoadWeight !== null ? `${tractorMaxLoadWeight} kg` : ''}
+                value={tractorMaxLoadWeight !== null ? `${tractorMaxLoadWeight} Tấn` : ''}
                 InputProps={{ readOnly: true }}
                 sx={{
                   '& .MuiInputBase-input': {
@@ -297,47 +375,50 @@ const ReplaceTripModal = ({ open, onClose, tripId, onSuccess }: ReplaceTripModal
               />
             </Grid>
             
-            {/* Trailer Dropdown (Optional) */}
-            <Grid item xs={12} md={9}>
-              <Autocomplete
-                options={trailers}
-                getOptionLabel={(option) => `${option.licensePlate} (${option.brand})`}
-                loading={loadingTrailers}
-                onChange={handleTrailerChange}
-                renderInput={(params) => (
+            {/* Trailer Dropdown (Optional) - Chỉ hiển thị khi vehicleType = 2 hoặc không xác định */}
+            {shouldShowTrailer && (
+              <>
+                <Grid item xs={12} md={9}>
+                  <Autocomplete
+                    options={trailers}
+                    getOptionLabel={(option) => `${option.licensePlate} (${option.brand})`}
+                    loading={loadingTrailers}
+                    onChange={handleTrailerChange}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Rơ moóc"                        
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {loadingTrailers ? <CircularProgress color="inherit" size={20} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12} md={3}>
                   <TextField
-                    {...params}
-                    label="Rơ moóc"
-                    helperText="Trường này có thể để trống nếu không cần rơ moóc"
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {loadingTrailers ? <CircularProgress color="inherit" size={20} /> : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
+                    label="Trọng tải tối đa"
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                    value={trailerMaxLoadWeight !== null ? `${trailerMaxLoadWeight} Tấn` : ''}
+                    InputProps={{ readOnly: true }}
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        color: 'text.secondary',
+                        bgcolor: 'action.hover',
+                      }
                     }}
                   />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                label="Trọng tải tối đa"
-                variant="outlined"
-                size="small"
-                fullWidth
-                value={trailerMaxLoadWeight !== null ? `${trailerMaxLoadWeight} kg` : ''}
-                InputProps={{ readOnly: true }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    color: 'text.secondary',
-                    bgcolor: 'action.hover',
-                  }
-                }}
-              />
-            </Grid>
+                </Grid>
+              </>
+            )}
           </Grid>
         )}
       </DialogContent>

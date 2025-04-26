@@ -32,9 +32,12 @@ import { useNavigate } from "react-router-dom";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { getTrailers } from "../services/trailerApi";
+import { useAuth } from "../contexts/AuthContext"; // Import useAuth hook
 
 const Trailers = () => {
   const navigate = useNavigate();
+  const { user } = useAuth(); // Get the user from auth context
+  const isAdmin = user?.role === "Admin"; // Check if user is Admin
   const [searchTerm, setSearchTerm] = useState("");
   const [summary, setSummary] = useState({
     total: 0,
@@ -372,14 +375,17 @@ const Trailers = () => {
               Danh sách rơ-moóc
             </Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleOpenCreate}
-                size="small"
-              >
-                Thêm mới
-              </Button>
+              {/* Only show Add button for non-Admin users */}
+              {!isAdmin && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleOpenCreate}
+                  size="small"
+                >
+                  Thêm mới
+                </Button>
+              )}
               <TextField
                 size="small"
                 placeholder="Tìm kiếm biển số xe..."
@@ -412,42 +418,48 @@ const Trailers = () => {
           </Box>
         </Box>
 
+        {/* Pass isAdmin prop to TrailerTable */}
         <TrailerTable
           searchTerm={searchTerm}
           filterOptions={filterOptions}
           onUpdateSummary={handleUpdateSummary}
           refreshTrigger={refreshTrigger}
+          isAdmin={isAdmin}
         />
 
-        <Modal
-          open={openCreate}
-          onClose={handleCloseCreate}
-          aria-labelledby="create-trailer-modal"
-        >
-          <Box
-            sx={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: "80%",
-              maxWidth: 800,
-              bgcolor: "background.paper",
-              boxShadow: 24,
-              p: 4,
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
+        {/* Only render modal components for non-Admin users */}
+        {!isAdmin && (
+          <Modal
+            open={openCreate}
+            onClose={handleCloseCreate}
+            aria-labelledby="create-trailer-modal"
           >
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <TrailerCreate
-                onClose={handleCloseCreate}
-                onSuccess={handleCreateSuccess}
-              />
-            </LocalizationProvider>
-          </Box>
-        </Modal>
+            <Box
+              sx={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "80%",
+                maxWidth: 800,
+                bgcolor: "background.paper",
+                boxShadow: 24,
+                p: 4,
+                maxHeight: "90vh",
+                overflowY: "auto",
+              }}
+            >
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <TrailerCreate
+                  onClose={handleCloseCreate}
+                  onSuccess={handleCreateSuccess}
+                />
+              </LocalizationProvider>
+            </Box>
+          </Modal>
+        )}
 
+        {/* Filter Dialog - available for all users */}
         <TrailerFilter
           open={openFilter}
           onClose={handleCloseFilter}

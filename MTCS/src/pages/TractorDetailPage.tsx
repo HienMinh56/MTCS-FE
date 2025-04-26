@@ -53,18 +53,25 @@ import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import EditIcon from "@mui/icons-material/Edit";
 import DirectionsIcon from "@mui/icons-material/Directions";
+import HistoryIcon from "@mui/icons-material/History";
 import TractorUpdate from "../components/Tractor/TractorUpdate";
+import TractorUseHistoryTable from "../components/Tractor/TractorUseHistoryTable";
+import TractorIncidentHistoryTable from "../components/Tractor/TractorIncidentHistoryTable";
 import {
   getTractorDetails,
   deactivateTractor,
   activateTractor,
+  getTractorUseHistory,
 } from "../services/tractorApi";
 import {
   TractorDetails as ITractorDetails,
   ContainerType,
   TractorStatus,
   TractorFileDTO,
+  PaginationParams,
+  TractorUseHistory,
 } from "../types/tractor";
+import { useAuth } from "../contexts/AuthContext"; // Import useAuth hook
 
 const FILE_CATEGORIES = ["Giấy Đăng ký", "Giấy Kiểm định", "Khác"];
 
@@ -96,6 +103,8 @@ const TractorDetailPage = () => {
   const { tractorId } = useParams<{ tractorId: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
+  const { user } = useAuth(); // Get the user from auth context
+  const isAdmin = user?.role === "Admin"; // Check if user is Admin
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
   const [details, setDetails] = useState<ITractorDetails | null>(null);
@@ -125,6 +134,20 @@ const TractorDetailPage = () => {
     title: "",
   });
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [tractorUseHistory, setTractorUseHistory] = useState<{
+    items: TractorUseHistory[];
+    currentPage: number;
+    totalPages: number;
+    pageSize: number;
+    totalCount: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+  } | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyParams, setHistoryParams] = useState<PaginationParams>({
+    pageNumber: 1,
+    pageSize: 5,
+  });
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -154,6 +177,82 @@ const TractorDetailPage = () => {
 
     fetchDetails();
   }, [tractorId]);
+
+  useEffect(() => {
+    const fetchUseHistory = async () => {
+      if (!tractorId) return;
+      try {
+        setHistoryLoading(true);
+        const response = await getTractorUseHistory(tractorId);
+        if (response.success) {
+          setTractorUseHistory(response.data.tractorUseHistories);
+        } else {
+          setAlert({
+            open: true,
+            message: "Không thể tải lịch sử sử dụng đầu kéo",
+            severity: "error",
+          });
+        }
+      } catch (error) {
+        setAlert({
+          open: true,
+          message: "Đã có lỗi xảy ra khi tải lịch sử sử dụng đầu kéo",
+          severity: "error",
+        });
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    fetchUseHistory();
+  }, [tractorId]);
+
+  // Fetch tractor use history
+  const fetchTractorUseHistory = async () => {
+    if (!tractorId) return;
+    try {
+      setHistoryLoading(true);
+      const response = await getTractorUseHistory(tractorId, historyParams);
+      if (response.success) {
+        setTractorUseHistory(response.data.tractorUseHistories);
+      } else {
+        setAlert({
+          open: true,
+          message: "Không thể tải lịch sử sử dụng đầu kéo",
+          severity: "error",
+        });
+      }
+    } catch (error) {
+      setAlert({
+        open: true,
+        message: "Đã có lỗi xảy ra khi tải lịch sử sử dụng đầu kéo",
+        severity: "error",
+      });
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Handle page change for history data
+  const handleHistoryPageChange = (page: number) => {
+    setHistoryParams({
+      ...historyParams,
+      pageNumber: page,
+    });
+  };
+
+  // Handle page size change for history data
+  const handleHistoryPageSizeChange = (pageSize: number) => {
+    setHistoryParams({
+      ...historyParams,
+      pageSize: pageSize,
+    });
+  };
+
+  // Fetch history data when tractorId or historyParams changes
+  useEffect(() => {
+    fetchTractorUseHistory();
+  }, [tractorId, historyParams]);
 
   const handleActivateClick = () => {
     setActionType("activate");
@@ -886,50 +985,54 @@ const TractorDetailPage = () => {
               </Grid>
 
               <Box mt={3} display="flex" justifyContent="space-between">
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<EditIcon />}
-                  onClick={handleEditClick}
-                  size={isMobile ? "small" : "medium"}
-                  sx={{ px: 3, py: 1 }}
-                >
-                  Chỉnh sửa thông tin
-                </Button>
+                {!isAdmin && (
+                  <>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      startIcon={<EditIcon />}
+                      onClick={handleEditClick}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ px: 3, py: 1 }}
+                    >
+                      Chỉnh sửa thông tin
+                    </Button>
 
-                {details.status === TractorStatus.Active ? (
-                  <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                    onClick={handleDeactivateClick}
-                    size={isMobile ? "small" : "medium"}
-                    sx={{ px: 3, py: 1 }}
-                  >
-                    Vô hiệu hóa đầu kéo
-                  </Button>
-                ) : details.status === TractorStatus.OnDuty ? (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    disabled
-                    startIcon={<DirectionsIcon />}
-                    size={isMobile ? "small" : "medium"}
-                    sx={{ px: 3, py: 1 }}
-                  >
-                    Đang vận chuyển
-                  </Button>
-                ) : (
-                  <Button
-                    variant="contained"
-                    color="success"
-                    startIcon={<CheckCircleIcon />}
-                    onClick={handleActivateClick}
-                    size={isMobile ? "small" : "medium"}
-                    sx={{ px: 3, py: 1 }}
-                  >
-                    Kích hoạt đầu kéo
-                  </Button>
+                    {details.status === TractorStatus.Active ? (
+                      <Button
+                        variant="contained"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={handleDeactivateClick}
+                        size={isMobile ? "small" : "medium"}
+                        sx={{ px: 3, py: 1 }}
+                      >
+                        Vô hiệu hóa đầu kéo
+                      </Button>
+                    ) : details.status === TractorStatus.OnDuty ? (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        disabled
+                        startIcon={<DirectionsIcon />}
+                        size={isMobile ? "small" : "medium"}
+                        sx={{ px: 3, py: 1 }}
+                      >
+                        Đang vận chuyển
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        color="success"
+                        startIcon={<CheckCircleIcon />}
+                        onClick={handleActivateClick}
+                        size={isMobile ? "small" : "medium"}
+                        sx={{ px: 3, py: 1 }}
+                      >
+                        Kích hoạt đầu kéo
+                      </Button>
+                    )}
+                  </>
                 )}
               </Box>
             </Paper>
@@ -1233,6 +1336,53 @@ const TractorDetailPage = () => {
                 )}
               </Paper>
             )}
+
+            {/* Tractor Use History */}
+            <Paper
+              elevation={3}
+              sx={{
+                p: { xs: 2, md: 3 },
+                borderRadius: 2,
+                mt: 3,
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+                <HistoryIcon color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Lịch sử sử dụng đầu kéo
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+
+              <TractorUseHistoryTable
+                historyData={tractorUseHistory}
+                loading={historyLoading}
+                onPageChange={handleHistoryPageChange}
+                onPageSizeChange={handleHistoryPageSizeChange}
+              />
+            </Paper>
+
+            {/* Tractor Incident History */}
+            <Paper
+              elevation={3}
+              sx={{
+                p: { xs: 2, md: 3 },
+                borderRadius: 2,
+                mt: 3,
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+                <WarningIcon color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Lịch sử sự cố
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+
+              {tractorId && (
+                <TractorIncidentHistoryTable tractorId={tractorId} />
+              )}
+            </Paper>
           </>
         ) : (
           <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
@@ -1261,154 +1411,158 @@ const TractorDetailPage = () => {
       </Box>
 
       {/* Image Preview Dialog */}
-      <Dialog
-        open={imagePreview.open}
-        onClose={closeImagePreview}
-        maxWidth="lg"
-        fullWidth
-        TransitionComponent={Fade}
-        PaperProps={{ sx: { borderRadius: 2 } }}
-      >
-        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
-          <ImageIcon sx={{ mr: 1 }} color="primary" />
-          {imagePreview.title}
-          <IconButton
-            onClick={closeImagePreview}
-            sx={{
-              position: "absolute",
-              right: 8,
-              top: 8,
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}>
-          <img
-            src={imagePreview.src}
-            alt={imagePreview.title}
-            style={{
-              maxWidth: "100%",
-              maxHeight: "80vh",
-              objectFit: "contain",
-              padding: 16,
-            }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button
-            component="a"
-            href={imagePreview.src}
-            target="_blank"
-            rel="noopener noreferrer"
-            startIcon={<OpenInNewIcon />}
-            variant="outlined"
-          >
-            Mở trong cửa sổ mới
-          </Button>
-          <Button
-            onClick={closeImagePreview}
-            color="primary"
-            variant="contained"
-          >
-            Đóng
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {!isAdmin && (
+        <Dialog
+          open={imagePreview.open}
+          onClose={closeImagePreview}
+          maxWidth="lg"
+          fullWidth
+          TransitionComponent={Fade}
+          PaperProps={{ sx: { borderRadius: 2 } }}
+        >
+          <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
+            <ImageIcon sx={{ mr: 1 }} color="primary" />
+            {imagePreview.title}
+            <IconButton
+              onClick={closeImagePreview}
+              sx={{
+                position: "absolute",
+                right: 8,
+                top: 8,
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}>
+            <img
+              src={imagePreview.src}
+              alt={imagePreview.title}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "80vh",
+                objectFit: "contain",
+                padding: 16,
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button
+              component="a"
+              href={imagePreview.src}
+              target="_blank"
+              rel="noopener noreferrer"
+              startIcon={<OpenInNewIcon />}
+              variant="outlined"
+            >
+              Mở trong cửa sổ mới
+            </Button>
+            <Button
+              onClick={closeImagePreview}
+              color="primary"
+              variant="contained"
+            >
+              Đóng
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
       {/* Confirmation Dialog */}
-      <Dialog
-        open={confirmDialog}
-        onClose={() => setConfirmDialog(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 2 } }}
-      >
-        <DialogTitle sx={{ pb: 1 }}>
-          {actionType === "activate" ? (
-            <Box display="flex" alignItems="center" gap={1}>
-              <CheckCircleIcon color="success" />
-              <Typography variant="h6">Xác nhận kích hoạt</Typography>
-            </Box>
-          ) : (
-            <Box display="flex" alignItems="center" gap={1}>
-              <DeleteIcon color="error" />
-              <Typography variant="h6">Xác nhận vô hiệu hóa</Typography>
-            </Box>
-          )}
-        </DialogTitle>
-        <DialogContent>
-          {errorDetails ? (
-            <>
-              <DialogContentText color="error" sx={{ mb: 2 }}>
-                {actionType === "activate"
-                  ? "Không thể kích hoạt đầu kéo"
-                  : "Không thể vô hiệu hóa đầu kéo"}
-              </DialogContentText>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2,
-                  bgcolor: "error.light",
-                  borderRadius: 1,
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  color="error.dark"
-                  sx={{ fontWeight: 500 }}
+      {!isAdmin && (
+        <Dialog
+          open={confirmDialog}
+          onClose={() => setConfirmDialog(false)}
+          maxWidth="xs"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: 2 } }}
+        >
+          <DialogTitle sx={{ pb: 1 }}>
+            {actionType === "activate" ? (
+              <Box display="flex" alignItems="center" gap={1}>
+                <CheckCircleIcon color="success" />
+                <Typography variant="h6">Xác nhận kích hoạt</Typography>
+              </Box>
+            ) : (
+              <Box display="flex" alignItems="center" gap={1}>
+                <DeleteIcon color="error" />
+                <Typography variant="h6">Xác nhận vô hiệu hóa</Typography>
+              </Box>
+            )}
+          </DialogTitle>
+          <DialogContent>
+            {errorDetails ? (
+              <>
+                <DialogContentText color="error" sx={{ mb: 2 }}>
+                  {actionType === "activate"
+                    ? "Không thể kích hoạt đầu kéo"
+                    : "Không thể vô hiệu hóa đầu kéo"}
+                </DialogContentText>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    bgcolor: "error.light",
+                    borderRadius: 1,
+                  }}
                 >
-                  {errorDetails}
-                </Typography>
-              </Paper>
-            </>
-          ) : (
-            <Box sx={{ color: "text.secondary" }}>
-              {actionType === "activate" ? (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography component="div">
-                    Bạn có chắc chắn muốn kích hoạt đầu kéo này?
+                  <Typography
+                    variant="body2"
+                    color="error.dark"
+                    sx={{ fontWeight: 500 }}
+                  >
+                    {errorDetails}
                   </Typography>
-                </Box>
-              ) : (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography component="div">
-                    Bạn có chắc chắn muốn vô hiệu hóa đầu kéo này?
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setConfirmDialog(false)} color="inherit">
-            Đóng
-          </Button>
-          {!errorDetails && (
-            <Button
-              onClick={handleConfirmAction}
-              color={actionType === "activate" ? "success" : "error"}
-              variant="contained"
-              disabled={actionLoading}
-              startIcon={
-                actionLoading ? (
-                  <CircularProgress size={18} color="inherit" />
-                ) : actionType === "activate" ? (
-                  <CheckCircleIcon />
+                </Paper>
+              </>
+            ) : (
+              <Box sx={{ color: "text.secondary" }}>
+                {actionType === "activate" ? (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography component="div">
+                      Bạn có chắc chắn muốn kích hoạt đầu kéo này?
+                    </Typography>
+                  </Box>
                 ) : (
-                  <DeleteIcon />
-                )
-              }
-            >
-              {actionLoading
-                ? "Đang xử lý..."
-                : actionType === "activate"
-                ? "Kích hoạt"
-                : "Vô hiệu hóa"}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography component="div">
+                      Bạn có chắc chắn muốn vô hiệu hóa đầu kéo này?
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={() => setConfirmDialog(false)} color="inherit">
+              Đóng
             </Button>
-          )}
-        </DialogActions>
-      </Dialog>
+            {!errorDetails && (
+              <Button
+                onClick={handleConfirmAction}
+                color={actionType === "activate" ? "success" : "error"}
+                variant="contained"
+                disabled={actionLoading}
+                startIcon={
+                  actionLoading ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : actionType === "activate" ? (
+                    <CheckCircleIcon />
+                  ) : (
+                    <DeleteIcon />
+                  )
+                }
+              >
+                {actionLoading
+                  ? "Đang xử lý..."
+                  : actionType === "activate"
+                  ? "Kích hoạt"
+                  : "Vô hiệu hóa"}
+              </Button>
+            )}
+          </DialogActions>
+        </Dialog>
+      )}
 
       {/* Alert Snackbar */}
       <Snackbar
@@ -1428,12 +1582,14 @@ const TractorDetailPage = () => {
       </Snackbar>
 
       {/* Tractor Update Dialog */}
-      <TractorUpdate
-        open={updateDialogOpen}
-        onClose={() => setUpdateDialogOpen(false)}
-        tractorDetails={details}
-        onSuccess={handleUpdateSuccess}
-      />
+      {!isAdmin && (
+        <TractorUpdate
+          open={updateDialogOpen}
+          onClose={() => setUpdateDialogOpen(false)}
+          tractorDetails={details}
+          onSuccess={handleUpdateSuccess}
+        />
+      )}
     </Container>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import {
   Container,
   Box,
@@ -33,6 +33,15 @@ import {
   useTheme,
   useMediaQuery,
   Avatar,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -52,18 +61,26 @@ import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import AirportShuttleIcon from "@mui/icons-material/AirportShuttle";
 import EditIcon from "@mui/icons-material/Edit";
+import HistoryIcon from "@mui/icons-material/History";
+import BugReportIcon from "@mui/icons-material/BugReport";
 import {
   getTrailerDetails,
   deactivateTrailer,
   activateTrailer,
+  getTrailerUseHistory,
 } from "../services/trailerApi";
 import {
   TrailerDetails as ITrailerDetails,
   TrailerStatus,
   TrailerFileDTO,
+  PaginationParams,
+  TrailerUseHistory,
 } from "../types/trailer";
 import { ContainerSize } from "../forms/trailer/trailerSchema";
 import TrailerUpdate from "../components/Trailer/TrailerUpdate";
+import TrailerUseHistoryTable from "../components/Trailer/TrailerUseHistoryTable";
+import TrailerIncidentHistoryTable from "../components/Trailer/TrailerIncidentHistoryTable";
+import { useAuth } from "../contexts/AuthContext"; // Import useAuth hook
 
 const FILE_CATEGORIES = ["Giấy Đăng ký", "Giấy Kiểm định", "Khác"];
 
@@ -95,6 +112,8 @@ const TrailerDetailPage = () => {
   const { trailerId } = useParams<{ trailerId: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
+  const { user } = useAuth(); // Get the user from auth context
+  const isAdmin = user?.role === "Admin"; // Check if user is Admin
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
   const [details, setDetails] = useState<ITrailerDetails | null>(null);
@@ -124,6 +143,50 @@ const TrailerDetailPage = () => {
     title: "",
   });
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [trailerUseHistory, setTrailerUseHistory] = useState<{
+    items: TrailerUseHistory[];
+    currentPage: number;
+    totalPages: number;
+    pageSize: number;
+    totalCount: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+  } | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyParams, setHistoryParams] = useState<PaginationParams>({
+    pageNumber: 1,
+    pageSize: 5,
+  });
+  const [historyTabValue, setHistoryTabValue] = useState<number>(0);
+
+  const handleHistoryTabChange = (
+    _: React.SyntheticEvent,
+    newValue: number
+  ) => {
+    setHistoryTabValue(newValue);
+  };
+
+  interface TabPanelProps {
+    children?: React.ReactNode;
+    index: number;
+    value: number;
+  }
+
+  function TabPanel(props: TabPanelProps) {
+    const { children, value, index, ...other } = props;
+
+    return (
+      <div
+        role="tabpanel"
+        hidden={value !== index}
+        id={`history-tabpanel-${index}`}
+        aria-labelledby={`history-tab-${index}`}
+        {...other}
+      >
+        {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+      </div>
+    );
+  }
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -153,6 +216,49 @@ const TrailerDetailPage = () => {
 
     fetchDetails();
   }, [trailerId]);
+
+  const fetchTrailerUseHistory = async () => {
+    if (!trailerId) return;
+    try {
+      setHistoryLoading(true);
+      const response = await getTrailerUseHistory(trailerId, historyParams);
+      if (response.success) {
+        setTrailerUseHistory(response.data.trailerUseHistories);
+      } else {
+        setAlert({
+          open: true,
+          message: "Không thể tải lịch sử sử dụng rơ-moóc",
+          severity: "error",
+        });
+      }
+    } catch (error) {
+      setAlert({
+        open: true,
+        message: "Đã có lỗi xảy ra khi tải lịch sử sử dụng rơ-moóc",
+        severity: "error",
+      });
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrailerUseHistory();
+  }, [trailerId, historyParams]);
+
+  const handleHistoryPageChange = (page: number) => {
+    setHistoryParams({
+      ...historyParams,
+      pageNumber: page,
+    });
+  };
+
+  const handleHistoryPageSizeChange = (pageSize: number) => {
+    setHistoryParams({
+      ...historyParams,
+      pageSize: pageSize,
+    });
+  };
 
   const handleActivateClick = () => {
     setActionType("activate");
@@ -512,6 +618,8 @@ const TrailerDetailPage = () => {
                 borderTop: `4px solid ${
                   details.status === TrailerStatus.Active
                     ? theme.palette.success.main
+                    : details.status === TrailerStatus.OnDuty
+                    ? theme.palette.primary.main
                     : theme.palette.error.main
                 }`,
               }}
@@ -530,6 +638,8 @@ const TrailerDetailPage = () => {
                       bgcolor:
                         details.status === TrailerStatus.Active
                           ? "success.main"
+                          : details.status === TrailerStatus.OnDuty
+                          ? "primary.main"
                           : "error.main",
                       width: 60,
                       height: 60,
@@ -558,16 +668,22 @@ const TrailerDetailPage = () => {
                   label={
                     details.status === TrailerStatus.Active
                       ? "Đang hoạt động"
+                      : details.status === TrailerStatus.OnDuty
+                      ? "Đang vận chuyển"
                       : "Không hoạt động"
                   }
                   color={
                     details.status === TrailerStatus.Active
                       ? "success"
+                      : details.status === TrailerStatus.OnDuty
+                      ? "primary"
                       : "error"
                   }
                   icon={
                     details.status === TrailerStatus.Active ? (
                       <VerifiedIcon />
+                    ) : details.status === TrailerStatus.OnDuty ? (
+                      <LocalShippingIcon />
                     ) : (
                       <WarningIcon />
                     )
@@ -879,42 +995,55 @@ const TrailerDetailPage = () => {
                 </Grid>
               </Grid>
 
-              <Box mt={3} display="flex" justifyContent="space-between">
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<EditIcon />}
-                  onClick={handleEditClick}
-                  size={isMobile ? "small" : "medium"}
-                  sx={{ px: 3, py: 1 }}
-                >
-                  Chỉnh sửa thông tin
-                </Button>
+              {!isAdmin && (
+                <Box mt={3} display="flex" justifyContent="space-between">
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<EditIcon />}
+                    onClick={handleEditClick}
+                    size={isMobile ? "small" : "medium"}
+                    sx={{ px: 3, py: 1 }}
+                  >
+                    Chỉnh sửa thông tin
+                  </Button>
 
-                {details.status === TrailerStatus.Active ? (
-                  <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                    onClick={handleDeactivateClick}
-                    size={isMobile ? "small" : "medium"}
-                    sx={{ px: 3, py: 1 }}
-                  >
-                    Vô hiệu hóa rơ-moóc
-                  </Button>
-                ) : (
-                  <Button
-                    variant="contained"
-                    color="success"
-                    startIcon={<CheckCircleIcon />}
-                    onClick={handleActivateClick}
-                    size={isMobile ? "small" : "medium"}
-                    sx={{ px: 3, py: 1 }}
-                  >
-                    Kích hoạt rơ-moóc
-                  </Button>
-                )}
-              </Box>
+                  {details.status === TrailerStatus.Active ? (
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={handleDeactivateClick}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ px: 3, py: 1 }}
+                    >
+                      Vô hiệu hóa rơ-moóc
+                    </Button>
+                  ) : details.status === TrailerStatus.OnDuty ? (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      disabled
+                      startIcon={<LocalShippingIcon />}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ px: 3, py: 1 }}
+                    >
+                      Đang vận chuyển
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      color="success"
+                      startIcon={<CheckCircleIcon />}
+                      onClick={handleActivateClick}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ px: 3, py: 1 }}
+                    >
+                      Kích hoạt rơ-moóc
+                    </Button>
+                  )}
+                </Box>
+              )}
             </Paper>
 
             {/* Display trailer files by category */}
@@ -1216,6 +1345,52 @@ const TrailerDetailPage = () => {
                 )}
               </Paper>
             )}
+
+            {/* Trailer Use History */}
+            <Paper
+              elevation={3}
+              sx={{
+                p: { xs: 2, md: 3 },
+                mt: 3,
+                borderRadius: 2,
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+                <HistoryIcon color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Lịch sử sử dụng rơ-moóc
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+              <TrailerUseHistoryTable
+                historyData={trailerUseHistory}
+                loading={historyLoading}
+                onPageChange={handleHistoryPageChange}
+                onPageSizeChange={handleHistoryPageSizeChange}
+              />
+            </Paper>
+
+            {/* Trailer Incident History */}
+            <Paper
+              elevation={3}
+              sx={{
+                p: { xs: 2, md: 3 },
+                borderRadius: 2,
+                mt: 3,
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+                <BugReportIcon color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Lịch sử sự cố
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+
+              {trailerId && (
+                <TrailerIncidentHistoryTable trailerId={trailerId} />
+              )}
+            </Paper>
           </>
         ) : (
           <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>

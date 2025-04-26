@@ -16,9 +16,11 @@ import {
   Divider,
   CircularProgress,
   Autocomplete,
+  Tooltip,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker"; // Add TimePicker import
 import { Controller, useFieldArray, useForm } from "react-hook-form";
@@ -50,6 +52,7 @@ interface OrderFormProps {
   isSubmitting: boolean;
   initialValues?: Partial<OrderFormValues>;
   isEditMode?: boolean;
+  isDisabled?: boolean;
 }
 
 const OrderForm: React.FC<OrderFormProps> = ({
@@ -58,6 +61,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
   isSubmitting,
   initialValues,
   isEditMode = false,
+  isDisabled = false,
 }) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
@@ -77,7 +81,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
     defaultValues: {
       companyName: initialValues?.companyName || "",
       temperature: initialValues?.temperature || 0,
-      weight: initialValues?.weight || 0,
+      weight: initialValues?.weight || "", // Initialize as empty string instead of 0
       pickUpDate: initialValues?.pickUpDate || dayjs().add(1, "day").toDate(),
       deliveryDate: initialValues?.deliveryDate || dayjs().add(2, "day").toDate(),
       completionTime: initialValues?.completeTime || null, 
@@ -88,7 +92,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
       pickUpLocation: initialValues?.pickUpLocation || "",
       deliveryLocation: initialValues?.deliveryLocation || "",
       conReturnLocation: initialValues?.conReturnLocation || "",
-      price: initialValues?.price || 0,
+      price: initialValues?.price || "", // Initialize as empty string instead of 0
       contactPerson: initialValues?.contactPerson || "",
       contactPhone: initialValues?.contactPhone || "",
       distance: initialValues?.distance || null,
@@ -225,6 +229,8 @@ const OrderForm: React.FC<OrderFormProps> = ({
     
     onSubmit({
       ...data,
+      weight: data.weight !== "" ? Number(data.weight) : 0, // Convert to number if not empty
+      price: data.price !== "" ? Number(data.price) : 0, // Convert to number if not empty
       files: filesToSubmit,
       fileDescriptions: descriptionsToSubmit,
       fileNotes: notesToSubmit
@@ -279,9 +285,10 @@ const OrderForm: React.FC<OrderFormProps> = ({
                             </>
                           ),
                         }}
+                        disabled={isSubmitting || isDisabled}
                       />
                     )}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                   />
                 )}
               />
@@ -297,7 +304,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     fullWidth
                     error={!!errors.contactPerson}
                     helperText={errors.contactPerson?.message}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                     required
                   />
                 )}
@@ -314,7 +321,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     fullWidth
                     error={!!errors.contactPhone}
                     helperText={errors.contactPhone?.message}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                     required
                   />
                 )}
@@ -331,7 +338,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     fullWidth
                     error={!!errors.orderPlacer}
                     helperText={errors.orderPlacer?.message}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                     required
                   />
                 )}
@@ -357,11 +364,11 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     label="Số container"
                     fullWidth
                     error={!!errors.containerNumber}
-                    helperText={errors.containerNumber?.message || 'Ví dụ: SEGU5593802 (3 kí tự đầu công ty, U, 5 số, 1 số kiểm tra)'}
-                    disabled={isSubmitting}
+                    helperText={errors.containerNumber?.message}
+                    disabled={isSubmitting || isDisabled}
                     required
                     inputProps={{
-                      maxLength: 10,
+                      maxLength: 11,
                       style: { textTransform: 'uppercase' }
                     }}
                     onChange={(e) => {
@@ -374,9 +381,27 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
-                          <Typography variant="caption" color="textSecondary">
-                            XXX-U-YYYYY-Z
-                          </Typography>
+                          <Tooltip 
+                            title={
+                              <React.Fragment>
+                                <Typography variant="subtitle2">Định dạng số container:</Typography>
+                                <Typography variant="body2">- 3 kí tự đầu: Viết tắt tên công ty</Typography>
+                                <Typography variant="body2">- Kí tự thứ 4:</Typography>
+                                <Typography variant="body2">&nbsp;&nbsp;U: Container chở hàng</Typography>
+                                <Typography variant="body2">&nbsp;&nbsp;J: Thiết bị có thể tháo rời của container</Typography>
+                                <Typography variant="body2">&nbsp;&nbsp;Z: Đầu kéo hoặc rơ mooc</Typography>
+                                <Typography variant="body2">- 6 kí tự tiếp theo: Số seri của container</Typography>
+                                <Typography variant="body2">- Kí tự cuối: Số kiểm tra</Typography>
+                                <Typography variant="body2">Ví dụ: SEGU5593802</Typography>
+                              </React.Fragment>
+                            }
+                            placement="top-start"
+                            arrow
+                          >
+                            <IconButton size="small" color="primary">
+                              <HelpOutlineIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </InputAdornment>
                       ),
                     }}
@@ -394,7 +419,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     <Select
                       {...field}
                       label="Loại container"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isDisabled}
                     >
                       <MenuItem value={ContainerType["Container Khô"]}>
                         Container Khô
@@ -422,7 +447,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     <Select
                       {...field}
                       label="Kích thước container"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isDisabled}
                     >
                       <MenuItem value={ContainerSize["Container 20 FEET"]}>
                         Container 20 FEET
@@ -450,7 +475,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     <Select
                       {...field}
                       label="Loại vận chuyển"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isDisabled}
                     >
                       <MenuItem value={DeliveryType.Import}>Nhập</MenuItem>
                       <MenuItem value={DeliveryType.Export}>Xuất</MenuItem>
@@ -466,7 +491,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
               <Controller
                 name="weight"
                 control={control}
-                render={({ field: { onChange, ...field } }) => (
+                render={({ field }) => (
                   <TextField
                     {...field}
                     label="Trọng lượng"
@@ -476,11 +501,15 @@ const OrderForm: React.FC<OrderFormProps> = ({
                         <InputAdornment position="end">tấn</InputAdornment>
                       ),
                     }}
-                    onChange={(e) => onChange(Number(e.target.value))}
+                    value={field.value === 0 || field.value === "" ? "" : field.value}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(value === "" ? "" : Number(value));
+                    }}
                     fullWidth
                     error={!!errors.weight}
                     helperText={errors.weight?.message}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                     required
                   />
                 )}
@@ -507,7 +536,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                       fullWidth
                       error={!!errors.temperature}
                       helperText={errors.temperature?.message}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isDisabled}
                       required
                     />
                   )}
@@ -519,7 +548,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
               <Controller
                 name="price"
                 control={control}
-                render={({ field: { onChange, ...field } }) => (
+                render={({ field }) => (
                   <TextField
                     {...field}
                     label="Giá"
@@ -529,11 +558,15 @@ const OrderForm: React.FC<OrderFormProps> = ({
                         <InputAdornment position="end">VNĐ</InputAdornment>
                       ),
                     }}
-                    onChange={(e) => onChange(Number(e.target.value))}
+                    value={field.value === 0 || field.value === "" ? "" : field.value}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(value === "" ? "" : Number(value));
+                    }}
                     fullWidth
                     error={!!errors.price}
                     helperText={errors.price?.message}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                     required
                   />
                 )}
@@ -559,7 +592,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     fullWidth
                     error={!!errors.distance}
                     helperText={errors.distance?.message}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                   />
                 )}
               />
@@ -585,7 +618,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     fullWidth
                     error={!!errors.pickUpLocation}
                     helperText={errors.pickUpLocation?.message}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                     multiline
                     rows={2}
                     required
@@ -604,7 +637,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     fullWidth
                     error={!!errors.deliveryLocation}
                     helperText={errors.deliveryLocation?.message}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                     multiline
                     rows={2}
                     required
@@ -623,7 +656,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     fullWidth
                     error={!!errors.conReturnLocation}
                     helperText={errors.conReturnLocation?.message}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                     multiline
                     rows={2}
                     required
@@ -655,7 +688,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                         fullWidth: true,
                         error: !!errors.pickUpDate,
                         helperText: errors.pickUpDate?.message,
-                        disabled: isSubmitting,
+                        disabled: isSubmitting || isDisabled,
                         required: true,
                       },
                     }}
@@ -677,7 +710,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                         fullWidth: true,
                         error: !!errors.deliveryDate,
                         helperText: errors.deliveryDate?.message,
-                        disabled: isSubmitting,
+                        disabled: isSubmitting || isDisabled,
                         required: true,
                       },
                     }}
@@ -691,7 +724,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 control={control}
                 render={({ field }) => (
                   <TimePicker
-                    label="Thời Gian Hoàn Thành (giờ:phút)"
+                    label="Thời Gian Ước tính hoàn thành vận chuyển"
                     value={field.value ? dayjs(field.value, "HH:mm") : null}
                     onChange={(newValue) => {
                       field.onChange(newValue ? dayjs(newValue).format("HH:mm") : null);
@@ -702,6 +735,8 @@ const OrderForm: React.FC<OrderFormProps> = ({
                         fullWidth: true,
                         error: !!errors.completeTime,
                         helperText: errors.completeTime?.message,
+                        required: true, // Đánh dấu trường là bắt buộc
+                        disabled: isSubmitting || isDisabled,
                       },
                     }}
                     ampm={false} // Use 24-hour format
@@ -731,7 +766,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     fullWidth
                     error={!!errors.note}
                     helperText={errors.note?.message}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                     multiline
                     rows={3}
                     required
@@ -751,14 +786,14 @@ const OrderForm: React.FC<OrderFormProps> = ({
                   variant="outlined"
                   startIcon={<CloudUploadIcon />}
                   sx={{ mb: 2 }}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isDisabled}
                 >
                   Chọn tệp
                   <VisuallyHiddenInput
                     type="file"
                     multiple
                     onChange={handleFileChange}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isDisabled}
                   />
                 </Button>
                 {selectedFiles.length > 0 && (
@@ -787,7 +822,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                             size="small"
                             color="error"
                             onClick={() => handleFileRemove(index)}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isDisabled}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -800,6 +835,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                           fullWidth
                           margin="normal"
                           size="small"
+                          disabled={isSubmitting || isDisabled}
                         />
                         
                         <TextField
@@ -809,6 +845,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                           fullWidth
                           margin="normal"
                           size="small"
+                          disabled={isSubmitting || isDisabled}
                         />
                       </Box>
                     ))}
@@ -832,7 +869,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
             <Button
               variant="outlined"
               onClick={onCancel}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDisabled}
             >
               Hủy
             </Button>
@@ -840,7 +877,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
               type="submit"
               variant="contained"
               color="primary"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDisabled}
             >
               {isSubmitting ? "Đang xử lý..." : isEditMode ? "Cập nhật" : "Lưu"}
             </Button>

@@ -1,14 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { fetchDeliveryStatuses, updateDeliveryStatuses, UpdateDeliveryStatusPayload } from '../services/deliveryStatusService';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
+import React, { useEffect, useState } from "react";
+import {
+  fetchDeliveryStatuses,
+  updateDeliveryStatuses,
+  UpdateDeliveryStatusPayload,
+} from "../services/deliveryStatusService";
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
   TableRow,
   Chip,
   Container,
@@ -31,17 +35,38 @@ import {
   FormControlLabel,
   FormGroup,
   Checkbox,
-  ButtonGroup
-} from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import SaveIcon from '@mui/icons-material/Save';
-import EditIcon from '@mui/icons-material/Edit';
-import DoneIcon from '@mui/icons-material/Done';
-import AddIcon from '@mui/icons-material/Add';
-import WarningIcon from '@mui/icons-material/Warning';
+  ButtonGroup,
+} from "@mui/material";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import SaveIcon from "@mui/icons-material/Save";
+import EditIcon from "@mui/icons-material/Edit";
+import DoneIcon from "@mui/icons-material/Done";
+import AddIcon from "@mui/icons-material/Add";
+import WarningIcon from "@mui/icons-material/Warning";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import LockIcon from "@mui/icons-material/Lock";
+
+// DnD Kit imports
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface DeliveryStatus {
   statusId: string;
@@ -57,26 +82,79 @@ interface DeliveryStatus {
   tripStatusHistories: any[];
 }
 
+// Sortable Item component for drag and drop functionality
+interface SortableItemProps {
+  id: string;
+  children: React.ReactNode;
+  isDraggable: boolean;
+}
+
+const SortableItem: React.FC<SortableItemProps> = ({
+  id,
+  children,
+  isDraggable,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id,
+    disabled: !isDraggable,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1 : 0,
+  };
+
+  // Apply the ref and listeners directly to the TableRow
+  return React.cloneElement(children as React.ReactElement, {
+    ref: setNodeRef,
+    style,
+    ...(isDraggable ? { ...attributes, ...listeners } : {}),
+  });
+};
+
 const DeliveryStatusPage: React.FC = () => {
   const [statuses, setStatuses] = useState<DeliveryStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modified, setModified] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
-  const [alertMessage, setAlertMessage] = useState('');
-  const [alertSeverity, setAlertSeverity] = useState<'success' | 'error'>('success');
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertSeverity, setAlertSeverity] = useState<"success" | "error">(
+    "success"
+  );
   const [editModeId, setEditModeId] = useState<string | null>(null);
-  const [editedName, setEditedName] = useState('');
+  const [editedName, setEditedName] = useState("");
   const [showInactive, setShowInactive] = useState(false); // State to track whether to show inactive statuses
   const theme = useTheme();
-  
+
+  // Sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement before drag activation
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   // Add status dialog state
   const [addStatusDialogOpen, setAddStatusDialogOpen] = useState(false);
-  const [newStatusId, setNewStatusId] = useState('');
-  const [newStatusName, setNewStatusName] = useState('');
+  const [newStatusId, setNewStatusId] = useState("");
+  const [newStatusName, setNewStatusName] = useState("");
   const [newStatusActive, setNewStatusActive] = useState(1);
-  const [statusIdError, setStatusIdError] = useState('');
-  const [statusNameError, setStatusNameError] = useState('');
+  const [statusIdError, setStatusIdError] = useState("");
+  const [statusNameError, setStatusNameError] = useState("");
 
   // Confirmation dialog state
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -90,10 +168,11 @@ const DeliveryStatusPage: React.FC = () => {
     try {
       const data = await fetchDeliveryStatuses();
       // Filter out statuses with names "canceled" and "delaying" (case insensitive)
-      const filteredData = data.filter((status: DeliveryStatus) => 
-        !['canceled', 'delaying'].includes(status.statusId.toLowerCase())
+      const filteredData = data.filter(
+        (status: DeliveryStatus) =>
+          !["canceled", "delaying"].includes(status.statusId.toLowerCase())
       );
-      
+
       // Sort by active status first (active on top), then by statusIndex
       const sortedData = [...filteredData].sort((a, b) => {
         if (a.isActive !== b.isActive) {
@@ -101,17 +180,17 @@ const DeliveryStatusPage: React.FC = () => {
         }
         return a.statusIndex - b.statusIndex; // Then sort by statusIndex
       });
-      
+
       setStatuses(sortedData);
     } catch (error) {
-      console.error('Error fetching delivery statuses:', error);
-      showAlert('Không thể tải trạng thái giao hàng', 'error');
+      console.error("Error fetching delivery statuses:", error);
+      showAlert("Không thể tải trạng thái giao hàng", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const showAlert = (message: string, severity: 'success' | 'error') => {
+  const showAlert = (message: string, severity: "success" | "error") => {
     setAlertMessage(message);
     setAlertSeverity(severity);
     setAlertOpen(true);
@@ -122,18 +201,18 @@ const DeliveryStatusPage: React.FC = () => {
   };
 
   const toggleStatusActive = (statusId: string) => {
-    setStatuses(prevStatuses => {
-      const updatedStatuses = prevStatuses.map(status => {
+    setStatuses((prevStatuses) => {
+      const updatedStatuses = prevStatuses.map((status) => {
         if (status.statusId === statusId) {
           return {
             ...status,
-            isActive: status.isActive === 1 ? 0 : 1
+            isActive: status.isActive === 1 ? 0 : 1,
           };
         }
         return status;
       });
       setModified(true);
-      
+
       // Sắp xếp lại danh sách sau khi thay đổi trạng thái
       return [...updatedStatuses].sort((a, b) => {
         if (a.isActive !== b.isActive) {
@@ -146,30 +225,37 @@ const DeliveryStatusPage: React.FC = () => {
 
   const moveStatusUp = (index: number) => {
     // Filter only active statuses
-    const activeStatuses = statuses.filter(status => status.isActive === 1);
+    const activeStatuses = statuses.filter((status) => status.isActive === 1);
     if (index <= 0 || activeStatuses.length <= 1) return; // Can't move first item up or if only one active item
-    
+
     // Find the actual index in the full statuses array
     const activeStatusId = activeStatuses[index].statusId;
-    const actualIndex = statuses.findIndex(s => s.statusId === activeStatusId);
+    const actualIndex = statuses.findIndex(
+      (s) => s.statusId === activeStatusId
+    );
     const prevActiveStatusId = activeStatuses[index - 1].statusId;
-    const prevIndex = statuses.findIndex(s => s.statusId === prevActiveStatusId);
-    
-    setStatuses(prevStatuses => {
+    const prevIndex = statuses.findIndex(
+      (s) => s.statusId === prevActiveStatusId
+    );
+
+    setStatuses((prevStatuses) => {
       const updatedStatuses = [...prevStatuses];
       // Swap items
-      [updatedStatuses[prevIndex], updatedStatuses[actualIndex]] = [updatedStatuses[actualIndex], updatedStatuses[prevIndex]];
-      
+      [updatedStatuses[prevIndex], updatedStatuses[actualIndex]] = [
+        updatedStatuses[actualIndex],
+        updatedStatuses[prevIndex],
+      ];
+
       // Update statusIndex values to match new positions
       return updatedStatuses.map((status, idx) => ({
         ...status,
-        statusIndex: idx
+        statusIndex: idx,
       }));
     });
     setModified(true);
-    
+
     // Sắp xếp lại danh sách sau khi thay đổi vị trí
-    setStatuses(prevStatuses => {
+    setStatuses((prevStatuses) => {
       return [...prevStatuses].sort((a, b) => {
         if (a.isActive !== b.isActive) {
           return b.isActive - a.isActive; // Active statuses (1) first, inactive (0) later
@@ -181,30 +267,38 @@ const DeliveryStatusPage: React.FC = () => {
 
   const moveStatusDown = (index: number) => {
     // Filter only active statuses
-    const activeStatuses = statuses.filter(status => status.isActive === 1);
-    if (index >= activeStatuses.length - 1 || activeStatuses.length <= 1) return; // Can't move last item down or if only one active item
-    
+    const activeStatuses = statuses.filter((status) => status.isActive === 1);
+    if (index >= activeStatuses.length - 1 || activeStatuses.length <= 1)
+      return; // Can't move last item down or if only one active item
+
     // Find the actual index in the full statuses array
     const activeStatusId = activeStatuses[index].statusId;
-    const actualIndex = statuses.findIndex(s => s.statusId === activeStatusId);
+    const actualIndex = statuses.findIndex(
+      (s) => s.statusId === activeStatusId
+    );
     const nextActiveStatusId = activeStatuses[index + 1].statusId;
-    const nextIndex = statuses.findIndex(s => s.statusId === nextActiveStatusId);
-    
-    setStatuses(prevStatuses => {
+    const nextIndex = statuses.findIndex(
+      (s) => s.statusId === nextActiveStatusId
+    );
+
+    setStatuses((prevStatuses) => {
       const updatedStatuses = [...prevStatuses];
       // Swap items
-      [updatedStatuses[actualIndex], updatedStatuses[nextIndex]] = [updatedStatuses[nextIndex], updatedStatuses[actualIndex]];
-      
+      [updatedStatuses[actualIndex], updatedStatuses[nextIndex]] = [
+        updatedStatuses[nextIndex],
+        updatedStatuses[actualIndex],
+      ];
+
       // Update statusIndex values to match new positions
       return updatedStatuses.map((status, idx) => ({
         ...status,
-        statusIndex: idx
+        statusIndex: idx,
       }));
     });
     setModified(true);
-    
+
     // Sắp xếp lại danh sách sau khi thay đổi vị trí
-    setStatuses(prevStatuses => {
+    setStatuses((prevStatuses) => {
       return [...prevStatuses].sort((a, b) => {
         if (a.isActive !== b.isActive) {
           return b.isActive - a.isActive; // Active statuses (1) first, inactive (0) later
@@ -214,38 +308,95 @@ const DeliveryStatusPage: React.FC = () => {
     });
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    setStatuses((prevStatuses) => {
+      // Find the indices of the dragged and target items
+      const filteredStatuses = prevStatuses.filter(
+        (status) => showInactive || status.isActive === 1
+      );
+      const activeStatusId = String(active.id);
+      const overStatusId = String(over.id);
+
+      const activeIndex = filteredStatuses.findIndex(
+        (s) => s.statusId === activeStatusId
+      );
+      const overIndex = filteredStatuses.findIndex(
+        (s) => s.statusId === overStatusId
+      );
+
+      if (activeIndex === -1 || overIndex === -1) return prevStatuses;
+
+      // Create a new array with the items reordered
+      const reorderedFilteredStatuses = arrayMove(
+        filteredStatuses,
+        activeIndex,
+        overIndex
+      );
+
+      // Update status indices
+      const updatedFilteredStatuses = reorderedFilteredStatuses.map(
+        (status, index) => ({
+          ...status,
+          statusIndex: index,
+        })
+      );
+
+      // Merge back with inactive statuses if they're not shown
+      const inactiveStatuses = !showInactive
+        ? prevStatuses.filter((status) => status.isActive === 0)
+        : [];
+
+      const result = [...updatedFilteredStatuses, ...inactiveStatuses];
+
+      // Sort the result by active status first, then by statusIndex
+      const sortedResult = [...result].sort((a, b) => {
+        if (a.isActive !== b.isActive) {
+          return b.isActive - a.isActive;
+        }
+        return a.statusIndex - b.statusIndex;
+      });
+
+      setModified(true);
+      return sortedResult;
+    });
+  };
+
   const saveChanges = async () => {
     setSaving(true);
     try {
       // Prepare payload for API
-      const payload: UpdateDeliveryStatusPayload[] = statuses.map(status => ({
+      const payload: UpdateDeliveryStatusPayload[] = statuses.map((status) => ({
         statusId: status.statusId,
         statusName: status.statusName,
         isActive: status.isActive,
-        statusIndex: status.statusIndex
+        statusIndex: status.statusIndex,
       }));
-      
+
       const response = await updateDeliveryStatuses(payload);
-      showAlert('Cập nhật trạng thái giao hàng thành công', 'success');
+      showAlert("Cập nhật trạng thái giao hàng thành công", "success");
       setModified(false);
-      
+
       // Reload data to ensure consistent display
       await fetchStatusData();
     } catch (error) {
-      console.error('Error updating delivery statuses:', error);
-      showAlert('Không thể cập nhật trạng thái giao hàng', 'error');
+      console.error("Error updating delivery statuses:", error);
+      showAlert("Không thể cập nhật trạng thái giao hàng", "error");
     } finally {
       setSaving(false);
     }
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -253,16 +404,16 @@ const DeliveryStatusPage: React.FC = () => {
     setEditModeId(statusId);
     setEditedName(currentName);
   };
-  
+
   const saveStatusName = (statusId: string) => {
-    if (editedName.trim() === '') return;
-    
-    setStatuses(prevStatuses => {
-      const updatedStatuses = prevStatuses.map(status => {
+    if (editedName.trim() === "") return;
+
+    setStatuses((prevStatuses) => {
+      const updatedStatuses = prevStatuses.map((status) => {
         if (status.statusId === statusId) {
           return {
             ...status,
-            statusName: editedName.trim()
+            statusName: editedName.trim(),
           };
         }
         return status;
@@ -270,25 +421,25 @@ const DeliveryStatusPage: React.FC = () => {
       setModified(true);
       return updatedStatuses;
     });
-    
+
     setEditModeId(null);
   };
-  
+
   const handleKeyDown = (e: React.KeyboardEvent, statusId: string) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       saveStatusName(statusId);
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setEditModeId(null);
     }
   };
 
   const handleOpenAddStatusDialog = () => {
     // Reset form fields
-    setNewStatusId('');
-    setNewStatusName('');
+    setNewStatusId("");
+    setNewStatusName("");
     setNewStatusActive(1);
-    setStatusIdError('');
-    setStatusNameError('');
+    setStatusIdError("");
+    setStatusNameError("");
     setAddStatusDialogOpen(true);
   };
 
@@ -301,21 +452,23 @@ const DeliveryStatusPage: React.FC = () => {
 
     // Validate Status ID
     if (!newStatusId.trim()) {
-      setStatusIdError('Mã trạng thái không được để trống');
+      setStatusIdError("Mã trạng thái không được để trống");
       isValid = false;
-    } else if (statuses.some(status => status.statusId === newStatusId.trim())) {
-      setStatusIdError('Mã trạng thái đã tồn tại');
+    } else if (
+      statuses.some((status) => status.statusId === newStatusId.trim())
+    ) {
+      setStatusIdError("Mã trạng thái đã tồn tại");
       isValid = false;
     } else {
-      setStatusIdError('');
+      setStatusIdError("");
     }
 
     // Validate Status Name
     if (!newStatusName.trim()) {
-      setStatusNameError('Tên trạng thái không được để trống');
+      setStatusNameError("Tên trạng thái không được để trống");
       isValid = false;
     } else {
-      setStatusNameError('');
+      setStatusNameError("");
     }
 
     return isValid;
@@ -327,33 +480,37 @@ const DeliveryStatusPage: React.FC = () => {
     }
 
     // Create a new status with current date and next available index
-    const nextIndex = statuses.length > 0 
-      ? Math.max(...statuses.map(s => s.statusIndex)) + 1 
-      : 0;
-    
+    const nextIndex =
+      statuses.length > 0
+        ? Math.max(...statuses.map((s) => s.statusIndex)) + 1
+        : 0;
+
     const newStatus: DeliveryStatus = {
       statusId: newStatusId.trim(),
       statusName: newStatusName.trim(),
       isActive: newStatusActive,
-      createdBy: 'current-user', // This would normally come from auth context
+      createdBy: "current-user", // This would normally come from auth context
       createdDate: new Date().toISOString(),
       modifiedDate: null,
       modifiedBy: null,
       deletedDate: null,
       deletedBy: null,
       statusIndex: nextIndex,
-      tripStatusHistories: []
+      tripStatusHistories: [],
     };
 
     // Add the new status to the current list
-    setStatuses(prevStatuses => [...prevStatuses, newStatus]);
+    setStatuses((prevStatuses) => [...prevStatuses, newStatus]);
     setModified(true);
-    
+
     // Close the dialog
     handleCloseAddStatusDialog();
-    
+
     // Show success message
-    showAlert('Thêm trạng thái mới thành công. Hãy nhớ lưu thay đổi!', 'success');
+    showAlert(
+      "Thêm trạng thái mới thành công. Hãy nhớ lưu thay đổi!",
+      "success"
+    );
   };
 
   const handleOpenConfirmDialog = () => {
@@ -371,168 +528,316 @@ const DeliveryStatusPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="80vh"
+      >
         <CircularProgress size={60} thickness={4} />
       </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Card elevation={3} sx={{ mb: 4, borderRadius: 2, overflow: 'hidden' }}>
-        <Box 
-          sx={{ 
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-            py: 2, 
-            px: 3
+    <Container
+      disableGutters
+      maxWidth={false}
+      sx={{
+        // Remove height and overflow properties that override parent layout
+        display: "flex",
+        flexDirection: "column",
+        px: { xs: 1, sm: 2, md: 3, lg: 4 },
+        py: { xs: 1, sm: 2 },
+      }}
+    >
+      <Card
+        elevation={3}
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          borderRadius: 2,
+          overflow: "hidden",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+        }}
+      >
+        <CardContent
+          sx={{
+            p: { xs: 1, sm: 2, md: 3 },
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
           }}
         >
-          <Typography variant="h4" color="white" fontWeight="bold">
-            Trạng Thái Giao Hàng
-          </Typography>
-          <Typography variant="body1" color="white" sx={{ mt: 0.5, opacity: 0.9 }}>
-            Tổng quan các loại trạng thái giao hàng trong hệ thống
-          </Typography>
-        </Box>
-        <CardContent>
           <Box display="flex" justifyContent="flex-end" mb={2}>
             <FormGroup>
               <FormControlLabel
-                control={<Checkbox checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />}
-                label="Hiển thị trạng thái không hoạt động"
+                control={
+                  <Checkbox
+                    checked={showInactive}
+                    onChange={(e) => setShowInactive(e.target.checked)}
+                    sx={{ "& .MuiSvgIcon-root": { fontSize: 20 } }}
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    Hiển thị trạng thái không hoạt động
+                  </Typography>
+                }
               />
             </FormGroup>
           </Box>
-          <TableContainer component={Paper} elevation={0}>
+          <TableContainer component={Paper} elevation={0} sx={{ mb: 2 }}>
             <Table sx={{ minWidth: 650 }}>
               <TableHead>
                 <TableRow sx={{ backgroundColor: theme.palette.grey[100] }}>
-                  <TableCell width="10%" sx={{ fontWeight: 'bold' }}>Index</TableCell>
-                  <TableCell width="35%" sx={{ fontWeight: 'bold' }}>Tên Trạng Thái</TableCell>
-                  <TableCell align="center" width="20%" sx={{ fontWeight: 'bold' }}>Tình Trạng</TableCell>
-                  <TableCell align="center" width="35%" sx={{ fontWeight: 'bold' }}>Hành Động</TableCell>
+                  <TableCell
+                    width="15%"
+                    align="center"
+                    sx={{ fontWeight: "bold", py: 2 }}
+                  >
+                    Index
+                  </TableCell>
+                  <TableCell
+                    width="30%"
+                    align="center"
+                    sx={{ fontWeight: "bold", py: 2 }}
+                  >
+                    Tên Trạng Thái
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    width="20%"
+                    sx={{ fontWeight: "bold", py: 2 }}
+                  >
+                    Tình Trạng
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    width="35%"
+                    sx={{ fontWeight: "bold", py: 2 }}
+                  >
+                    Hành Động
+                  </TableCell>
                 </TableRow>
               </TableHead>
-              <TableBody>
-                {statuses
-                  .filter(status => showInactive || status.isActive === 1)
-                  .map((status, index) => (
-                  <TableRow 
-                    key={status.statusId}
-                    sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { backgroundColor: theme.palette.grey[50] } }}
-                  >
-                    <TableCell align="center">
-                      {status.statusIndex}
-                    </TableCell>
-                    <TableCell component="th" scope="row">
-                      {editModeId === status.statusId ? (
-                        <TextField 
-                          value={editedName} 
-                          onChange={(e) => setEditedName(e.target.value)} 
-                          onKeyDown={(e) => handleKeyDown(e, status.statusId)} 
-                          size="small" 
-                          autoFocus 
-                          sx={{ width: '100%' }}
-                        />
-                      ) : (
-                        <Typography variant="body1" fontWeight="medium">
-                          {status.statusName}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell align="center">
-                      {status.isActive ? (
-                        <Chip 
-                          icon={<CheckCircleIcon />} 
-                          label="Đang hoạt động" 
-                          size="small" 
-                          color="success" 
-                          sx={{ fontWeight: 'medium' }}
-                        />
-                      ) : (
-                        <Chip 
-                          icon={<CancelIcon />} 
-                          label="Không hoạt động" 
-                          size="small" 
-                          color="error"
-                          sx={{ fontWeight: 'medium' }} 
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                        <Tooltip title="Đổi trạng thái hoạt động">
-                          <Switch 
-                            checked={status.isActive === 1} 
-                            onChange={() => toggleStatusActive(status.statusId)}
-                            size="small"
-                          />
-                        </Tooltip>
 
-                        <ButtonGroup size="small" sx={{ ml: 1 }}>
-                          <Tooltip title="Di chuyển lên">
-                            <span> {/* Wrap with span to allow tooltip on disabled button */}
-                              <IconButton 
-                                onClick={() => moveStatusUp(index)} 
-                                disabled={index === 0 || status.isActive === 0}
-                                size="small"
-                              >
-                                <ArrowUpwardIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                          
-                          <Tooltip title="Di chuyển xuống">
-                            <span> {/* Wrap with span to allow tooltip on disabled button */}
-                              <IconButton 
-                                onClick={() => moveStatusDown(index)} 
-                                disabled={
-                                  status.isActive === 0 || 
-                                  index === statuses.filter(s => showInactive || s.isActive === 1).length - 1 ||
-                                  // Kiểm tra xem có phải là trạng thái active cuối cùng không
-                                  (status.isActive === 1 && 
-                                   !statuses.filter(s => s.isActive === 1)
-                                     .some((s, i, arr) => arr.indexOf(s) > statuses.indexOf(status)))
-                                }
-                                size="small"
-                              >
-                                <ArrowDownwardIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                        </ButtonGroup>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={statuses
+                    .filter((status) => showInactive || status.isActive === 1)
+                    .map((status) => status.statusId)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <TableBody>
+                    {statuses
+                      .filter((status) => showInactive || status.isActive === 1)
+                      .map((status, index) => {
+                        // Check if this is a special status that cannot be moved
+                        const isSpecialStatus = [
+                          "not_started",
+                          "completed",
+                        ].includes(status.statusId);
 
-                        {editModeId === status.statusId ? (
-                          <Tooltip title="Lưu tên">
-                            <IconButton 
-                              onClick={() => saveStatusName(status.statusId)}
-                              size="small"
-                              color="primary"
+                        // Determine if this item is draggable - only special statuses can't be moved
+                        const isDraggable =
+                          status.isActive === 1 && !isSpecialStatus;
+
+                        return (
+                          <SortableItem
+                            key={status.statusId}
+                            id={status.statusId}
+                            isDraggable={isDraggable}
+                          >
+                            <TableRow
+                              sx={{
+                                "&:last-child td, &:last-child th": {
+                                  border: 0,
+                                },
+                                "&:hover": {
+                                  backgroundColor: theme.palette.grey[50],
+                                },
+                                height: "64px",
+                                cursor: isDraggable ? "grab" : "default",
+                                // Highlight special statuses with subtle background
+                                ...(isSpecialStatus && {
+                                  backgroundColor: "rgba(25, 118, 210, 0.04)",
+                                }),
+                              }}
                             >
-                              <DoneIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        ) : (
-                          <Tooltip title="Sửa tên">
-                            <IconButton 
-                              onClick={() => enableEditMode(status.statusId, status.statusName)}
-                              size="small"
-                              color="primary"
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+                              <TableCell align="center">
+                                {status.statusIndex}
+                              </TableCell>
+                              <TableCell
+                                component="th"
+                                scope="row"
+                                align="center"
+                              >
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 1,
+                                  }}
+                                >
+                                  {isDraggable ? (
+                                    <DragIndicatorIcon
+                                      sx={{
+                                        color: theme.palette.text.secondary,
+                                        cursor: "grab",
+                                        "&:hover": {
+                                          color: theme.palette.primary.main,
+                                        },
+                                      }}
+                                    />
+                                  ) : (
+                                    <LockIcon
+                                      sx={{
+                                        color: theme.palette.text.disabled,
+                                        fontSize: "1.1rem",
+                                      }}
+                                    />
+                                  )}
+
+                                  {editModeId === status.statusId ? (
+                                    <TextField
+                                      value={editedName}
+                                      onChange={(e) =>
+                                        setEditedName(e.target.value)
+                                      }
+                                      onKeyDown={(e) =>
+                                        handleKeyDown(e, status.statusId)
+                                      }
+                                      size="small"
+                                      autoFocus
+                                      sx={{ width: "100%" }}
+                                    />
+                                  ) : (
+                                    <Typography
+                                      variant="body1"
+                                      fontWeight="medium"
+                                      sx={{
+                                        ...(isSpecialStatus && {
+                                          fontWeight: "bold",
+                                        }),
+                                      }}
+                                    >
+                                      {status.statusName}
+                                      {isSpecialStatus && (
+                                        <Chip
+                                          label="Cố định"
+                                          size="small"
+                                          color="secondary"
+                                          sx={{
+                                            ml: 1,
+                                            height: 20,
+                                            fontSize: "0.7rem",
+                                          }}
+                                        />
+                                      )}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell align="center">
+                                {status.isActive ? (
+                                  <Chip
+                                    icon={<CheckCircleIcon />}
+                                    label="Đang hoạt động"
+                                    size="small"
+                                    color="success"
+                                    sx={{ fontWeight: "medium", px: 1 }}
+                                  />
+                                ) : (
+                                  <Chip
+                                    icon={<CancelIcon />}
+                                    label="Không hoạt động"
+                                    size="small"
+                                    color="error"
+                                    sx={{ fontWeight: "medium", px: 1 }}
+                                  />
+                                )}
+                              </TableCell>
+                              <TableCell align="center">
+                                <Tooltip title="Đổi trạng thái hoạt động">
+                                  <Switch
+                                    checked={status.isActive === 1}
+                                    onChange={() =>
+                                      toggleStatusActive(status.statusId)
+                                    }
+                                    size="small"
+                                    sx={{
+                                      "& .MuiSwitch-switchBase": {
+                                        p: 0.75,
+                                      },
+                                    }}
+                                  />
+                                </Tooltip>
+
+                                {editModeId === status.statusId ? (
+                                  <Tooltip title="Lưu tên">
+                                    <IconButton
+                                      onClick={() =>
+                                        saveStatusName(status.statusId)
+                                      }
+                                      size="small"
+                                      color="primary"
+                                      sx={{
+                                        ml: 1.5,
+                                        border: `1px solid ${theme.palette.primary.main}`,
+                                        backgroundColor:
+                                          "rgba(25, 118, 210, 0.04)",
+                                      }}
+                                    >
+                                      <DoneIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                ) : (
+                                  <Tooltip title="Sửa tên">
+                                    <IconButton
+                                      onClick={() =>
+                                        enableEditMode(
+                                          status.statusId,
+                                          status.statusName
+                                        )
+                                      }
+                                      size="small"
+                                      color="primary"
+                                      sx={{
+                                        ml: 1.5,
+                                        border: `1px solid ${theme.palette.grey[300]}`,
+                                        "&:hover": {
+                                          backgroundColor:
+                                            "rgba(25, 118, 210, 0.04)",
+                                          borderColor:
+                                            theme.palette.primary.main,
+                                        },
+                                      }}
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          </SortableItem>
+                        );
+                      })}
+                  </TableBody>
+                </SortableContext>
+              </DndContext>
             </Table>
           </TableContainer>
-          
+
           {statuses.length === 0 && (
-            <Box sx={{ py: 4, textAlign: 'center' }}>
+            <Box sx={{ py: 6, textAlign: "center" }}>
               <Typography variant="body1" color="text.secondary">
                 Không tìm thấy trạng thái giao hàng nào
               </Typography>
@@ -540,56 +845,121 @@ const DeliveryStatusPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
-      
-      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+      <Box
+        sx={{
+          mt: 4,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          backgroundColor: theme.palette.grey[50],
+          borderRadius: 2,
+          p: 2,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+        }}
+      >
         <Box display="flex" alignItems="center">
-          <Typography variant="body2" color="text.secondary" sx={{ mr: 2 }}>
-            {showInactive 
-              ? `Tổng số trạng thái: ${statuses.length}` 
-              : `Trạng thái đang hoạt động: ${statuses.filter(status => status.isActive === 1).length}`
-            }
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{
+              mr: 3,
+              fontWeight: 500,
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: theme.palette.grey[100],
+              px: 2,
+              py: 0.75,
+              borderRadius: 1.5,
+            }}
+          >
+            {showInactive
+              ? `Tổng số trạng thái: ${statuses.length}`
+              : `Trạng thái đang hoạt động: ${
+                  statuses.filter((status) => status.isActive === 1).length
+                }`}
           </Typography>
           <Button
             variant="outlined"
             color="primary"
             startIcon={<AddIcon />}
             onClick={handleOpenAddStatusDialog}
-            size="small"
+            size="medium"
+            sx={{
+              borderRadius: 1.5,
+              px: 2.5,
+              py: 0.75,
+              fontWeight: 500,
+              "&:hover": {
+                backgroundColor: "rgba(25, 118, 210, 0.04)",
+              },
+            }}
           >
             Thêm trạng thái mới
           </Button>
         </Box>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          startIcon={<SaveIcon />} 
-          onClick={handleOpenConfirmDialog} 
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<SaveIcon />}
+          onClick={handleOpenConfirmDialog}
           disabled={!modified || saving}
+          size="medium"
+          sx={{
+            borderRadius: 1.5,
+            px: 3,
+            py: 1,
+            fontWeight: 500,
+            boxShadow: "0 2px 8px rgba(25, 118, 210, 0.25)",
+          }}
         >
-          {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+          {saving ? "Đang lưu..." : "Lưu thay đổi"}
         </Button>
       </Box>
 
-      <Snackbar open={alertOpen} autoHideDuration={6000} onClose={handleCloseAlert}>
-        <Alert onClose={handleCloseAlert} severity={alertSeverity} sx={{ width: '100%' }}>
+      <Snackbar
+        open={alertOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseAlert}
+      >
+        <Alert
+          onClose={handleCloseAlert}
+          severity={alertSeverity}
+          sx={{ width: "100%" }}
+        >
           {alertMessage}
         </Alert>
       </Snackbar>
 
       {/* Add Status Dialog */}
-      <Dialog open={addStatusDialogOpen} onClose={handleCloseAddStatusDialog} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ 
-          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-          color: 'white',
-          fontWeight: 'bold'
-        }}>
+      <Dialog
+        open={addStatusDialogOpen}
+        onClose={handleCloseAddStatusDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          elevation: 5,
+          sx: { borderRadius: 2, overflow: "hidden" },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            color: "white",
+            fontWeight: "bold",
+            py: 2.5,
+            px: 3,
+          }}
+        >
           Thêm Trạng Thái Giao Hàng Mới
         </DialogTitle>
-        <DialogContent sx={{ pt: 2, mt: 2 }}>
-          <DialogContentText sx={{ mb: 2 }}>
+        <DialogContent sx={{ pt: 3, px: 3 }}>
+          <DialogContentText
+            sx={{ mb: 3, color: theme.palette.text.secondary }}
+          >
             Nhập thông tin chi tiết cho trạng thái giao hàng mới.
           </DialogContentText>
-          
+
           <TextField
             autoFocus
             margin="dense"
@@ -600,9 +970,12 @@ const DeliveryStatusPage: React.FC = () => {
             onChange={(e) => setNewStatusId(e.target.value)}
             error={!!statusIdError}
             helperText={statusIdError}
-            sx={{ mb: 2 }}
+            sx={{ mb: 3 }}
+            InputProps={{
+              sx: { borderRadius: 1.5 },
+            }}
           />
-          
+
           <TextField
             margin="dense"
             label="Tên Trạng Thái"
@@ -612,9 +985,12 @@ const DeliveryStatusPage: React.FC = () => {
             onChange={(e) => setNewStatusName(e.target.value)}
             error={!!statusNameError}
             helperText={statusNameError}
-            sx={{ mb: 2 }}
+            sx={{ mb: 3 }}
+            InputProps={{
+              sx: { borderRadius: 1.5 },
+            }}
           />
-          
+
           <FormControlLabel
             control={
               <Switch
@@ -623,18 +999,38 @@ const DeliveryStatusPage: React.FC = () => {
                 color="primary"
               />
             }
-            label="Trạng Thái Hoạt Động"
+            label={
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                Trạng Thái Hoạt Động
+              </Typography>
+            }
           />
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={handleCloseAddStatusDialog} color="inherit">
+        <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
+          <Button
+            onClick={handleCloseAddStatusDialog}
+            color="inherit"
+            variant="outlined"
+            sx={{
+              borderRadius: 1.5,
+              px: 2.5,
+              textTransform: "none",
+              fontWeight: 500,
+            }}
+          >
             Hủy
           </Button>
-          <Button 
-            onClick={handleAddNewStatus} 
-            variant="contained" 
+          <Button
+            onClick={handleAddNewStatus}
+            variant="contained"
             color="primary"
             startIcon={<AddIcon />}
+            sx={{
+              borderRadius: 1.5,
+              px: 2.5,
+              textTransform: "none",
+              fontWeight: 500,
+            }}
           >
             Thêm Trạng Thái
           </Button>
@@ -642,45 +1038,70 @@ const DeliveryStatusPage: React.FC = () => {
       </Dialog>
 
       {/* Confirm Save Changes Dialog */}
-      <Dialog 
-        open={confirmDialogOpen} 
-        onClose={handleCloseConfirmDialog} 
-        maxWidth="xs" 
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={handleCloseConfirmDialog}
+        maxWidth="xs"
         fullWidth
+        PaperProps={{
+          elevation: 5,
+          sx: { borderRadius: 2, overflow: "hidden" },
+        }}
       >
-        <DialogTitle sx={{ 
-          background: theme.palette.primary.main,
-          color: 'white',
-          fontWeight: 'bold',
-          py: 1.5,
-          fontSize: '1rem'
-        }}>
+        <DialogTitle
+          sx={{
+            background: theme.palette.primary.main,
+            color: "white",
+            fontWeight: "bold",
+            py: 2,
+            px: 3,
+            fontSize: "1.1rem",
+          }}
+        >
           Xác nhận thay đổi
         </DialogTitle>
-        <DialogContent sx={{ pt: 2, pb: 1, px: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-            <WarningIcon color="warning" sx={{ mr: 1.5, fontSize: 24 }} />
-            <DialogContentText>
+        <DialogContent sx={{ pt: 3, pb: 2, px: 3 }}>
+          <Box sx={{ display: "flex", alignItems: "flex-start" }}>
+            <WarningIcon
+              color="warning"
+              sx={{ mr: 2, fontSize: 28, mt: 0.5 }}
+            />
+            <DialogContentText
+              sx={{ color: theme.palette.text.primary, fontWeight: 500 }}
+            >
               Bạn có chắc chắn muốn lưu các thay đổi trạng thái giao hàng không?
             </DialogContentText>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 2, pb: 2 }}>
-          <Button 
-            onClick={handleCloseConfirmDialog} 
+        <DialogActions sx={{ px: 3, pb: 3, pt: 1, gap: 1 }}>
+          <Button
+            onClick={handleCloseConfirmDialog}
             variant="outlined"
             color="inherit"
-            size="small"
-            sx={{ minWidth: 80 }}
+            sx={{
+              borderRadius: 1.5,
+              px: 3,
+              py: 0.75,
+              minWidth: 100,
+              textTransform: "none",
+              fontWeight: 500,
+            }}
           >
             Hủy
           </Button>
-          <Button 
-            onClick={handleConfirmSaveChanges} 
-            variant="contained" 
+          <Button
+            onClick={handleConfirmSaveChanges}
+            variant="contained"
             color="primary"
-            size="small"
-            sx={{ minWidth: 80 }}
+            sx={{
+              borderRadius: 1.5,
+              px: 3,
+              py: 0.75,
+              minWidth: 100,
+              textTransform: "none",
+              fontWeight: 500,
+              boxShadow: "0 2px 8px rgba(25, 118, 210, 0.25)",
+            }}
           >
             Xác nhận
           </Button>

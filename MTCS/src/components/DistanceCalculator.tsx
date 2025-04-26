@@ -89,7 +89,6 @@ const DistanceCalculator: React.FC = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [containerType, setContainerType] = useState<number>(1);
   const [containerSize, setContainerSize] = useState<number>(1);
-  const [deliveryType, setDeliveryType] = useState<number>(1);
   const [priceResult, setPriceResult] = useState<{
     basePrice: number;
     averagePrice: number;
@@ -326,7 +325,6 @@ const DistanceCalculator: React.FC = () => {
         distance: Math.round(totalDistance / 1000), // Convert meters to kilometers
         containerType,
         containerSize,
-        deliveryType,
       });
 
       if (response.success && response.data) {
@@ -1098,21 +1096,6 @@ const DistanceCalculator: React.FC = () => {
                         </Select>
                       </FormControl>
                     </Grid>
-                    <Grid item xs={12} sm={4}>
-                      <FormControl fullWidth size="small" variant="outlined">
-                        <InputLabel>Loại vận chuyển</InputLabel>
-                        <Select
-                          value={deliveryType}
-                          label="Loại vận chuyển"
-                          onChange={(e) =>
-                            setDeliveryType(e.target.value as number)
-                          }
-                        >
-                          <MenuItem value={1}>Nhập</MenuItem>
-                          <MenuItem value={2}>Xuất</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
                   </Grid>
 
                   <Button
@@ -1300,11 +1283,6 @@ const DistanceCalculator: React.FC = () => {
                           <Chip
                             size="small"
                             label={containerSize === 1 ? "20 feet" : "40 feet"}
-                            variant="outlined"
-                          />
-                          <Chip
-                            size="small"
-                            label={deliveryType === 1 ? "Nhập" : "Xuất"}
                             variant="outlined"
                           />
                         </Box>

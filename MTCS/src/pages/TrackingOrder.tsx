@@ -34,11 +34,13 @@ import {
 import { trackingOrder } from "../services/orderApi";
 import { getGeocodeByAddress } from "../services/mapApi";
 import { styled } from "@mui/material/styles";
-import dayjs from "dayjs";
+import dayjs from "dayjs"; // Thêm lại import dayjs
 import { useTheme } from "@mui/material/styles";
 import { useParams, useNavigate } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import StraightenIcon from "@mui/icons-material/Straighten";
+// Add SignalR client import
+import * as signalR from "@microsoft/signalr";
 // Define types based on the response structure
 interface Driver {
   driverId: string;
@@ -104,6 +106,24 @@ interface DriverLocation {
   lng: number;
   timestamp?: string;
 }
+
+// Function to get status display in Vietnamese
+const getStatusDisplay = (status: string) => {
+  switch (status) {
+    case "Pending":
+      return { label: "Chờ xử lý", color: "warning" };
+    case "Scheduled":
+      return { label: "Đã lên lịch", color: "info" };
+    case "Delivering":
+      return { label: "Đang giao hàng", color: "info" };
+    case "Shipped":
+      return { label: "Đã giao hàng", color: "info" };
+    case "Completed":
+      return { label: "Hoàn thành", color: "success" };
+    default:
+      return { label: status || "Không xác định", color: "default" };
+  }
+};
 
 // Styled components for better visuals
 const StatusChip = styled(Chip)(({ theme, status }: { theme: any, status: string }) => ({
@@ -193,16 +213,19 @@ const TrackingOrder: React.FC = () => {
   const [driverId, setDriverId] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'receiving'>('disconnected');
   const [trackingActive, setTrackingActive] = useState<boolean>(false);
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<signalR.HubConnection | null>(null);
   const mapRef = useRef<any>(null);
   const driverMarkerRef = useRef<any>(null);
   const driverPathRef = useRef<any>(null);
   const pathCoordinatesRef = useRef<[number, number][]>([]);
+  // Add reference for driver to delivery route
+  const driverToDeliveryPathRef = useRef<any>(null);
+  const apiKeyRef = useRef<string>("");
 
   // Function to fetch order tracking data
   const handleTrackOrder = async () => {
     if (!trackingCode.trim()) {
-      setError("Please enter a tracking code");
+      setError("Vui lòng hãy nhập mã vận chuyển");
       return;
     }
 
@@ -240,7 +263,7 @@ const TrackingOrder: React.FC = () => {
       if (err.message === "ORDER_COMPLETED") {
         setError("Đơn hàng đã hoàn thành không thể tiến hành theo dõi.");
       } else {
-        setError("Unable to find order with this tracking code. Please check and try again.");
+        setError("Không thể tìm thấy mã vận chuyển của bạn. Vui lòng kiểm tra xem mã có đã đúng hay đơn hàng đã hoàn thành.");
       }
       setTrackingData(null);
     } finally {
@@ -269,7 +292,18 @@ const TrackingOrder: React.FC = () => {
   const handleStopTracking = () => {
     // Stop tracking
     if (socketRef.current) {
-      socketRef.current.close();
+      // First unsubscribe from the user's location updates if connected
+      if (socketRef.current.state === signalR.HubConnectionState.Connected && driverId) {
+        socketRef.current.invoke("Unsubscribe", driverId)
+          .catch(err => {
+            console.error("Error unsubscribing from driver location:", err);
+          });
+      }
+
+      // Then stop the connection
+      socketRef.current.stop().catch(err => {
+        console.error("Error stopping SignalR connection:", err);
+      });
       socketRef.current = null;
     }
 
@@ -292,84 +326,78 @@ const TrackingOrder: React.FC = () => {
     setTrackingActive(false);
   };
 
-  // Function to connect to WebSocket server
-  const connectWebSocket = (userId: string) => {
+  // Function to connect to SignalR hub
+  const connectSignalR = (userId: string) => {
     // Close existing connection if any
     if (socketRef.current) {
-      socketRef.current.close();
+      socketRef.current.stop();
     }
     
     setConnectionStatus('connecting');
-    console.log(`Connecting to WebSocket for driver: ${userId}`);
+    console.log(`Connecting to SignalR hub for driver: ${userId}`);
     
-    // Connect to WebSocket server as subscriber
-    const wsUrl = `wss://mtcs-server.azurewebsites.net/ws?userId=${userId}&action=subscribe`;
-    console.log(`WebSocket URL: ${wsUrl}`);
+    // Connect to SignalR hub with proper configuration
+    socketRef.current = new signalR.HubConnectionBuilder()
+      .withUrl("https://mtcs-server.azurewebsites.net/locationHub", {
+        skipNegotiation: true,
+        transport: signalR.HttpTransportType.WebSockets
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 15000, 30000])
+      .configureLogging(signalR.LogLevel.Information)
+      .build();
+
+    // Handle location updates
+    socketRef.current.on("ReceiveLocation", (receivedUserId: string, latitude: number, longitude: number) => {
+      console.log(`SignalR message received for user ${receivedUserId}:`, { latitude, longitude });
+      
+      // Only update if the location is for our driver
+      if (receivedUserId === userId) {
+        updateDriverLocation(latitude, longitude);
+        setConnectionStatus('receiving');
+      }
+    });
     
-    try {
-      socketRef.current = new WebSocket(wsUrl);
+    // Start the connection and subscribe to the user's location updates
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    function attemptConnection() {
+      retryCount++;
+      console.log(`SignalR connection attempt ${retryCount}/${maxRetries}`);
       
-      socketRef.current.onopen = () => {
-        console.log(`WebSocket connection opened for driver: ${userId}`);
-        setConnectionStatus('connected');
-      };
-      
-      socketRef.current.onmessage = (event) => {
-        console.log(`WebSocket message received:`, event.data);
-        try {
-          const data = JSON.parse(event.data);
-          console.log(`Parsed WebSocket data:`, data);
+      socketRef.current!.start()
+        .then(() => {
+          console.log(`SignalR connection opened for driver: ${userId}`);
+          setConnectionStatus('connected');
           
-          // Extended debugging to check all potential location data formats
-          console.log(`Data properties:`, Object.keys(data));
+          // Subscribe to the user location updates
+          return socketRef.current!.invoke("Subscribe", userId);
+        })
+        .then(() => {
+          console.log(`Successfully subscribed to location updates for driver: ${userId}`);
+        })
+        .catch(err => {
+          console.error("Error connecting to SignalR hub:", err);
+          setConnectionStatus('disconnected');
           
-          // Check for standard formats
-          if (data.Latitude !== undefined && data.Longitude !== undefined) {
-            console.log(`Location found in format 1: Lat=${data.Latitude}, Lng=${data.Longitude}`);
-            updateDriverLocation(data.Latitude, data.Longitude);
-            setConnectionStatus('receiving');
-          } 
-          // Check alternative format
-          else if (data.lat !== undefined && data.lng !== undefined) {
-            console.log(`Location found in format 2: lat=${data.lat}, lng=${data.lng}`);
-            updateDriverLocation(data.lat, data.lng);
-            setConnectionStatus('receiving');
+          if (retryCount < maxRetries) {
+            console.log(`Retry attempt ${retryCount} failed. Trying again in 3 seconds...`);
+            setTimeout(attemptConnection, 3000);
+          } else {
+            console.log(`Failed to connect after ${maxRetries} attempts`);
+            setTrackingActive(false);
           }
-          // Check if data is nested under a location object
-          else if (data.location && (data.location.lat !== undefined && data.location.lng !== undefined)) {
-            console.log(`Location found in nested format: lat=${data.location.lat}, lng=${data.location.lng}`);
-            updateDriverLocation(data.location.lat, data.location.lng);
-            setConnectionStatus('receiving');
-          }
-          // Check for alternate capitalization
-          else if (data.latitude !== undefined && data.longitude !== undefined) {
-            console.log(`Location found in lowercase format: lat=${data.latitude}, lng=${data.longitude}`);
-            updateDriverLocation(data.latitude, data.longitude);
-            setConnectionStatus('receiving');
-          }
-          else {
-            console.warn(`No recognized location format found in message:`, data);
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error, 'Raw data:', event.data);
-        }
-      };
-      
-      socketRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setConnectionStatus('disconnected');
-      };
-      
-      socketRef.current.onclose = (event) => {
-        console.log(`WebSocket closed with code: ${event.code}, reason: ${event.reason}`);
-        setConnectionStatus('disconnected');
-        setTrackingActive(false);
-      };
-    } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
+        });
+    }
+    
+    attemptConnection();
+    
+    // Handle connection closed
+    socketRef.current.onclose = (error) => {
+      console.log('SignalR connection closed:', error);
       setConnectionStatus('disconnected');
       setTrackingActive(false);
-    }
+    };
   };
 
   // Function to update driver marker position on the map
@@ -377,6 +405,10 @@ const TrackingOrder: React.FC = () => {
     if (!mapRef.current) return;
 
     const map = mapRef.current;
+    const apiKey = import.meta.env.VITE_GOONG_MAP_API_KEY;
+    apiKeyRef.current = apiKey;
+    
+    console.log("Driver location updated:", { lat, lng });
     
     // Store the new coordinates in the path history
     pathCoordinatesRef.current.push([lng, lat]);
@@ -449,6 +481,89 @@ const TrackingOrder: React.FC = () => {
       }
     }
     
+    // Vẽ đường từ vị trí tài xế đến điểm giao hàng nếu có vị trí giao hàng
+    if (locations.delivery?.coordinates) {
+      const deliveryCoords = locations.delivery.coordinates;
+      console.log("Delivery coordinates:", deliveryCoords);
+      
+      // Chuẩn bị URL cho API Directions
+      // CHÚ Ý: Goong API yêu cầu origin và destination theo dạng lat,lng
+      const directionsUrl = `https://rsapi.goong.io/Direction?origin=${lat},${lng}&destination=${deliveryCoords.lat},${deliveryCoords.lng}&vehicle=car&api_key=${apiKey}`;
+
+      console.log("Calling directions API:", directionsUrl);
+      
+      // Gọi API để lấy đường đi từ vị trí tài xế đến điểm giao hàng
+      fetch(directionsUrl)
+        .then(response => {
+          console.log("Directions API response status:", response.status);
+          return response.json();
+        })
+        .then(data => {
+          console.log("Directions API response:", data);
+          
+          if (data.routes && data.routes.length > 0 && data.routes[0].overview_polyline) {
+            const polyline = data.routes[0].overview_polyline.points;
+            console.log("Got polyline:", polyline ? "Yes (length: " + polyline.length + ")" : "No");
+            
+            const decodedCoords = decodePolyline(polyline);
+            console.log("Decoded coordinates count:", decodedCoords.length);
+            
+            if (decodedCoords.length > 0) {
+              // Chuyển đổi tọa độ thành định dạng [lng, lat] cho Goong Maps
+              const routeCoordinates = decodedCoords.map(coord => [coord.lng, coord.lat]);
+              
+              // Nếu đã có layer và source, xóa chúng trước
+              if (map.getLayer('driverToDeliveryLine')) {
+                map.removeLayer('driverToDeliveryLine');
+              }
+              
+              if (map.getSource('driverToDelivery')) {
+                map.removeSource('driverToDelivery');
+                driverToDeliveryPathRef.current = null;
+              }
+              
+              // Tạo mới source và layer
+              map.addSource('driverToDelivery', {
+                type: 'geojson',
+                data: {
+                  type: 'Feature',
+                  properties: {},
+                  geometry: {
+                    type: 'LineString',
+                    coordinates: routeCoordinates
+                  }
+                }
+              });
+              
+              map.addLayer({
+                id: 'driverToDeliveryLine',
+                type: 'line',
+                source: 'driverToDelivery',
+                layout: {
+                  'line-join': 'round',
+                  'line-cap': 'round'
+                },
+                paint: {
+                  'line-color': '#FFFE00',  // Thay đổi màu thành đỏ (từ #2196F3)
+                  'line-width': 4,
+                  'line-dasharray': [1, 2]  // Kiểu đường nét đứt
+                }
+              });
+              
+              driverToDeliveryPathRef.current = 'created';
+              console.log("Driver to delivery route added to map successfully!");
+            }
+          } else {
+            console.error("Direction API error or no routes found:", data);
+          }
+        })
+        .catch(err => {
+          console.error("Error loading driver to delivery route:", err);
+        });
+    } else {
+      console.warn("No delivery coordinates available for routing");
+    }
+    
     // Animate to the new position smoothly
     if (pathCoordinatesRef.current.length === 1) {
       map.flyTo({
@@ -459,26 +574,80 @@ const TrackingOrder: React.FC = () => {
     }
   };
 
+  // Helper function to decode Google/Goong Maps encoded polylines
+  const decodePolyline = (encoded: string) => {
+    if (!encoded) return [];
+    
+    let index = 0;
+    const len = encoded.length;
+    let lat = 0;
+    let lng = 0;
+    const coordinates = [];
+    
+    while (index < len) {
+      let b;
+      let shift = 0;
+      let result = 0;
+      
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      
+      const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+      
+      shift = 0;
+      result = 0;
+      
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      
+      const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+      
+      coordinates.push({
+        lat: lat / 1e5,
+        lng: lng / 1e5
+      });
+    }
+    
+    return coordinates;
+  };
+
   // Set driver ID and auto-start tracking when tracking data loads
   useEffect(() => {
     if (trackingData?.trips?.[0]?.driverId) {
       const tripDriverId = trackingData.trips[0].driverId;
       setDriverId(tripDriverId);
       
-      // Auto-start tracking if we're not already tracking
-      if (!trackingActive && tripDriverId) {
-        console.log("Auto-starting driver tracking for:", tripDriverId);
-        connectWebSocket(tripDriverId);
-        setTrackingActive(true);
+      // Check if both locations have coordinates before starting tracking
+      if (locations.pickup?.coordinates && locations.delivery?.coordinates) {
+        // Auto-start tracking if we're not already tracking
+        if (!trackingActive && tripDriverId) {
+          console.log("Auto-starting driver tracking for:", tripDriverId);
+          console.log("Pickup coordinates:", locations.pickup.coordinates);
+          console.log("Delivery coordinates:", locations.delivery.coordinates);
+          connectSignalR(tripDriverId);
+          setTrackingActive(true);
+        }
+      } else {
+        console.log("Waiting for location coordinates before starting tracking:", 
+          locations.pickup?.coordinates ? "Pickup ready" : "Pickup not ready", 
+          locations.delivery?.coordinates ? "Delivery ready" : "Delivery not ready");
       }
     }
-  }, [trackingData, trackingActive]);
+  }, [trackingData, trackingActive, locations]);
 
   // Cleanup WebSocket connection on unmount
   useEffect(() => {
     return () => {
       if (socketRef.current) {
-        socketRef.current.close();
+        socketRef.current.stop();
       }
     };
   }, []);
@@ -517,14 +686,14 @@ const TrackingOrder: React.FC = () => {
         new window.goongjs.Marker({ color: '#4CAF50' })
           .setLngLat(pickupCoords)
           .setPopup(new window.goongjs.Popup({ offset: 25 })
-            .setHTML(`<h3>Pickup Location</h3><p>${locations.pickup!.name}</p>`))
+            .setHTML(`<h3>Nơi lấy hàng</h3><p>${locations.pickup!.name}</p>`))
           .addTo(map);
 
         // Add delivery marker
         new window.goongjs.Marker({ color: '#F44336' })
           .setLngLat(deliveryCoords)
           .setPopup(new window.goongjs.Popup({ offset: 25 })
-            .setHTML(`<h3>Delivery Location</h3><p>${locations.delivery!.name}</p>`))
+            .setHTML(`<h3>Nơi giao hàng</h3><p>${locations.delivery!.name}</p>`))
           .addTo(map);
 
         // Fit the map to show both markers
@@ -588,51 +757,6 @@ const TrackingOrder: React.FC = () => {
       });
     };
 
-    // Helper function to decode Google/Goong Maps encoded polylines
-    const decodePolyline = (encoded: string) => {
-      if (!encoded) return [];
-      
-      let index = 0;
-      const len = encoded.length;
-      let lat = 0;
-      let lng = 0;
-      const coordinates = [];
-      
-      while (index < len) {
-        let b;
-        let shift = 0;
-        let result = 0;
-        
-        do {
-          b = encoded.charCodeAt(index++) - 63;
-          result |= (b & 0x1f) << shift;
-          shift += 5;
-        } while (b >= 0x20);
-        
-        const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
-        lat += dlat;
-        
-        shift = 0;
-        result = 0;
-        
-        do {
-          b = encoded.charCodeAt(index++) - 63;
-          result |= (b & 0x1f) << shift;
-          shift += 5;
-        } while (b >= 0x20);
-        
-        const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
-        lng += dlng;
-        
-        coordinates.push({
-          lat: lat / 1e5,
-          lng: lng / 1e5
-        });
-      }
-      
-      return coordinates;
-    };
-
     // If goongjs is not loaded, load it first
     if (!window.goongjs) {
       const script = document.createElement('script');
@@ -667,29 +791,82 @@ const TrackingOrder: React.FC = () => {
   const renderTripTimeline = () => {
     if (!sortedStatuses.length) return null;
 
+    // Hàm format thời gian với xử lý lỗi
+    const formatDateTime = (dateTimeString: string) => {
+      try {
+        console.log('Raw dateTimeString value:', dateTimeString);
+        
+        // Nếu chuỗi thời gian rỗng hoặc null/undefined
+        if (!dateTimeString) {
+          return 'Không có dữ liệu thời gian';
+        }
+        
+        // Thử parse ngày trực tiếp
+        let date;
+        try {
+          date = new Date(dateTimeString);
+          console.log('Parsed date:', date);
+          
+          // Kiểm tra nếu date không phải là ngày hợp lệ
+          if (isNaN(date.getTime())) {
+            console.warn('Invalid date after parsing:', dateTimeString);
+            return 'Không có dữ liệu thời gian';
+          }
+        } catch (err) {
+          console.error('Error parsing date:', err);
+          return 'Không có dữ liệu thời gian';
+        }
+        
+        // Format ngày tháng thủ công thay vì dùng dayjs
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        
+        const formattedResult = `${day}/${month}/${year} ${hours}:${minutes}`;
+        console.log('Formatted result:', formattedResult);
+        return formattedResult;
+      } catch (err) {
+        console.error('Error formatting date:', err);
+        return 'Không có dữ liệu thời gian';
+      }
+    };
+
+    // Important: Set the active step to a value LESS THAN the total status count
+    // This ensures all steps are rendered and visible
     return (
       <Box sx={{ my: 4 }}>
         <Typography variant="h6" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
-          Trip Status Timeline
+          Trạng thái vận chuyển của chuyến hàng
         </Typography>
-        <Stepper orientation="vertical" activeStep={sortedStatuses.length}>
-          {sortedStatuses.map((status, index) => (
-            <Step key={status.historyId} completed={true}>
-              <StepLabel>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  {status.statusName}
-                </Typography>
-              </StepLabel>
-              <StepContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <AccessTime sx={{ mr: 1, color: theme.palette.text.secondary }} fontSize="small" />
-                  <Typography variant="body2" color="text.secondary">
-                    {dayjs(status.startTime).format('MMM D, YYYY h:mm A')}
+        
+        {/* Fix: Change activeStep to sortedStatuses.length - 1 to properly show all steps */}
+        <Stepper orientation="vertical" activeStep={sortedStatuses.length - 1}>
+          {sortedStatuses.map((status, index) => {
+            // Format thời gian và lưu vào biến
+            const formattedTime = formatDateTime(status.startTime);
+            console.log(`Status ${index} formatted time:`, formattedTime);
+            
+            return (
+              <Step key={status.historyId} completed={true}>
+                <StepLabel>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    {status.statusName}
                   </Typography>
-                </Box>
-              </StepContent>
-            </Step>
-          ))}
+                </StepLabel>
+                <StepContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <AccessTime sx={{ mr: 1, color: theme.palette.text.secondary }} fontSize="small" />
+
+                    Bắt đầu lúc {formattedTime || 'NO TIME DATA'}
+                    
+                   
+                  </Box>
+                </StepContent>
+              </Step>
+            );
+          })}
         </Stepper>
       </Box>
     );
@@ -753,16 +930,16 @@ const TrackingOrder: React.FC = () => {
   // Render driver tracking controls that overlay on the map
   const renderDriverTrackingControls = () => {
     const statusLabels = {
-      'connected': 'Connected, waiting for location...',
-      'disconnected': 'Not tracking',
-      'connecting': 'Connecting...',
-      'receiving': `Receiving location for ${driverId}`
+      'connected': 'Đã kết nối, đang đợi lấy vị trí...',
+      'disconnected': 'Chưa kết nối',
+      'connecting': 'Đang kết nối...',
+      'receiving': `Bạn đang quan sát vị trí của tài xế`
     };
 
     return (
       <MapControlsContainer>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Driver Location Tracker</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Trạng thái dò tìm vị trí tài xế</Typography>
         </Box>
         
         {/* <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1 }}>
@@ -842,7 +1019,7 @@ const TrackingOrder: React.FC = () => {
           <TextField
             fullWidth
             variant="outlined"
-            label="Enter Tracking Code"
+            label="Nhập mã vận chuyển của bạn"
             value={trackingCode}
             onChange={(e) => setTrackingCode(e.target.value)}
             placeholder="e.g., TRAK_20250411_091440_9489"
@@ -916,10 +1093,11 @@ const TrackingOrder: React.FC = () => {
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <StatusChip
-                      label={trackingData.status}
-                      status={trackingData.status}
-                      icon={trackingData.status === 'Completed' ? <CheckCircle /> : undefined}
+                    <Chip
+                      size="medium"
+                      label={getStatusDisplay(trackingData.status).label}
+                      color={getStatusDisplay(trackingData.status).color as any}
+                      sx={{ fontWeight: 600 }}
                     />
                   </Grid>
                 </Grid>
@@ -940,7 +1118,7 @@ const TrackingOrder: React.FC = () => {
                       <LocationOn sx={{ mt: 0.5, mr: 1, color: theme.palette.success.main }} />
                       <Box>
                         <Typography variant="subtitle2" color="text.secondary">
-                          Pickup Location
+                          Nơi lấy hàng
                         </Typography>
                         <Typography variant="body1" sx={{ fontWeight: 500 }}>
                           {trackingData.pickUpLocation}
@@ -959,7 +1137,7 @@ const TrackingOrder: React.FC = () => {
                       <LocationOn sx={{ mt: 0.5, mr: 1, color: theme.palette.error.main }} />
                       <Box>
                         <Typography variant="subtitle2" color="text.secondary">
-                          Delivery Location
+                          Nơi giao hàng
                         </Typography>
                         <Typography variant="body1" sx={{ fontWeight: 500 }}>
                           {trackingData.deliveryLocation}
@@ -979,7 +1157,7 @@ const TrackingOrder: React.FC = () => {
               {/* Right Column: Map */}
               <Grid item xs={12} md={7}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                  Delivery Route
+                  Tuyến đường vận chuyển
                 </Typography>
                 <MapContainer>
                   <div id="tracking-map" style={{ width: '100%', height: '100%' }}></div>
@@ -1020,7 +1198,7 @@ const TrackingOrder: React.FC = () => {
             }}
           >
             <LocalShipping sx={{ fontSize: 60, mb: 2, opacity: 0.4 }} />
-            <Typography variant="h6">Enter a tracking code to see order details</Typography>
+            <Typography variant="h6">Vui lòng điền mã vận chuyển của bạn để theo dõi đơn hàng.</Typography>
           </Box>
         )}
       </Paper>

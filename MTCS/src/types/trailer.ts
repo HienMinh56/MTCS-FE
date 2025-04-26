@@ -82,3 +82,39 @@ export interface TrailerDetailsResponse {
   message: string;
   errors: string[] | null;
 }
+
+export interface PaginationParams {
+  pageNumber: number;
+  pageSize: number;
+}
+
+export interface TrailerUseHistory {
+  tripId: string;
+  driverId: string;
+  driverName: string;
+  tractorId: string;
+  tractorPlate: string;
+  startTime: string | null;
+  endTime: string | null;
+  status: string;
+  matchBy: string;
+  matchTime: string;
+}
+
+export interface TrailerUseHistoryResponse {
+  success: boolean;
+  data: {
+    trailerUseHistories: {
+      currentPage: number;
+      totalPages: number;
+      pageSize: number;
+      totalCount: number;
+      hasPrevious: boolean;
+      hasNext: boolean;
+      items: TrailerUseHistory[];
+    };
+  };
+  message: string;
+  messageVN: string;
+  errors: string[] | null;
+}

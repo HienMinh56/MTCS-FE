@@ -38,8 +38,10 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import { useNavigate } from "react-router-dom";
 import { getCustomers, createCustomer } from "../services/customerApi";
 import { Customer } from "../types/customer";
+import useAuth from "../hooks/useAuth"; // Add useAuth import
 
 const Customers = () => {
+  const { user } = useAuth(); // Use the useAuth hook to get user information
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
@@ -251,14 +253,22 @@ const Customers = () => {
     let isValid = true;
     const newErrors = { ...errors };
 
+    // Kiểm tra tên công ty
     if (!formData.companyName.trim()) {
       newErrors.companyName = 'Tên công ty là bắt buộc';
       isValid = false;
     } else if (formData.companyName.trim().length < 2) {
       newErrors.companyName = 'Tên công ty phải có ít nhất 2 ký tự';
       isValid = false;
+    } else if (/^\s/.test(formData.companyName) || /\s$/.test(formData.companyName)) {
+      newErrors.companyName = 'Tên công ty không được bắt đầu hoặc kết thúc bằng dấu cách';
+      isValid = false;
+    } else if (/\s{2,}/.test(formData.companyName)) {
+      newErrors.companyName = 'Tên công ty không được chứa nhiều hơn một dấu cách giữa các từ';
+      isValid = false;
     }
 
+    // Kiểm tra email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email.trim()) {
       newErrors.email = 'Email là bắt buộc';
@@ -268,6 +278,7 @@ const Customers = () => {
       isValid = false;
     }
 
+    // Kiểm tra số điện thoại
     const phoneRegex = /^[0-9]+$/;
     if (!formData.phoneNumber.trim()) {
       newErrors.phoneNumber = 'Số điện thoại là bắt buộc';
@@ -280,6 +291,7 @@ const Customers = () => {
       isValid = false;
     }
 
+    // Kiểm tra mã số thuế
     if (!formData.taxNumber.trim()) {
       newErrors.taxNumber = 'Mã số thuế là bắt buộc';
       isValid = false;
@@ -291,11 +303,18 @@ const Customers = () => {
       isValid = false;
     }
 
+    // Kiểm tra địa chỉ
     if (!formData.address.trim()) {
       newErrors.address = 'Địa chỉ là bắt buộc';
       isValid = false;
     } else if (formData.address.trim().length < 5) {
       newErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
+      isValid = false;
+    } else if (/^\s/.test(formData.address) || /\s$/.test(formData.address)) {
+      newErrors.address = 'Địa chỉ không được bắt đầu hoặc kết thúc bằng dấu cách';
+      isValid = false;
+    } else if (/\s{2,}/.test(formData.address)) {
+      newErrors.address = 'Địa chỉ không được chứa nhiều hơn một dấu cách giữa các từ';
       isValid = false;
     }
 
@@ -443,15 +462,17 @@ const Customers = () => {
               </Typography>
             </Box>
             <Box sx={{ display: "flex", gap: 1, width: { xs: "100%", sm: "auto" } }}>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AddIcon />}
-                onClick={handleOpenCreateDialog}
-                size="small"
-              >
-                Thêm khách hàng
-              </Button>
+              {user?.role?.toLowerCase() !== 'admin' && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={handleOpenCreateDialog}
+                  size="small"
+                >
+                  Thêm khách hàng
+                </Button>
+              )}
               <TextField
                 size="small"
                 placeholder="Tìm kiếm theo Công ty, Email, Số điện thoại..."

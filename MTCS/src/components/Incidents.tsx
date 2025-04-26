@@ -28,16 +28,19 @@ import {
   ImageListItem,
   CircularProgress,
   Alert,
+  Fade,
+  Snackbar,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import EditIcon from "@mui/icons-material/Edit";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import ImageIcon from "@mui/icons-material/Image";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import CloseIcon from "@mui/icons-material/Close";
 import { getAllIncidentReports, getIncidentReportById, IncidentReports } from "../services/IncidentReportApi";
 import ReplaceTripModal from "./ReplaceTripModal";
 
@@ -47,8 +50,8 @@ interface TabPanelProps {
   value: number;
 }
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
+function TabPanel(props: TabPanelProps & { sx?: any }) {
+  const { children, value, index, sx, ...other } = props;
 
   return (
     <div
@@ -56,9 +59,11 @@ function TabPanel(props: TabPanelProps) {
       hidden={value !== index}
       id={`incident-tabpanel-${index}`}
       aria-labelledby={`incident-tab-${index}`}
+      style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
       {...other}
+      sx={sx}
     >
-      {value === index && <Box>{children}</Box>}
+      {value === index && <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>{children}</Box>}
     </div>
   );
 }
@@ -81,13 +86,20 @@ interface Incident extends IncidentReports {
 }
 
 // Incident detail dialog component
-const IncidentDetailDialog = ({ open, incident, onClose }: { 
+const IncidentDetailDialog = ({ 
+  open, 
+  incident, 
+  onClose,
+  onImagePreview
+}: { 
   open: boolean; 
   incident: Incident | null; 
   onClose: () => void;
+  onImagePreview: (src: string, title: string) => void;
 }) => {
   const [openReplaceTripModal, setOpenReplaceTripModal] = useState(false);
   const [createTripSuccess, setCreateTripSuccess] = useState(false);
+  const [createTripError, setCreateTripError] = useState(false); // Add error state
   const [tripReplaced, setTripReplaced] = useState(false);
   const navigate = useNavigate();
   
@@ -98,11 +110,23 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
   const invoiceFiles = incident.incidentReportsFiles?.filter(file => file.type === 2) || [];
   const transferFiles = incident.incidentReportsFiles?.filter(file => file.type === 3) || [];
   
-  const handleReplaceTripSuccess = () => {
-    setCreateTripSuccess(true);
-    setTripReplaced(true); // Set flag to indicate trip has been replaced
-    // Reset success message after 3 seconds
-    setTimeout(() => setCreateTripSuccess(false), 3000);
+  // Updated to handle both success and failure cases
+  const handleReplaceTripSuccess = (success: boolean = true) => {
+    if (success) {
+      setCreateTripSuccess(true);
+      setTripReplaced(true); // Set flag to indicate trip has been replaced
+      // Reset success message after 3 seconds
+      setTimeout(() => setCreateTripSuccess(false), 3000);
+    } else {
+      setCreateTripError(true);
+      // Reset error message after 3 seconds
+      setTimeout(() => setCreateTripError(false), 3000);
+    }
+  };
+
+  // Handler for image clicks - use onImagePreview prop instead of direct link
+  const handleImageClick = (fileUrl: string, fileTitle: string) => {
+    onImagePreview(fileUrl, fileTitle);
   };
   
   return (
@@ -123,11 +147,43 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
         </Box>
       </DialogTitle>
       <DialogContent dividers>
-        {createTripSuccess && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+        {/* Success toast notification */}
+        <Snackbar
+          open={createTripSuccess}
+          autoHideDuration={3000}
+          onClose={() => setCreateTripSuccess(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          sx={{ top: 24 }}
+        >
+          <Alert 
+            onClose={() => setCreateTripSuccess(false)} 
+            severity="success" 
+            variant="filled"
+            elevation={6}
+            sx={{ width: '100%' }}
+          >
             Đã tạo chuyến thay thế thành công!
           </Alert>
-        )}
+        </Snackbar>
+        
+        {/* Error toast notification */}
+        <Snackbar
+          open={createTripError}
+          autoHideDuration={3000}
+          onClose={() => setCreateTripError(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          sx={{ top: 24 }}
+        >
+          <Alert 
+            onClose={() => setCreateTripError(false)} 
+            severity="error" 
+            variant="filled"
+            elevation={6}
+            sx={{ width: '100%' }}
+          >
+            Không thể tạo chuyến thay thế. Vui lòng thử lại!
+          </Alert>
+        </Snackbar>
         
         {/* Main content structure */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -159,7 +215,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/staff-menu/orders/${incident.trip.orderId}`);
+                          navigate(`/staff-menu/orders/${incident.trip.order.orderId}`);
                         }}
                       >
                         {incident.trackingCode}
@@ -205,8 +261,18 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                     <Typography variant="caption" color="text.secondary">Loại</Typography>
                     <Typography variant="body1">
                       {incident.type === 1 ? "Có thể sửa" : 
-                       incident.type === 2 ? "Cần hỗ trợ" : 
-                       incident.type}
+                       incident.type === 2 ? "Cần hỗ trợ" :
+                       incident.type === 3 ? "Không thể sửa" :
+                       "N/A"}
+                    </Typography>
+                  </Box>
+
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Phương tiện hư hỏng</Typography>
+                    <Typography variant="body1">
+                      {incident.vehicleType === 1 ? "Đầu kéo" : 
+                       incident.vehicleType === 2 ? "Rơ-moóc" : 
+                       "N/A"}
                     </Typography>
                   </Box>
 
@@ -265,7 +331,7 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
             </Grid>
           </Paper>        
           
-          {/* Section: Images */}
+          {/* Section: Images - modified to use the image preview */}
           <Paper variant="outlined" sx={{ p: 2, borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.12)' }}>
             <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ mb: 2, borderBottom: '2px solid #e0e0e0', pb: 1 }}>
               Hình ảnh
@@ -278,12 +344,22 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                 {incidentFiles.length > 0 ? (
                   <ImageList cols={3} rowHeight={160} gap={8}>
                     {incidentFiles.map((file, index) => (
-                      <ImageListItem key={file.fileId} sx={{ border: '2px solid #e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
+                      <ImageListItem 
+                        key={file.fileId} 
+                        sx={{ 
+                          border: '2px solid #e0e0e0', 
+                          borderRadius: 1, 
+                          overflow: 'hidden',
+                          position: 'relative',
+                          cursor: 'pointer',
+                        }}
+                      >
                         <img 
                           src={file.fileUrl} 
                           alt={`Ảnh sự cố ${index + 1}`} 
                           loading="lazy"
                           style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
+                          onClick={() => handleImageClick(file.fileUrl, `Ảnh sự cố ${index + 1}`)}
                         />
                       </ImageListItem>
                     ))}
@@ -299,12 +375,22 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                 {invoiceFiles.length > 0 ? (
                   <ImageList cols={3} rowHeight={160} gap={8}>
                     {invoiceFiles.map((file, index) => (
-                      <ImageListItem key={file.fileId} sx={{ border: '2px solid #e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
+                      <ImageListItem 
+                        key={file.fileId} 
+                        sx={{ 
+                          border: '2px solid #e0e0e0', 
+                          borderRadius: 1, 
+                          overflow: 'hidden',
+                          position: 'relative',
+                          cursor: 'pointer',
+                        }}
+                      >
                         <img 
                           src={file.fileUrl} 
                           alt={`Ảnh hóa đơn ${index + 1}`} 
                           loading="lazy"
                           style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
+                          onClick={() => handleImageClick(file.fileUrl, `Ảnh hóa đơn ${index + 1}`)}
                         />
                       </ImageListItem>
                     ))}
@@ -320,12 +406,22 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
                 {transferFiles.length > 0 ? (
                   <ImageList cols={3} rowHeight={160} gap={8}>
                     {transferFiles.map((file, index) => (
-                      <ImageListItem key={file.fileId} sx={{ border: '2px solid #e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
+                      <ImageListItem 
+                        key={file.fileId} 
+                        sx={{ 
+                          border: '2px solid #e0e0e0', 
+                          borderRadius: 1, 
+                          overflow: 'hidden',
+                          position: 'relative',
+                          cursor: 'pointer',
+                        }}
+                      >
                         <img 
                           src={file.fileUrl} 
                           alt={`Ảnh chuyển nhượng ${index + 1}`} 
                           loading="lazy"
                           style={{ objectFit: 'cover', width: '100%', height: '100%' }} 
+                          onClick={() => handleImageClick(file.fileUrl, `Ảnh chuyển nhượng ${index + 1}`)}
                         />
                       </ImageListItem>
                     ))}
@@ -341,8 +437,8 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
         </Box>
       </DialogContent>
       <DialogActions>
-        {/* Show button only if incident is not completed OR if incident cannot be repaired */}
-        {(incident.status === "Handling" && incident.type === 2) && (
+        {/* Show button only if incident is not completed OR if incident cannot be repaired OR requires assistance */}
+        {(incident.status === "Handling" && (incident.type === 2 || incident.type === 3)) && (
           <Button 
             variant="contained" 
             color="primary"
@@ -366,12 +462,15 @@ const IncidentDetailDialog = ({ open, incident, onClose }: {
         <Button onClick={onClose}>Đóng</Button>
       </DialogActions>
 
-      {/* Replacement Trip Modal */}
+      {/* Update the ReplaceTripModal to handle both success and error cases */}
       <ReplaceTripModal
         open={openReplaceTripModal}
         onClose={() => setOpenReplaceTripModal(false)}
         tripId={incident.tripId}
-        onSuccess={handleReplaceTripSuccess}
+        orderId={incident.trip.order.orderId}
+        onSuccess={() => handleReplaceTripSuccess(true)}
+        onError={() => handleReplaceTripSuccess(false)}
+        vehicleType={incident.vehicleType}
       />
     </Dialog>
   );
@@ -386,7 +485,17 @@ const IncidentManagement = () => {
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
-  const navigate = useNavigate();
+  
+  // Add state for image preview
+  const [imagePreview, setImagePreview] = useState<{
+    open: boolean;
+    src: string;
+    title: string;
+  }>( {
+    open: false,
+    src: "",
+    title: "",
+  });
 
   // Fetch incident reports from API
   useEffect(() => {
@@ -453,6 +562,22 @@ const IncidentManagement = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedIncident(null);
+  };
+
+  // Add functions to handle image preview
+  const openImagePreview = (src: string, title: string = "Image Preview") => {
+    setImagePreview({
+      open: true,
+      src,
+      title,
+    });
+  };
+
+  const closeImagePreview = () => {
+    setImagePreview({
+      ...imagePreview,
+      open: false,
+    });
   };
 
   // Updated to properly count all non-handling statuses as "Đã xử lý"
@@ -681,6 +806,7 @@ const IncidentManagement = () => {
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
+          height: "calc(100vh - 250px)",
         }}
       >
         <Box sx={{ p: 2, pb: 1 }}>
@@ -770,7 +896,7 @@ const IncidentManagement = () => {
           </Box>
         </Box>
 
-        <Box sx={{ flexGrow: 1, overflow: "auto" }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: "hidden" }}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
               <CircularProgress />
@@ -778,11 +904,28 @@ const IncidentManagement = () => {
           ) : (
             incidentStatusOptions.map((status, index) => (
               <TabPanel key={index} value={tabValue} index={index}>
-                <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                <TableContainer sx={{ 
+                  flexGrow: 1, 
+                  overflow: "auto",
+                  position: "relative",
+                }}>
                   <Table
                     stickyHeader
                     size="small"
-                    sx={{ minWidth: 650 }}
+                    sx={{ 
+                      minWidth: 650,
+                      "& .MuiTableHead-root": {
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 2,
+                        backgroundColor: "background.paper",
+                      },
+                      "& .MuiTableCell-stickyHeader": {
+                        backgroundColor: "background.paper",
+                        boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.1)"
+                      }
+                    }}
                     aria-label="incidents table"
                   >
                     <TableHead>
@@ -815,7 +958,9 @@ const IncidentManagement = () => {
                                 {incident.type === 1 
                                   ? "Có thể sửa" 
                                   : incident.type === 2 
-                                  ? "Cần hỗ trợ" 
+                                  ? "Cần hỗ trợ"
+                                  : incident.type === 3 
+                                  ? "Không thể sửa" 
                                   : incident.type}
                               </TableCell>
                               <TableCell align="center">
@@ -874,6 +1019,7 @@ const IncidentManagement = () => {
                   }
                   sx={{ borderTop: "1px solid rgba(224, 224, 224, 1)" }}
                 />
+                </Box>
               </TabPanel>
             ))
           )}
@@ -885,7 +1031,66 @@ const IncidentManagement = () => {
         open={openDialog}
         incident={selectedIncident}
         onClose={handleCloseDialog}
+        onImagePreview={openImagePreview} // Pass the open preview function
       />
+
+      {/* Image Preview Dialog */}
+      <Dialog
+        open={imagePreview.open}
+        onClose={closeImagePreview}
+        maxWidth="lg"
+        fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
+          <ImageIcon sx={{ mr: 1 }} color="primary" />
+          {imagePreview.title}
+          <IconButton
+            onClick={closeImagePreview}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}
+        >
+          <img
+            src={imagePreview.src}
+            alt={imagePreview.title}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+              padding: 16,
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            component="a"
+            href={imagePreview.src}
+            target="_blank"
+            rel="noopener noreferrer"
+            startIcon={<OpenInNewIcon />}
+            variant="outlined"
+          >
+            Mở trong cửa sổ mới
+          </Button>
+          <Button
+            onClick={closeImagePreview}
+            color="primary"
+            variant="contained"
+          >
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -35,6 +35,7 @@ interface DriverTableProps {
   }) => void;
   refreshTrigger?: number;
   onStatusClick?: (status: DriverStatus) => void; // New prop for status click handling
+  isAdmin?: boolean; // Added isAdmin prop
 }
 
 const DriverTable: React.FC<DriverTableProps> = ({
@@ -42,6 +43,7 @@ const DriverTable: React.FC<DriverTableProps> = ({
   statusFilter = null,
   onUpdateSummary,
   refreshTrigger = 0,
+  isAdmin = false, // Default to false
 }) => {
   const navigate = useNavigate();
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -259,17 +261,22 @@ const DriverTable: React.FC<DriverTableProps> = ({
                     onClick={() => handleDriverClick(driver.driverId)}
                     sx={{ cursor: "pointer" }}
                   >
-                    <TableCell align="center">{driver.fullName || "N/A"}</TableCell>
-                    <TableCell align="center">{driver.email || "N/A"}</TableCell>
+                    <TableCell align="center">
+                      {driver.fullName || "N/A"}
+                    </TableCell>
+                    <TableCell align="center">
+                      {driver.email || "N/A"}
+                    </TableCell>
                     <TableCell>{driver.phoneNumber || "N/A"}</TableCell>
                     <TableCell align="center">
                       {driver.currentWeekHours !== null &&
                       driver.currentWeekHours !== undefined
                         ? driver.currentWeekHours.toLocaleString()
                         : "0"}{" "}
-                      giờ
                     </TableCell>
-                    <TableCell align="center">{renderStatusChip(driver.status)}</TableCell>
+                    <TableCell align="center">
+                      {renderStatusChip(driver.status)}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (

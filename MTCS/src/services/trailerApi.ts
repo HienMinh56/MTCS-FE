@@ -3,6 +3,8 @@ import {
   TrailerStatus,
   TrailerResponse,
   TrailerDetailsResponse,
+  TrailerUseHistoryResponse,
+  PaginationParams,
 } from "../types/trailer";
 import axiosInstance from "../utils/axiosConfig";
 
@@ -71,6 +73,41 @@ export const getTrailerDetails = async (id: string) => {
     `/api/Trailer/${id}`
   );
   return response.data;
+};
+
+export const getTrailerUseHistory = async (
+  trailerId: string,
+  paginationParams: PaginationParams = { pageNumber: 1, pageSize: 5 }
+) => {
+  try {
+    const params = new URLSearchParams();
+    params.append("pageNumber", paginationParams.pageNumber.toString());
+    params.append("pageSize", paginationParams.pageSize.toString());
+
+    const response = await axiosInstance.get<TrailerUseHistoryResponse>(
+      `/api/Trailer/history/${trailerId}?${params.toString()}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching trailer use history:", error);
+    return {
+      success: false,
+      data: {
+        trailerUseHistories: {
+          items: [],
+          currentPage: 1,
+          totalPages: 0,
+          pageSize: 5,
+          totalCount: 0,
+          hasPrevious: false,
+          hasNext: false,
+        },
+      },
+      message: "Error fetching trailer use history",
+      messageVN: "Đã xảy ra lỗi khi tải lịch sử sử dụng rơ-moóc",
+      errors: null,
+    };
+  }
 };
 
 export const deleteTrailer = async (id: string) => {

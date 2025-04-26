@@ -32,67 +32,62 @@ import {
   MenuOpen,
   ChevronLeft,
   Menu as MenuIcon,
+  Settings as SettingsIcon,
+  ManageAccounts as ManageAccountsIcon,
 } from "@mui/icons-material";
+import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import { useAuth } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import {
+  useNavigate,
+  useLocation,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
+import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import logo1 from "../assets/logo1.png";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import "dayjs/locale/vi";
 import FinanceDashboard from "../components/finance/FinanceDashboard";
 import Customers from "../components/Customers";
+import SystemConfiguration from "../components/SystemConfiguration";
+import PriceTableComponent from "../components/Price/PriceTable";
+import UserManagement from "../components/User/UserManagement";
+import Drivers from "./Drivers";
+import Tractors from "./Tractors";
+import Trailers from "./Trailers";
+import StraightenIcon from "@mui/icons-material/Straighten";
+import DeliveryStatusPage from "./DeliveryStatusPage";
 
-// Placeholder component for the Price Table
-const PriceTable: React.FC = () => {
-  return (
-    <Box sx={{ my: 4 }}>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          mb: 4,
-          borderRadius: 2,
-          background:
-            "linear-gradient(45deg, rgba(1, 70, 199, 0.8), rgba(1, 70, 199, 0.9))",
-          color: "white",
-        }}
-      >
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
-          Bảng Giá Dịch Vụ
-        </Typography>
-      </Paper>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 4,
-          mb: 4,
-          borderRadius: 2,
-          border: "1px solid #e0e0e0",
-        }}
-      >
-        <Typography variant="h6" gutterBottom>
-          Nội dung bảng giá sẽ được cập nhật sớm
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Tính năng này đang trong quá trình phát triển. Vui lòng quay lại sau.
-        </Typography>
-      </Paper>
-    </Box>
-  );
-};
 
 const AdminFinanceDashboard: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [activeSideTab, setActiveSideTab] = useState<string>("finance");
   const [drawerOpen, setDrawerOpen] = useState(true);
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const userId = localStorage.getItem("userId") || "admin-user";
+
+  // Get active tab from URL
+  const getActiveTabFromUrl = () => {
+    const path = location.pathname.split("/").filter(Boolean);
+    return path.length > 1 ? path[1] : "finance";
+  };
+
+  const [activeSideTab, setActiveSideTab] = useState<string>(
+    getActiveTabFromUrl()
+  );
+
+  useEffect(() => {
+    setActiveSideTab(getActiveTabFromUrl());
+  }, [location.pathname]);
 
   // Profile menu handlers
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -117,28 +112,72 @@ const AdminFinanceDashboard: React.FC = () => {
   };
 
   const handleSideTabChange = (tab: string) => {
-    setActiveSideTab(tab);
-    // Additional logic to handle different sidebar tabs
+    navigate(`/admin/${tab}`);
   };
 
   const sidebarItems = [
     {
       id: "finance",
-      text: "Báo Cáo Tài Chính",
+      text: "Báo Cáo Hoạt Động",
       icon: <BarChartOutlined />,
       selected: activeSideTab === "finance",
+      path: "/admin/finance",
+    },
+    {
+      id: "user-management",
+      text: "Quản Lý Người Dùng",
+      icon: <ManageAccountsIcon />,
+      selected: activeSideTab === "user-management",
+      path: "/admin/user-management",
     },
     {
       id: "customers",
       text: "Khách Hàng",
       icon: <PersonOutlined />,
       selected: activeSideTab === "customers",
+      path: "/admin/customers",
+    },
+    {
+      id: "drivers",
+      text: "Tài xế",
+      icon: <PeopleAltIcon />,
+      selected: activeSideTab === "drivers",
+      path: "/admin/drivers",
+    },
+    {
+      id: "tractors",
+      text: "Đầu kéo",
+      icon: <LocalShippingIcon />,
+      selected: activeSideTab === "tractors",
+      path: "/admin/tractors",
+    },
+    {
+      id: "trailers",
+      text: "Rơ-moóc",
+      icon: <DirectionsCarFilledIcon />,
+      selected: activeSideTab === "trailers",
+      path: "/admin/trailers",
     },
     {
       id: "pricing",
       text: "Bảng Giá",
       icon: <PriceChangeOutlined />,
       selected: activeSideTab === "pricing",
+      path: "/admin/pricing",
+    },
+    {
+      id: "system-config",
+      text: "Cấu Hình Hệ Thống",
+      icon: <SettingsIcon />,
+      selected: activeSideTab === "system-config",
+      path: "/admin/system-config",
+    },
+    {
+      id: "delivery-status",
+      text: "Trạng thái giao hàng",
+      icon: <StraightenIcon />, // You can replace this icon with a more suitable one
+      selected: activeSideTab === "delivery-status",
+      path: "/admin/delivery-status",
     },
   ];
 
@@ -427,9 +466,21 @@ const AdminFinanceDashboard: React.FC = () => {
       >
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="vi">
           <Box sx={{ px: { xs: 2, sm: 3 }, py: 3, maxWidth: "100%" }}>
-            {activeSideTab === "finance" && <FinanceDashboard />}
-            {activeSideTab === "customers" && <Customers />}
-            {activeSideTab === "pricing" && <PriceTable />}
+            <Routes>
+              <Route path="/finance" element={<FinanceDashboard />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/drivers" element={<Drivers />} />
+              <Route path="/tractors" element={<Tractors />} />
+              <Route path="/trailers" element={<Trailers />} />
+              <Route path="/pricing" element={<PriceTableComponent />} />
+              <Route path="/system-config" element={<SystemConfiguration />} />
+              <Route path="/user-management" element={<UserManagement />} />
+              <Route path="/delivery-status" element={<DeliveryStatusPage />} />
+              <Route
+                path="/"
+                element={<Navigate to="/admin/finance" replace />}
+              />
+            </Routes>
           </Box>
         </LocalizationProvider>
       </Box>

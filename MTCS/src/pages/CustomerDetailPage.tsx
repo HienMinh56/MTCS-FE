@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -41,8 +41,8 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Checkbox,
-  TablePagination
-} from '@mui/material';
+  TablePagination,
+} from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
@@ -60,12 +60,20 @@ import {
   AttachFile as AttachFileIcon,
   Delete as DeleteOutlinedIcon,
   Download as DownloadIcon,
-} from '@mui/icons-material';
-import { getCustomerById, updateCustomer, deleteCustomer } from '../services/customerApi';
-import { updateContract } from '../services/contractApi';
-import { CustomerDetail } from '../types/customer';
-import { ContractFile } from '../types/contract';
-import AddContractFileModal from '../components/contract/AddContractFileModal';
+} from "@mui/icons-material";
+import {
+  getCustomerById,
+  updateCustomer,
+  deleteCustomer,
+} from "../services/customerApi";
+import {
+  OrderStatus
+} from "../types/order";
+import { updateContract } from "../services/contractApi";
+import { CustomerDetail } from "../types/customer";
+import { ContractFile } from "../types/contract";
+import AddContractFileModal from "../components/contract/AddContractFileModal";
+import useAuth from "../hooks/useAuth"; // Thêm import useAuth
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -84,11 +92,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`customer-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
   );
 }
@@ -96,39 +100,42 @@ function TabPanel(props: TabPanelProps) {
 const CustomerDetailPage = () => {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth(); // Lấy thông tin user từ useAuth hook
+  const isAdmin = user?.role === "Admin"; // Kiểm tra xem người dùng có role Admin không
+
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
-  
+
   // Edit form state
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    cusId: '',
-    companyName: '',
-    email: '',
-    phoneNumber: '',
-    taxNumber: '',
-    address: ''
+    cusId: "",
+    companyName: "",
+    email: "",
+    phoneNumber: "",
+    taxNumber: "",
+    address: "",
   });
   const [formErrors, setFormErrors] = useState({
-    companyName: '',
-    email: '',
-    phoneNumber: '',
-    taxNumber: '',
-    address: ''
+    companyName: "",
+    email: "",
+    phoneNumber: "",
+    taxNumber: "",
+    address: "",
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error' | 'info' | 'warning'
+    message: "",
+    severity: "success" as "success" | "error" | "info" | "warning",
   });
 
   // Add state for delete confirmation dialog
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deletingCustomer, setDeletingCustomer] = useState(false);
-  
+
   // Add state for contract file modal
   const [openAddContractModal, setOpenAddContractModal] = useState(false);
 
@@ -136,20 +143,25 @@ const CustomerDetailPage = () => {
   const [openEditContractDialog, setOpenEditContractDialog] = useState(false);
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [editContractForm, setEditContractForm] = useState({
-    ContractId: '',
-    StartDate: '',
-    EndDate: '',
+    Summary: "",
+    ContractId: "",
+    StartDate: "",
+    EndDate: "",
     Status: 1,
+    CreatedBy: "",
+    CreatedDate: "",
+    SignedTime: "",
+    SignedBy: "",
     FileIdsToRemove: [] as string[],
     AddedFiles: null as File[] | null,
   });
   const [editContractErrors, setEditContractErrors] = useState({
-    StartDate: '',
-    EndDate: '',
-    Status: '',
+    StartDate: "",
+    EndDate: "",
+    Status: "",
   });
   const [editingContract, setEditingContract] = useState(false);
-  
+
   // File upload state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [filesToRemove, setFilesToRemove] = useState<string[]>([]);
@@ -158,15 +170,32 @@ const CustomerDetailPage = () => {
   // Add state for orders pagination
   const [ordersPage, setOrdersPage] = useState(0);
   const [ordersRowsPerPage, setOrdersRowsPerPage] = useState(5);
-  
+
   // Add state for contracts pagination
   const [contractsPage, setContractsPage] = useState(0);
   const [contractsRowsPerPage, setContractsRowsPerPage] = useState(5);
 
+  const getStatusDisplay = (status: OrderStatus) => {
+      switch (status) {
+        case OrderStatus.Pending:
+          return { label: "Chờ xử lý", color: "warning" };
+        case OrderStatus.Scheduled:
+          return { label: "Đã lên lịch", color: "info" };
+        case OrderStatus.Delivering:
+          return { label: "Đang giao hàng", color: "info" };
+        case OrderStatus.Shipped:
+          return { label: "Đã giao hàng", color: "info" };
+        case OrderStatus.Completed:
+          return { label: "Hoàn thành", color: "success" };
+        default:
+          return { label: "Không xác định", color: "default" };
+      }
+    };
+
   useEffect(() => {
     const fetchCustomerDetails = async () => {
       if (!customerId) return;
-      
+
       setLoading(true);
       try {
         const customerData = await getCustomerById(customerId);
@@ -174,16 +203,16 @@ const CustomerDetailPage = () => {
         // Initialize form data with customer data
         setFormData({
           cusId: customerData.customerId,
-          companyName: customerData.companyName || '',
-          email: customerData.email || '',
-          phoneNumber: customerData.phoneNumber || '',
-          taxNumber: customerData.taxNumber || '',
-          address: customerData.address || ''
+          companyName: customerData.companyName || "",
+          email: customerData.email || "",
+          phoneNumber: customerData.phoneNumber || "",
+          taxNumber: customerData.taxNumber || "",
+          address: customerData.address || "",
         });
         setError(null);
       } catch (err) {
-        console.error('Error fetching customer details:', err);
-        setError('Không thể tải thông tin khách hàng. Vui lòng thử lại sau.');
+        console.error("Error fetching customer details:", err);
+        setError("Không thể tải thông tin khách hàng. Vui lòng thử lại sau.");
       } finally {
         setLoading(false);
       }
@@ -216,7 +245,7 @@ const CustomerDetailPage = () => {
   const handleCloseDeleteDialog = () => {
     setOpenDeleteDialog(false);
   };
-  
+
   // Add handlers for contract modal
   const handleOpenAddContractModal = () => {
     setOpenAddContractModal(true);
@@ -225,26 +254,30 @@ const CustomerDetailPage = () => {
   const handleCloseAddContractModal = () => {
     setOpenAddContractModal(false);
   };
-  
+
   const handleContractAdded = async () => {
     if (customerId) {
       try {
         // Reload customer data to get the updated contracts
         const updatedCustomer = await getCustomerById(customerId);
         setCustomer(updatedCustomer);
-        
+
         // Show success message
         setSnackbar({
           open: true,
-          message: 'Hợp đồng đã được thêm thành công',
-          severity: 'success'
+          message: "Hợp đồng đã được thêm thành công",
+          severity: "success",
         });
       } catch (error) {
-        console.error("Error refreshing customer data after adding contract:", error);
+        console.error(
+          "Error refreshing customer data after adding contract:",
+          error
+        );
         setSnackbar({
           open: true,
-          message: 'Đã thêm hợp đồng nhưng không thể cập nhật dữ liệu. Vui lòng làm mới trang.',
-          severity: 'warning'
+          message:
+            "Đã thêm hợp đồng nhưng không thể cập nhật dữ liệu. Vui lòng làm mới trang.",
+          severity: "warning",
         });
       }
     }
@@ -252,27 +285,27 @@ const CustomerDetailPage = () => {
 
   const handleConfirmDelete = async () => {
     if (!customerId) return;
-    
+
     setDeletingCustomer(true);
     try {
       await deleteCustomer(customerId);
-      
+
       setSnackbar({
         open: true,
-        message: 'Xóa khách hàng thành công!',
-        severity: 'success'
+        message: "Xóa khách hàng thành công!",
+        severity: "success",
       });
-      
+
       // Navigate back to customer list after successful deletion
       setTimeout(() => {
-        navigate('/staff-menu/customers');
+        navigate("/staff-menu/customers");
       }, 1500);
     } catch (error) {
-      console.error('Error deleting customer:', error);
+      console.error("Error deleting customer:", error);
       setSnackbar({
         open: true,
-        message: 'Lỗi khi xóa khách hàng. Vui lòng thử lại sau.',
-        severity: 'error'
+        message: "Lỗi khi xóa khách hàng. Vui lòng thử lại sau.",
+        severity: "error",
       });
     } finally {
       setDeletingCustomer(false);
@@ -284,14 +317,14 @@ const CustomerDetailPage = () => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
-    
+
     // Clear error when typing
     if (formErrors[name as keyof typeof formErrors]) {
       setFormErrors({
         ...formErrors,
-        [name]: ''
+        [name]: "",
       });
     }
   };
@@ -299,110 +332,123 @@ const CustomerDetailPage = () => {
   const validateForm = () => {
     let isValid = true;
     const newErrors = { ...formErrors };
-    
+
     // Validate company name
     if (!formData.companyName.trim()) {
-      newErrors.companyName = 'Tên công ty là bắt buộc';
+      newErrors.companyName = "Tên công ty là bắt buộc";
       isValid = false;
     } else if (formData.companyName.trim().length < 2) {
-      newErrors.companyName = 'Tên công ty phải có ít nhất 2 ký tự';
+      newErrors.companyName = "Tên công ty phải có ít nhất 2 ký tự";
       isValid = false;
     }
-    
+
     // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email.trim()) {
-      newErrors.email = 'Email là bắt buộc';
+      newErrors.email = "Email là bắt buộc";
       isValid = false;
     } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
+      newErrors.email = "Email không hợp lệ";
       isValid = false;
     }
-    
+
     // Validate phone number
     const phoneRegex = /^[0-9]+$/;
     if (!formData.phoneNumber.trim()) {
-      newErrors.phoneNumber = 'Số điện thoại là bắt buộc';
+      newErrors.phoneNumber = "Số điện thoại là bắt buộc";
       isValid = false;
     } else if (!phoneRegex.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = 'Số điện thoại chỉ được chứa số';
+      newErrors.phoneNumber = "Số điện thoại chỉ được chứa số";
       isValid = false;
-    } else if (formData.phoneNumber.length < 10 || formData.phoneNumber.length > 15) {
-      newErrors.phoneNumber = 'Số điện thoại phải từ 10 đến 15 số';
+    } else if (
+      formData.phoneNumber.length < 10 ||
+      formData.phoneNumber.length > 15
+    ) {
+      newErrors.phoneNumber = "Số điện thoại phải từ 10 đến 15 số";
       isValid = false;
     }
-    
+
     // Validate tax number
     if (!formData.taxNumber.trim()) {
-      newErrors.taxNumber = 'Mã số thuế là bắt buộc';
+      newErrors.taxNumber = "Mã số thuế là bắt buộc";
       isValid = false;
     } else if (!phoneRegex.test(formData.taxNumber)) {
-      newErrors.taxNumber = 'Mã số thuế chỉ được chứa số';
+      newErrors.taxNumber = "Mã số thuế chỉ được chứa số";
       isValid = false;
     } else if (formData.taxNumber.length < 10) {
-      newErrors.taxNumber = 'Mã số thuế phải có ít nhất 10 số';
+      newErrors.taxNumber = "Mã số thuế phải có ít nhất 10 số";
       isValid = false;
     }
-    
+
     // Validate address
     if (!formData.address.trim()) {
-      newErrors.address = 'Địa chỉ là bắt buộc';
+      newErrors.address = "Địa chỉ là bắt buộc";
       isValid = false;
     } else if (formData.address.trim().length < 5) {
-      newErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
+      newErrors.address = "Địa chỉ phải có ít nhất 5 ký tự";
       isValid = false;
     }
-    
+
     setFormErrors(newErrors);
     return isValid;
   };
 
   const handleUpdateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       console.log("Submitting form data:", formData);
-      
+
       await updateCustomer(formData);
-      
+
       // Close dialog and show success message
       handleCloseEditDialog();
       setSnackbar({
         open: true,
-        message: 'Cập nhật thông tin khách hàng thành công!',
-        severity: 'success'
+        message: "Cập nhật thông tin khách hàng thành công!",
+        severity: "success",
       });
-      
+
       // Reload customer data
       if (customerId) {
         const updatedCustomer = await getCustomerById(customerId);
         setCustomer(updatedCustomer);
       }
     } catch (error: any) {
-      console.error('Error updating customer:', error);
-      
+      console.error("Error updating customer:", error);
+
       // Handle specific validation errors from backend
-      const errorMessage = error.message || 'Lỗi khi cập nhật thông tin. Vui lòng thử lại sau.';
-      
+      const errorMessage =
+        error.message || "Lỗi khi cập nhật thông tin. Vui lòng thử lại sau.";
+
       // Set specific field errors based on backend validation messages
       if (error.message?.includes("Email already exists")) {
-        setFormErrors(prev => ({ ...prev, email: 'Email đã tồn tại trong hệ thống' }));
+        setFormErrors((prev) => ({
+          ...prev,
+          email: "Email đã tồn tại trong hệ thống",
+        }));
       } else if (error.message?.includes("Phone number already exists")) {
-        setFormErrors(prev => ({ ...prev, phoneNumber: 'Số điện thoại đã tồn tại trong hệ thống' }));
+        setFormErrors((prev) => ({
+          ...prev,
+          phoneNumber: "Số điện thoại đã tồn tại trong hệ thống",
+        }));
       } else if (error.message?.includes("Tax number already exists")) {
-        setFormErrors(prev => ({ ...prev, taxNumber: 'Mã số thuế đã tồn tại trong hệ thống' }));
+        setFormErrors((prev) => ({
+          ...prev,
+          taxNumber: "Mã số thuế đã tồn tại trong hệ thống",
+        }));
       }
-      
+
       // Show general error message in snackbar
       setSnackbar({
         open: true,
         message: errorMessage,
-        severity: 'error'
+        severity: "error",
       });
     } finally {
       setIsSubmitting(false);
@@ -410,17 +456,17 @@ const CustomerDetailPage = () => {
   };
 
   const handleCloseSnackbar = () => {
-    setSnackbar({...snackbar, open: false});
+    setSnackbar({ ...snackbar, open: false });
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("vi-VN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -433,182 +479,198 @@ const CustomerDetailPage = () => {
   // Replace the contract handler with a function to download file from Firebase URL
   const handleViewContractFile = (e: React.MouseEvent, contract: any) => {
     e.stopPropagation(); // Prevent event bubbling
-    
+
     // Check if contract is an object and has contractFiles
-    if (typeof contract === 'object' && contract !== null && contract.contractFiles && contract.contractFiles.length > 0) {
+    if (
+      typeof contract === "object" &&
+      contract !== null &&
+      contract.contractFiles &&
+      contract.contractFiles.length > 0
+    ) {
       // Get the file URL from the first file in the contract
       const fileUrl = contract.contractFiles[0].fileUrl;
-      const fileName = contract.contractFiles[0].fileName || `Contract_${contract.contractId}.pdf`;
-      
+      const fileName =
+        contract.contractFiles[0].fileName ||
+        `Contract_${contract.contractId}.pdf`;
+
       if (fileUrl) {
         // Create a temporary anchor element to trigger the download
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = fileUrl;
-        link.target = '_blank'; // Open in a new tab first
+        link.target = "_blank"; // Open in a new tab first
         link.download = fileName; // Suggest a filename for the download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         // Show success message
         setSnackbar({
           open: true,
-          message: 'Đang tải file hợp đồng...',
-          severity: 'info'
+          message: "Đang tải file hợp đồng...",
+          severity: "info",
         });
       } else {
         // Show snackbar if no file URL is available
         setSnackbar({
           open: true,
-          message: 'Không tìm thấy URL file hợp đồng',
-          severity: 'error'
+          message: "Không tìm thấy URL file hợp đồng",
+          severity: "error",
         });
       }
     } else {
       // Show snackbar if no contract files are available
       setSnackbar({
         open: true,
-        message: 'Không có file hợp đồng để tải',
-        severity: 'info'
+        message: "Không có file hợp đồng để tải",
+        severity: "info",
       });
     }
   };
 
   const handleEditContractClick = (contract: any) => {
     setSelectedContract(contract);
-    
+
     // Format dates for input type="datetime-local" (YYYY-MM-DDThh:mm)
     const formatDateForInput = (dateString: string | null) => {
-      if (!dateString) return '';
+      if (!dateString) return "";
       // Make sure the date is treated as UTC to prevent timezone offsets
       const date = new Date(dateString);
       return date.toISOString().slice(0, 16);
     };
-    
+
     // Ensure the contract status is correctly retrieved
     // Default to 1 (active) if status is undefined/null, otherwise use the actual status
-    const contractStatus = contract.status !== undefined && contract.status !== null 
-      ? Number(contract.status) 
-      : 1;
-    
-    console.log("Contract status from API:", contract.status);
-    console.log("Parsed contract status:", contractStatus);
-    
+    const contractStatus =
+      contract.status !== undefined && contract.status !== null
+        ? Number(contract.status)
+        : 1;
+
     setEditContractForm({
       ContractId: contract.contractId,
       StartDate: formatDateForInput(contract.startDate),
       EndDate: formatDateForInput(contract.endDate),
       Status: contractStatus,
+      CreatedBy: contract.createdBy || "",
+      CreatedDate: formatDateForInput(contract.createdDate) || "",
+      SignedTime: formatDateForInput(contract.signedTime) || "",
+      SignedBy: contract.signedBy || "",
+      Summary: contract.summary || "",
       FileIdsToRemove: [],
       AddedFiles: null,
     });
-    
+
     // Reset file-related states
     setFilesToRemove([]);
     setSelectedFiles([]);
-    
+
     setOpenEditContractDialog(true);
   };
-  
+
   const handleCloseEditContractDialog = () => {
     setOpenEditContractDialog(false);
     setSelectedContract(null);
     setEditContractErrors({
-      StartDate: '',
-      EndDate: '',
-      Status: '',
+      StartDate: "",
+      EndDate: "",
+      Status: "",
     });
   };
-  
-  const handleContractInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+
+  const handleContractInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setEditContractForm({
       ...editContractForm,
-      [name]: value
+      [name]: value,
     });
-    
+
     // Clear error when typing
     if (editContractErrors[name as keyof typeof editContractErrors]) {
       setEditContractErrors({
         ...editContractErrors,
-        [name]: ''
+        [name]: "",
       });
     }
   };
-  
-  const handleContractSelectChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+
+  const handleContractSelectChange = (
+    e: React.ChangeEvent<{ name?: string; value: unknown }>
+  ) => {
     const name = e.target.name as string;
     const value = e.target.value as number;
-    
+
     console.log(`Setting ${name} to:`, value);
-    
-    setEditContractForm(prev => ({
+
+    setEditContractForm((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
-  
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
       setSelectedFiles([...selectedFiles, ...filesArray]);
     }
   };
-  
+
   const handleRemoveFile = (index: number) => {
     const updatedFiles = [...selectedFiles];
     updatedFiles.splice(index, 1);
     setSelectedFiles(updatedFiles);
   };
-  
+
   const handleToggleRemoveExistingFile = (fileId: string) => {
     if (filesToRemove.includes(fileId)) {
-      setFilesToRemove(filesToRemove.filter(id => id !== fileId));
+      setFilesToRemove(filesToRemove.filter((id) => id !== fileId));
     } else {
       setFilesToRemove([...filesToRemove, fileId]);
     }
   };
-  
+
   const handleNewFileDescriptionChange = (index: number, value: string) => {
     const updatedFiles = [...selectedFiles];
     (updatedFiles[index] as any).description = value;
     setSelectedFiles(updatedFiles);
   };
-  
+
   const handleNewFileNoteChange = (index: number, value: string) => {
     const updatedFiles = [...selectedFiles];
     (updatedFiles[index] as any).note = value;
     setSelectedFiles(updatedFiles);
   };
-  
+
   const validateContractForm = () => {
     let isValid = true;
     const newErrors = { ...editContractErrors };
-    
+
     if (!editContractForm.StartDate) {
-      newErrors.StartDate = 'Ngày bắt đầu là bắt buộc';
+      newErrors.StartDate = "Ngày bắt đầu là bắt buộc";
       isValid = false;
     }
-    
+
     if (!editContractForm.EndDate) {
-      newErrors.EndDate = 'Ngày kết thúc là bắt buộc';
+      newErrors.EndDate = "Ngày kết thúc là bắt buộc";
       isValid = false;
-    } else if (new Date(editContractForm.StartDate) > new Date(editContractForm.EndDate)) {
-      newErrors.EndDate = 'Ngày kết thúc phải sau ngày bắt đầu';
+    } else if (
+      new Date(editContractForm.StartDate) > new Date(editContractForm.EndDate)
+    ) {
+      newErrors.EndDate = "Ngày kết thúc phải sau ngày bắt đầu";
       isValid = false;
     }
-    
+
     setEditContractErrors(newErrors);
     return isValid;
   };
-  
+
   const handleUpdateContract = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateContractForm()) {
       return;
     }
-    
+
     setEditingContract(true);
     try {
       const updateData = {
@@ -619,29 +681,30 @@ const CustomerDetailPage = () => {
         FileIdsToRemove: filesToRemove.length > 0 ? filesToRemove : null,
         AddedFiles: selectedFiles.length > 0 ? selectedFiles : null,
       };
-      
+
       console.log("Sending contract update data:", updateData);
-      
+
       await updateContract(updateData);
-      
+
       handleCloseEditContractDialog();
       setSnackbar({
         open: true,
-        message: 'Cập nhật hợp đồng thành công!',
-        severity: 'success'
+        message: "Cập nhật hợp đồng thành công!",
+        severity: "success",
       });
-      
+
       if (customerId) {
         const updatedCustomer = await getCustomerById(customerId);
         setCustomer(updatedCustomer);
       }
     } catch (error: any) {
-      console.error('Error updating contract:', error);
-      
+      console.error("Error updating contract:", error);
+
       setSnackbar({
         open: true,
-        message: error.message || 'Lỗi khi cập nhật hợp đồng. Vui lòng thử lại sau.',
-        severity: 'error'
+        message:
+          error.message || "Lỗi khi cập nhật hợp đồng. Vui lòng thử lại sau.",
+        severity: "error",
       });
     } finally {
       setEditingContract(false);
@@ -652,38 +715,51 @@ const CustomerDetailPage = () => {
     setOrdersPage(newPage);
   };
 
-  const handleOrdersChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOrdersChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setOrdersRowsPerPage(parseInt(event.target.value, 10));
     setOrdersPage(0);
   };
-  
+
   const handleContractsChangePage = (event: unknown, newPage: number) => {
     setContractsPage(newPage);
   };
 
-  const handleContractsChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleContractsChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setContractsRowsPerPage(parseInt(event.target.value, 10));
     setContractsPage(0);
   };
 
   const renderContractsTab = () => (
     <TabPanel value={tabValue} index={2}>
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box
+        sx={{
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <Typography variant="h6">Danh sách hợp đồng</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          size="small"
-          onClick={handleOpenAddContractModal}
-        >
-          Thêm hợp đồng
-        </Button>
+        {user?.role === "Staff" && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            size="small"
+            onClick={handleOpenAddContractModal}
+          >
+            Thêm hợp đồng
+          </Button>
+        )}
       </Box>
-      
+
       {customer.contracts && customer.contracts.length > 0 ? (
-        <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-          <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
+        <Box sx={{ flexGrow: 1, overflow: "auto" }}>
+          <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
@@ -695,30 +771,47 @@ const CustomerDetailPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {Array.isArray(customer.contracts) && 
+                {Array.isArray(customer.contracts) &&
                   customer.contracts
-                    .slice(contractsPage * contractsRowsPerPage, contractsPage * contractsRowsPerPage + contractsRowsPerPage)
+                    .slice(
+                      contractsPage * contractsRowsPerPage,
+                      contractsPage * contractsRowsPerPage +
+                        contractsRowsPerPage
+                    )
                     .map((contract, index) => {
-                      const contractId = typeof contract === 'object' && contract !== null 
-                        ? contract.contractId 
-                        : contract;
-                      const startDate = typeof contract === 'object' && contract !== null && contract.startDate
-                        ? new Date(contract.startDate).toLocaleDateString('vi-VN')
-                        : '-';
-                      const endDate = typeof contract === 'object' && contract !== null && contract.endDate
-                        ? new Date(contract.endDate).toLocaleDateString('vi-VN')
-                        : '-';
-                      const status = typeof contract === 'object' && contract !== null
-                        ? contract.status === 1 
-                          ? 'Hoạt động' 
-                          : 'Không hoạt động'
-                        : '-';
-                        
-                      const hasFiles = typeof contract === 'object' && 
-                                      contract !== null && 
-                                      contract.contractFiles && 
-                                      contract.contractFiles.length > 0;
-                        
+                      const contractId =
+                        typeof contract === "object" && contract !== null
+                          ? contract.contractId
+                          : contract;
+                      const startDate =
+                        typeof contract === "object" &&
+                        contract !== null &&
+                        contract.startDate
+                          ? new Date(contract.startDate).toLocaleDateString(
+                              "vi-VN"
+                            )
+                          : "-";
+                      const endDate =
+                        typeof contract === "object" &&
+                        contract !== null &&
+                        contract.endDate
+                          ? new Date(contract.endDate).toLocaleDateString(
+                              "vi-VN"
+                            )
+                          : "-";
+                      const status =
+                        typeof contract === "object" && contract !== null
+                          ? contract.status === 1
+                            ? "Hoạt động"
+                            : "Không hoạt động"
+                          : "-";
+
+                      const hasFiles =
+                        typeof contract === "object" &&
+                        contract !== null &&
+                        contract.contractFiles &&
+                        contract.contractFiles.length > 0;
+
                       return (
                         <TableRow key={index} hover>
                           <TableCell>{contractId}</TableCell>
@@ -727,29 +820,41 @@ const CustomerDetailPage = () => {
                           <TableCell>
                             <Chip
                               label={status}
-                              color={status === 'Hoạt động' ? 'success' : 'default'}
+                              color={
+                                status === "Hoạt động" ? "success" : "default"
+                              }
                               size="small"
                             />
                           </TableCell>
                           <TableCell align="center">
-                            <IconButton 
+                            <IconButton
                               size="small"
-                              onClick={(e) => handleViewContractFile(e, contract)}
+                              onClick={(e) =>
+                                handleViewContractFile(e, contract)
+                              }
                               disabled={!hasFiles}
-                              title={hasFiles ? "Xem file hợp đồng" : "Không có file hợp đồng"}
+                              title={
+                                hasFiles
+                                  ? "Xem file hợp đồng"
+                                  : "Không có file hợp đồng"
+                              }
                               color={hasFiles ? "primary" : "default"}
                               sx={{ mr: 1 }}
                             >
                               <DownloadIcon fontSize="small" />
                             </IconButton>
-                            <IconButton 
-                              size="small"
-                              onClick={() => handleEditContractClick(contract)}
-                              title="Chỉnh sửa hợp đồng"
-                              color="info"
-                            >
-                              <EditOutlinedIcon fontSize="small" />
-                            </IconButton>
+                            {user?.role === "Staff" && (
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  handleEditContractClick(contract)
+                                }
+                                title="Chỉnh sửa hợp đồng"
+                                color="info"
+                              >
+                                <EditOutlinedIcon fontSize="small" />
+                              </IconButton>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -780,48 +885,76 @@ const CustomerDetailPage = () => {
 
   const renderOrdersTab = () => (
     <TabPanel value={tabValue} index={1}>
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box
+        sx={{
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <Typography variant="h6">Danh sách đơn hàng</Typography>
       </Box>
-      
+
       {customer.orders && customer.orders.length > 0 ? (
-        <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-          <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
+        <Box sx={{ flexGrow: 1, overflow: "auto" }}>
+          <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell>Mã đơn hàng</TableCell>
-                  <TableCell>Ngày tạo</TableCell>
+                  <TableCell align="center">Mã đơn hàng</TableCell>
+                  <TableCell align="center">Ngày tạo</TableCell>
                   <TableCell align="right">Tổng giá trị</TableCell>
-                  <TableCell>Trạng thái</TableCell>
+                  <TableCell align="center">Trạng thái</TableCell>
                   <TableCell align="center">Thao tác</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {Array.isArray(customer.orders) && 
+                {Array.isArray(customer.orders) &&
                   customer.orders
-                    .slice(ordersPage * ordersRowsPerPage, ordersPage * ordersRowsPerPage + ordersRowsPerPage)
+                    .slice(
+                      ordersPage * ordersRowsPerPage,
+                      ordersPage * ordersRowsPerPage + ordersRowsPerPage
+                    )
                     .map((order, index) => {
-                      const orderId = typeof order === 'object' && order !== null 
-                        ? order.orderId 
-                        : order;
-                      const createdDate = typeof order === 'object' && order !== null && order.createdDate 
-                        ? new Date(order.createdDate).toLocaleDateString('vi-VN') 
-                        : '-';
-                      const price = typeof order === 'object' && order !== null && order.price 
-                        ? order.price.toLocaleString('vi-VN') + ' đ'
-                        : '-';
-                      const status = typeof order === 'object' && order !== null 
-                        ? order.status 
-                        : '-';
+                      const orderId =
+                        typeof order === "object" && order !== null
+                          ? order.orderId
+                          : order;
+                      const createdDate =
+                        typeof order === "object" &&
+                        order !== null &&
+                        order.createdDate
+                          ? new Date(order.createdDate).toLocaleDateString(
+                              "vi-VN"
+                            )
+                          : "-";
+                      const price =
+                        typeof order === "object" &&
+                        order !== null &&
+                        order.price
+                          ? order.price.toLocaleString("vi-VN") + " đ"
+                          : "-";
+                      const status =
+                        typeof order === "object" && order !== null
+                          ? order.status
+                          : "-";
                       return (
                         <TableRow key={index} hover>
                           <TableCell>{orderId}</TableCell>
                           <TableCell>{createdDate}</TableCell>
                           <TableCell align="right">{price}</TableCell>
-                          <TableCell>{status}</TableCell>
+                          <TableCell align="center" sx={{
+                                                fontWeight: "medium",
+                                                color:
+                                                  order.status === OrderStatus.Completed
+                                                    ? "success.main"
+                                                    : order.status === OrderStatus.Scheduled
+                                                    ? "info.main"
+                                                    : "warning.main",
+                                              }}>{getStatusDisplay(order.status).label}</TableCell>
                           <TableCell align="center">
-                            <IconButton 
+                            <IconButton
                               size="small"
                               onClick={(e) => handleViewOrderDetail(e, orderId)}
                               title="Xem chi tiết đơn hàng"
@@ -860,7 +993,7 @@ const CustomerDetailPage = () => {
     return (
       <Box sx={{ p: 3 }}>
         <Breadcrumbs sx={{ mb: 2 }}>
-          <Link color="inherit" onClick={handleBack} sx={{ cursor: 'pointer' }}>
+          <Link color="inherit" onClick={handleBack} sx={{ cursor: "pointer" }}>
             Danh sách khách hàng
           </Link>
           <Typography color="text.primary">
@@ -871,17 +1004,25 @@ const CustomerDetailPage = () => {
         <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
-              <Skeleton variant="rectangular" height={120} sx={{ mb: 2, borderRadius: 1 }} />
+              <Skeleton
+                variant="rectangular"
+                height={120}
+                sx={{ mb: 2, borderRadius: 1 }}
+              />
               <Skeleton height={30} sx={{ mb: 1 }} />
               <Skeleton height={25} sx={{ mb: 1 }} />
               <Skeleton height={25} sx={{ mb: 1 }} />
               <Skeleton height={25} sx={{ mb: 1 }} />
             </Grid>
             <Grid item xs={12} md={8}>
-              <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+              <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
                 <Skeleton height={40} width="80%" />
               </Box>
-              <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 1 }} />
+              <Skeleton
+                variant="rectangular"
+                height={300}
+                sx={{ borderRadius: 1 }}
+              />
             </Grid>
           </Grid>
         </Paper>
@@ -892,8 +1033,8 @@ const CustomerDetailPage = () => {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <Button 
-          startIcon={<ArrowBackIcon />} 
+        <Button
+          startIcon={<ArrowBackIcon />}
           onClick={handleBack}
           sx={{ mb: 2 }}
         >
@@ -909,16 +1050,14 @@ const CustomerDetailPage = () => {
   if (!customer) {
     return (
       <Box sx={{ p: 3 }}>
-        <Button 
-          startIcon={<ArrowBackIcon />} 
+        <Button
+          startIcon={<ArrowBackIcon />}
           onClick={handleBack}
           sx={{ mb: 2 }}
         >
           Quay lại
         </Button>
-        <Alert severity="info">
-          Không tìm thấy thông tin khách hàng
-        </Alert>
+        <Alert severity="info">Không tìm thấy thông tin khách hàng</Alert>
       </Box>
     );
   }
@@ -927,124 +1066,197 @@ const CustomerDetailPage = () => {
     <Box sx={{ p: 3 }}>
       {/* Breadcrumb */}
       <Breadcrumbs sx={{ mb: 2 }}>
-        <Link 
-          color="inherit" 
-          onClick={handleBack} 
-          sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+        <Link
+          color="inherit"
+          onClick={handleBack}
+          sx={{ cursor: "pointer", display: "flex", alignItems: "center" }}
         >
-          <ArrowBackIcon sx={{ mr: 0.5, fontSize: '0.8rem' }} />
+          <ArrowBackIcon sx={{ mr: 0.5, fontSize: "0.8rem" }} />
           Danh sách khách hàng
         </Link>
         <Typography color="text.primary">{customer.companyName}</Typography>
       </Breadcrumbs>
 
       {/* Header with Actions */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <Typography variant="h5" component="h1" fontWeight="500">
           Chi tiết khách hàng
         </Typography>
-        <Box>
-          <Button
-            variant="outlined"
-            startIcon={<EditIcon />}
-            onClick={handleEdit}
-            sx={{ mr: 1 }}
-          >
-            Chỉnh sửa
-          </Button>
-          {/* Commented out delete button
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={handleDelete}
-          >
-            Xóa
-          </Button>
-          */}
-        </Box>
+        {user?.role === "Staff" && (
+          <Box>
+            <Button
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={handleEdit}
+              sx={{ mr: 1 }}
+            >
+              Chỉnh sửa
+            </Button>
+            {/* Commented out delete button
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={handleDelete}
+            >
+              Xóa
+            </Button>
+            */}
+          </Box>
+        )}
       </Box>
 
       {/* Main Content */}
-      <Paper elevation={1} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+      <Paper elevation={1} sx={{ borderRadius: 2, overflow: "hidden" }}>
         <Grid container>
           {/* Customer Info Card */}
-          <Grid item xs={12} md={4} sx={{ borderRight: { md: '1px solid #e0e0e0' } }}>
+          <Grid
+            item
+            xs={12}
+            md={4}
+            sx={{ borderRight: { md: "1px solid #e0e0e0" } }}
+          >
             <Box sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar 
-                  sx={{ 
-                    bgcolor: 'primary.main', 
-                    width: 70, 
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                <Avatar
+                  sx={{
+                    bgcolor: "primary.main",
+                    width: 70,
                     height: 70,
-                    fontSize: '2rem'
+                    fontSize: "2rem",
                   }}
                 >
                   {customer.companyName && customer.companyName.charAt(0)}
                 </Avatar>
                 <Box sx={{ ml: 2 }}>
-                  <Typography variant="h6" fontWeight="500">{customer.companyName || 'N/A'}</Typography>
+                  <Typography variant="h6" fontWeight="500">
+                    {customer.companyName || "N/A"}
+                  </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    MST: {customer.taxNumber || 'N/A'}
+                    MST: {customer.taxNumber || "N/A"}
                   </Typography>
                 </Box>
               </Box>
 
               <Divider sx={{ my: 2 }} />
 
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                gutterBottom
+              >
                 Thông tin liên hệ
               </Typography>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
+
+              <Box sx={{ display: "flex", alignItems: "center", my: 1 }}>
                 <EmailIcon fontSize="small" color="primary" sx={{ mr: 1 }} />
-                <Typography variant="body2">{customer.email || 'N/A'}</Typography>
+                <Typography variant="body2">
+                  {customer.email || "N/A"}
+                </Typography>
               </Box>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
+
+              <Box sx={{ display: "flex", alignItems: "center", my: 1 }}>
                 <PhoneIcon fontSize="small" color="primary" sx={{ mr: 1 }} />
-                <Typography variant="body2">{customer.phoneNumber || 'N/A'}</Typography>
+                <Typography variant="body2">
+                  {customer.phoneNumber || "N/A"}
+                </Typography>
               </Box>
-              
-              <Box sx={{ display: 'flex', my: 1 }}>
-                <BusinessIcon fontSize="small" color="primary" sx={{ mr: 1, mt: 0.3 }} />
-                <Typography variant="body2">{customer.address || 'N/A'}</Typography>
+
+              <Box sx={{ display: "flex", my: 1 }}>
+                <BusinessIcon
+                  fontSize="small"
+                  color="primary"
+                  sx={{ mr: 1, mt: 0.3 }}
+                />
+                <Typography variant="body2">
+                  {customer.address || "N/A"}
+                </Typography>
               </Box>
 
               <Divider sx={{ my: 2 }} />
 
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                gutterBottom
+              >
                 Thông tin hồ sơ
               </Typography>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', my: 0.5 }}>
-                <Typography variant="body2" color="text.secondary">Ngày tạo:</Typography>
-                <Typography variant="body2">{formatDate(customer.createdDate)}</Typography>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  my: 0.5,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Ngày tạo:
+                </Typography>
+                <Typography variant="body2">
+                  {formatDate(customer.createdDate)}
+                </Typography>
               </Box>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', my: 0.5 }}>
-                <Typography variant="body2" color="text.secondary">Người tạo:</Typography>
-                <Typography variant="body2">{customer.createdBy || 'N/A'}</Typography>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  my: 0.5,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Người tạo:
+                </Typography>
+                <Typography variant="body2">
+                  {customer.createdBy || "N/A"}
+                </Typography>
               </Box>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', my: 0.5 }}>
-                <Typography variant="body2" color="text.secondary">Lần cập nhật cuối:</Typography>
-                <Typography variant="body2">{formatDate(customer.modifiedDate)}</Typography>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  my: 0.5,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Lần cập nhật cuối:
+                </Typography>
+                <Typography variant="body2">
+                  {formatDate(customer.modifiedDate)}
+                </Typography>
               </Box>
 
               <Divider sx={{ my: 2 }} />
 
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Chip 
-                  icon={<AssignmentIcon />} 
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Chip
+                  icon={<AssignmentIcon />}
                   label={`${customer.contracts?.length || 0} Hợp đồng`}
                   variant="outlined"
                   size="small"
                   sx={{ mr: 1 }}
                   color="primary"
                 />
-                <Chip 
-                  icon={<LocalShippingIcon />} 
+                <Chip
+                  icon={<LocalShippingIcon />}
                   label={`${customer.orders?.length || 0} Đơn hàng`}
                   variant="outlined"
                   size="small"
@@ -1056,11 +1268,11 @@ const CustomerDetailPage = () => {
 
           {/* Tabs Section */}
           <Grid item xs={12} md={8}>
-            <Box sx={{ width: '100%' }}>
-              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                <Tabs 
-                  value={tabValue} 
-                  onChange={handleTabChange} 
+            <Box sx={{ width: "100%" }}>
+              <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+                <Tabs
+                  value={tabValue}
+                  onChange={handleTabChange}
                   aria-label="customer details tabs"
                 >
                   <Tab label="Tổng quan" />
@@ -1073,29 +1285,86 @@ const CustomerDetailPage = () => {
               <TabPanel value={tabValue} index={0}>
                 <Grid container spacing={3}>
                   <Grid item xs={12}>
-                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
-                      <Typography variant="h6" sx={{ mb: 2 }}>Thông tin chi tiết</Typography>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        bgcolor: "background.default",
+                        borderRadius: 2,
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ mb: 2 }}>
+                        Thông tin chi tiết
+                      </Typography>
                       <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
-                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Tên công ty</Typography>
-                          <Typography variant="body1" sx={{ mb: 2 }}>{customer.companyName}</Typography>
-                          
-                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Email</Typography>
-                          <Typography variant="body1" sx={{ mb: 2 }}>{customer.email}</Typography>
-                          
-                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Số điện thoại</Typography>
-                          <Typography variant="body1" sx={{ mb: 2 }}>{customer.phoneNumber}</Typography>
+                          <Typography
+                            variant="subtitle1"
+                            color="text.secondary"
+                            fontWeight="600"
+                          >
+                            Tên công ty
+                          </Typography>
+                          <Typography variant="body1" sx={{ mb: 2 }}>
+                            {customer.companyName}
+                          </Typography>
+
+                          <Typography
+                            variant="subtitle1"
+                            color="text.secondary"
+                            fontWeight="600"
+                          >
+                            Email
+                          </Typography>
+                          <Typography variant="body1" sx={{ mb: 2 }}>
+                            {customer.email}
+                          </Typography>
+
+                          <Typography
+                            variant="subtitle1"
+                            color="text.secondary"
+                            fontWeight="600"
+                          >
+                            Số điện thoại
+                          </Typography>
+                          <Typography variant="body1" sx={{ mb: 2 }}>
+                            {customer.phoneNumber}
+                          </Typography>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Mã số thuế</Typography>
-                          <Typography variant="body1" sx={{ mb: 2 }}>{customer.taxNumber || 'N/A'}</Typography>
-                          
-                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Địa chỉ</Typography>
-                          <Typography variant="body1" sx={{ mb: 2 }}>{customer.address || 'N/A'}</Typography>
-                          
-                          <Typography variant="subtitle1" color="text.secondary" fontWeight="600">Trạng thái</Typography>
-                          <Chip 
-                            label={customer.deletedDate ? "Đã xóa" : "Đang hoạt động"}
+                          <Typography
+                            variant="subtitle1"
+                            color="text.secondary"
+                            fontWeight="600"
+                          >
+                            Mã số thuế
+                          </Typography>
+                          <Typography variant="body1" sx={{ mb: 2 }}>
+                            {customer.taxNumber || "N/A"}
+                          </Typography>
+
+                          <Typography
+                            variant="subtitle1"
+                            color="text.secondary"
+                            fontWeight="600"
+                          >
+                            Địa chỉ
+                          </Typography>
+                          <Typography variant="body1" sx={{ mb: 2 }}>
+                            {customer.address || "N/A"}
+                          </Typography>
+
+                          <Typography
+                            variant="subtitle1"
+                            color="text.secondary"
+                            fontWeight="600"
+                          >
+                            Trạng thái
+                          </Typography>
+                          <Chip
+                            label={
+                              customer.deletedDate ? "Đã xóa" : "Đang hoạt động"
+                            }
                             color={customer.deletedDate ? "error" : "success"}
                             size="small"
                           />
@@ -1105,11 +1374,15 @@ const CustomerDetailPage = () => {
                   </Grid>
 
                   <Grid item xs={12} sm={6}>
-                    <Card sx={{ height: '100%' }}>
+                    <Card sx={{ height: "100%" }}>
                       <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mb: 2 }}
+                        >
                           <AssignmentIcon color="primary" sx={{ mr: 1 }} />
-                          <Typography variant="h6">Hợp đồng gần nhất</Typography>
+                          <Typography variant="h6">
+                            Hợp đồng gần nhất
+                          </Typography>
                         </Box>
                         {customer.contracts && customer.contracts.length > 0 ? (
                           <Typography>
@@ -1126,11 +1399,15 @@ const CustomerDetailPage = () => {
                   </Grid>
 
                   <Grid item xs={12} sm={6}>
-                    <Card sx={{ height: '100%' }}>
+                    <Card sx={{ height: "100%" }}>
                       <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mb: 2 }}
+                        >
                           <LocalShippingIcon color="primary" sx={{ mr: 1 }} />
-                          <Typography variant="h6">Đơn hàng gần nhất</Typography>
+                          <Typography variant="h6">
+                            Đơn hàng gần nhất
+                          </Typography>
                         </Box>
                         {customer.orders && customer.orders.length > 0 ? (
                           <Typography>
@@ -1159,8 +1436,8 @@ const CustomerDetailPage = () => {
       </Paper>
 
       {/* Edit Customer Dialog */}
-      <Dialog 
-        open={openEditDialog} 
+      <Dialog
+        open={openEditDialog}
         onClose={handleCloseEditDialog}
         fullWidth
         maxWidth="sm"
@@ -1240,27 +1517,24 @@ const CustomerDetailPage = () => {
             </Grid>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button 
-              onClick={handleCloseEditDialog} 
-              variant="outlined"
-            >
+            <Button onClick={handleCloseEditDialog} variant="outlined">
               Hủy
             </Button>
-            <Button 
-              type="submit" 
-              variant="contained" 
+            <Button
+              type="submit"
+              variant="contained"
               disabled={isSubmitting}
               startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
             >
-              {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+              {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
             </Button>
           </DialogActions>
         </form>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog 
-        open={openDeleteDialog} 
+      <Dialog
+        open={openDeleteDialog}
         onClose={handleCloseDeleteDialog}
         aria-labelledby="delete-dialog-title"
         aria-describedby="delete-dialog-description"
@@ -1270,30 +1544,29 @@ const CustomerDetailPage = () => {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body1" id="delete-dialog-description">
-            Bạn có chắc chắn muốn xóa khách hàng <strong>{customer?.companyName}</strong>? 
-            Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn xóa khách hàng{" "}
+            <strong>{customer?.companyName}</strong>? Hành động này không thể
+            hoàn tác.
           </Typography>
           {customer?.orders && customer.orders.length > 0 && (
             <Alert severity="warning" sx={{ mt: 2 }}>
-              Khách hàng này có {customer.orders.length} đơn hàng. Xóa khách hàng có thể ảnh hưởng đến các đơn hàng liên quan.
+              Khách hàng này có {customer.orders.length} đơn hàng. Xóa khách
+              hàng có thể ảnh hưởng đến các đơn hàng liên quan.
             </Alert>
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button 
-            onClick={handleCloseDeleteDialog} 
-            variant="outlined"
-          >
+          <Button onClick={handleCloseDeleteDialog} variant="outlined">
             Hủy
           </Button>
-          <Button 
+          <Button
             onClick={handleConfirmDelete}
-            variant="contained" 
+            variant="contained"
             color="error"
             disabled={deletingCustomer}
             startIcon={deletingCustomer ? <CircularProgress size={20} /> : null}
           >
-            {deletingCustomer ? 'Đang xóa...' : 'Xóa khách hàng'}
+            {deletingCustomer ? "Đang xóa..." : "Xóa khách hàng"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1310,19 +1583,73 @@ const CustomerDetailPage = () => {
       )}
 
       {/* Add Edit Contract Dialog */}
-      <Dialog 
-        open={openEditContractDialog} 
+      <Dialog
+        open={openEditContractDialog}
         onClose={handleCloseEditContractDialog}
         fullWidth
         maxWidth="md"
         PaperProps={{
-          sx: { borderRadius: 2, maxHeight: '90vh' }
+          sx: { borderRadius: 2, maxHeight: "90vh" },
         }}
       >
         <DialogTitle>Chỉnh sửa hợp đồng</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <Grid container spacing={3}>
+              <Grid item xs={12} md={12}>
+                <TextField
+                  name="Summary"
+                  label="Tóm tắt hợp đồng"
+                  fullWidth
+                  value={editContractForm.Summary}
+                  margin="dense"
+                  InputProps={{ readOnly: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="SignedTime"
+                  label="Ngày ký"
+                  type="date"
+                  fullWidth
+                  value={editContractForm.SignedTime ? editContractForm.SignedTime.substring(0, 10) : ""}
+                  margin="dense"
+                  InputProps={{ readOnly: true }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="SignedBy"
+                  label="Người ký"
+                  fullWidth
+                  value={editContractForm.SignedBy}
+                  margin="dense"
+                  InputProps={{ readOnly: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="CreatedBy"
+                  label="Người tạo"
+                  fullWidth
+                  value={editContractForm.CreatedBy}
+                  margin="dense"
+                  InputProps={{ readOnly: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="CreatedDate"
+                  label="Ngày tạo"
+                  type="datetime-local"
+                  fullWidth
+                  value={editContractForm.CreatedDate}
+                  margin="dense"
+                  InputProps={{ readOnly: true }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
                   name="StartDate"
@@ -1366,18 +1693,27 @@ const CustomerDetailPage = () => {
                     name="Status"
                     value={editContractForm.Status}
                     label="Trạng thái"
-                    onChange={(e) => handleContractSelectChange(e as React.ChangeEvent<{ name?: string; value: unknown }>)}
+                    onChange={(e) =>
+                      handleContractSelectChange(
+                        e as React.ChangeEvent<{
+                          name?: string;
+                          value: unknown;
+                        }>
+                      )
+                    }
                     error={!!editContractErrors.Status}
                   >
                     <MenuItem value={1}>Hoạt động</MenuItem>
                     <MenuItem value={0}>Không hoạt động</MenuItem>
                   </Select>
                   {editContractErrors.Status && (
-                    <FormHelperText error>{editContractErrors.Status}</FormHelperText>
+                    <FormHelperText error>
+                      {editContractErrors.Status}
+                    </FormHelperText>
                   )}
                 </FormControl>
               </Grid>
-              
+
               {/* File management section */}
               <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>
@@ -1386,64 +1722,100 @@ const CustomerDetailPage = () => {
                 <Divider sx={{ mb: 2 }} />
 
                 {/* Existing files list with checkboxes for deletion */}
-                {selectedContract && selectedContract.contractFiles && selectedContract.contractFiles.length > 0 ? (
+                {selectedContract &&
+                selectedContract.contractFiles &&
+                selectedContract.contractFiles.length > 0 ? (
                   <Box mb={3}>
                     <Typography variant="subtitle2" gutterBottom>
                       File hợp đồng hiện có
                     </Typography>
                     <List>
-                      {selectedContract.contractFiles.map((file: any, index: number) => {
-                        // Check if file is marked for removal
-                        const isMarkedForRemoval = filesToRemove.includes(file.fileId);
-                        
-                        return (
-                          <Box 
-                            key={file.fileId} 
-                            sx={{ 
-                              mb: 2, 
-                              p: 2, 
-                              border: '1px solid rgba(0, 0, 0, 0.12)',
-                              borderRadius: 1,
-                              bgcolor: isMarkedForRemoval ? 'rgba(0, 0, 0, 0.04)' : 'transparent'
-                            }}
-                          >
-                            <Box sx={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between',
-                              alignItems: 'center'
-                            }}>
-                              <Box>
-                                <Typography variant="body2">{file.fileName || `File ${index + 1}`}</Typography>
-                                {isMarkedForRemoval && (
-                                  <Typography variant="caption" color="error">
-                                    Đánh dấu để xóa
+                      {selectedContract.contractFiles.map(
+                        (file: any, index: number) => {
+                          // Check if file is marked for removal
+                          const isMarkedForRemoval = filesToRemove.includes(
+                            file.fileId
+                          );
+
+                          return (
+                            <Box
+                              key={file.fileId}
+                              sx={{
+                                mb: 2,
+                                p: 2,
+                                border: "1px solid rgba(0, 0, 0, 0.12)",
+                                borderRadius: 1,
+                                bgcolor: isMarkedForRemoval
+                                  ? "rgba(0, 0, 0, 0.04)"
+                                  : "transparent",
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "flex-start",
+                                }}
+                              >
+                                <Box>
+                                  <Typography variant="body2" fontWeight="500">
+                                    {file.fileName || `File ${index + 1}`}
                                   </Typography>
-                                )}
-                              </Box>
-                              <Box>
-                                <IconButton 
-                                  size="small" 
-                                  href={file.fileUrl} 
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <AttachFileIcon fontSize="small" />
-                                </IconButton>
-                                <Checkbox
-                                  size="small"
-                                  onChange={() => handleToggleRemoveExistingFile(file.fileId)}
-                                  checked={isMarkedForRemoval}
-                                  color="error"
-                                />
+                                  
+                                  {/* Display Description */}
+                                  <Box sx={{ mt: 1 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                      <strong>Mô tả:</strong> {file.description || "Không có mô tả"}
+                                    </Typography>
+                                  </Box>
+                                  
+                                  {/* Display Note */}
+                                  <Box sx={{ mt: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                      <strong>Ghi chú:</strong> {file.note || "Không có ghi chú"}
+                                    </Typography>
+                                  </Box>
+                                  
+                                  {isMarkedForRemoval && (
+                                    <Typography variant="caption" color="error">
+                                      Đánh dấu để xóa
+                                    </Typography>
+                                  )}
+                                </Box>
+                                
+                                <Box>
+                                  <IconButton
+                                    size="small"
+                                    href={file.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <AttachFileIcon fontSize="small" />
+                                  </IconButton>
+                                  <Checkbox
+                                    size="small"
+                                    onChange={() =>
+                                      handleToggleRemoveExistingFile(
+                                        file.fileId
+                                      )
+                                    }
+                                    checked={isMarkedForRemoval}
+                                    color="error"
+                                  />
+                                </Box>
                               </Box>
                             </Box>
-                          </Box>
-                        );
-                      })}
+                          );
+                        }
+                      )}
                     </List>
                   </Box>
                 ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 2 }}
+                  >
                     Không có file hợp đồng hiện tại
                   </Typography>
                 )}
@@ -1474,22 +1846,26 @@ const CustomerDetailPage = () => {
                     <Box sx={{ mt: 2 }}>
                       <List>
                         {selectedFiles.map((file, index) => (
-                          <Box 
-                            key={index} 
-                            sx={{ 
-                              mb: 2, 
-                              p: 2, 
-                              border: '1px solid rgba(0, 0, 0, 0.12)',
-                              borderRadius: 1
+                          <Box
+                            key={index}
+                            sx={{
+                              mb: 2,
+                              p: 2,
+                              border: "1px solid rgba(0, 0, 0, 0.12)",
+                              borderRadius: 1,
                             }}
                           >
-                            <Box sx={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              mb: 1
-                            }}>
-                              <Typography variant="body2">{file.name}</Typography>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                mb: 1,
+                              }}
+                            >
+                              <Typography variant="body2">
+                                {file.name}
+                              </Typography>
                               <IconButton
                                 size="small"
                                 color="error"
@@ -1503,8 +1879,13 @@ const CustomerDetailPage = () => {
                               fullWidth
                               multiline
                               rows={2}
-                              value={(file as any).description || ''}
-                              onChange={(e) => handleNewFileDescriptionChange(index, e.target.value)}
+                              value={(file as any).description || ""}
+                              onChange={(e) =>
+                                handleNewFileDescriptionChange(
+                                  index,
+                                  e.target.value
+                                )
+                              }
                               margin="dense"
                               size="small"
                             />
@@ -1513,8 +1894,10 @@ const CustomerDetailPage = () => {
                               fullWidth
                               multiline
                               rows={2}
-                              value={(file as any).note || ''}
-                              onChange={(e) => handleNewFileNoteChange(index, e.target.value)}
+                              value={(file as any).note || ""}
+                              onChange={(e) =>
+                                handleNewFileNoteChange(index, e.target.value)
+                              }
                               margin="dense"
                               size="small"
                             />
@@ -1529,32 +1912,33 @@ const CustomerDetailPage = () => {
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button 
-            onClick={handleCloseEditContractDialog} 
-            variant="outlined"
-          >
+          <Button onClick={handleCloseEditContractDialog} variant="outlined">
             Hủy
           </Button>
-          <Button 
-            type="submit" 
-            variant="contained" 
+          <Button
+            type="submit"
+            variant="contained"
             disabled={editingContract}
             startIcon={editingContract ? <CircularProgress size={20} /> : null}
             onClick={handleUpdateContract}
           >
-            {editingContract ? 'Đang cập nhật...' : 'Cập nhật hợp đồng'}
+            {editingContract ? "Đang cập nhật..." : "Cập nhật hợp đồng"}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Snackbar for notifications */}
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
