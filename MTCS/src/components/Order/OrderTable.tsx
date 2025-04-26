@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogTitle,
   DialogActions,
+  TableSortLabel, // Thêm import TableSortLabel
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
@@ -103,6 +104,15 @@ const OrderManagement: React.FC = () => {
   const [allFetchedOrders, setAllFetchedOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [isFiltering, setIsFiltering] = useState(false);
+  
+  // Thêm state cho chức năng sắp xếp
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'asc' | 'desc' | null;
+  }>({
+    key: 'deliveryDate',
+    direction: null,
+  });
 
   // Fetch all orders once to use for count calculations
   useEffect(() => {
@@ -443,9 +453,21 @@ const OrderManagement: React.FC = () => {
   // Get current orders for display with client-side pagination
   const getCurrentOrders = () => {
     const statusValue = orderStatusOptions[tabValue].value;
-    const filtered = typeof statusValue === "string" && statusValue === "all" 
+    let filtered = typeof statusValue === "string" && statusValue === "all" 
       ? filteredOrders 
       : filteredOrders.filter(order => order.status === statusValue);
+    
+    // Áp dụng sắp xếp theo ngày giao hàng nếu có
+    if (sortConfig.key === 'deliveryDate' && sortConfig.direction) {
+      filtered = [...filtered].sort((a, b) => {
+        const dateA = new Date(a.deliveryDate).getTime();
+        const dateB = new Date(b.deliveryDate).getTime();
+        
+        return sortConfig.direction === 'asc' 
+          ? dateA - dateB 
+          : dateB - dateA;
+      });
+    }
       
     return filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   };
@@ -454,6 +476,16 @@ const OrderManagement: React.FC = () => {
   const handleCardClick = (tabIndex: number) => {
     setTabValue(tabIndex);
     setPage(0); // Reset to first page when changing filter
+  };
+
+  // Thêm hàm xử lý sắp xếp cho cột ngày giao hàng
+  const handleRequestSort = () => {
+    const isAsc = sortConfig.key === 'deliveryDate' && sortConfig.direction === 'asc';
+    setSortConfig({
+      key: 'deliveryDate',
+      direction: isAsc ? 'desc' : 'asc',
+    });
+    setPage(0); // Reset về trang đầu khi sắp xếp
   };
 
   return (
@@ -843,7 +875,16 @@ const OrderManagement: React.FC = () => {
                 <TableRow>
                   <TableCell align="center">Mã vận chuyển</TableCell>
                   <TableCell align="center">Khách hàng</TableCell>
-                  <TableCell align="center">Ngày giao hàng</TableCell>
+                  <TableCell align="center">
+                    <TableSortLabel
+                      active={sortConfig.key === 'deliveryDate'}
+                      direction={sortConfig.direction === null ? 'asc' : sortConfig.direction}
+                      onClick={handleRequestSort}
+                      sx={{ whiteSpace: 'nowrap' }}
+                    >
+                      Ngày giao hàng
+                    </TableSortLabel>
+                  </TableCell>
                   <TableCell align="center">Loại vận chuyển</TableCell>
                   <TableCell align="center">Giá (VNĐ)</TableCell>
                   <TableCell align="center">Khoảng cách</TableCell>

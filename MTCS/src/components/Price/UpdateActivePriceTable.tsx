@@ -42,7 +42,7 @@ import {
   getPriceTables,
   updatePriceTables,
 } from "../../services/priceTableApi";
-import useAuth from "../../hooks/useAuth";
+import useAuth from "../../contexts/AuthContext";
 
 const UpdateActivePriceTable: React.FC = () => {
   const { user } = useAuth();

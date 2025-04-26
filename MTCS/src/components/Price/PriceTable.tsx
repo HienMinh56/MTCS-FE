@@ -62,7 +62,7 @@ import {
   VersionInfo,
 } from "../../types/price-table";
 import PriceChangesComponent from "./PriceChanges";
-import useAuth from "../../hooks/useAuth";
+import useAuth from "../../contexts/AuthContext";
 
 type Order = "asc" | "desc";
 

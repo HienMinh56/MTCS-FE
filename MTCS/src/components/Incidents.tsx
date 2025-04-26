@@ -43,6 +43,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import CloseIcon from "@mui/icons-material/Close";
 import { getAllIncidentReports, getIncidentReportById, IncidentReports } from "../services/IncidentReportApi";
 import ReplaceTripModal from "./ReplaceTripModal";
+import TableSortLabel from '@mui/material/TableSortLabel';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -105,6 +106,11 @@ const IncidentDetailDialog = ({
   
   if (!incident) return null;
   
+  // Check if there's any replacement trip (a trip with status other than canceled/cancelled)
+  const hasReplacementTrip = incident.order?.trips?.some(
+    trip => trip.status.toLowerCase() !== "canceled" && trip.status.toLowerCase() !== "cancelled"
+  );
+  
   // Group files by type
   const incidentFiles = incident.incidentReportsFiles?.filter(file => file.type === 1) || [];
   const invoiceFiles = incident.incidentReportsFiles?.filter(file => file.type === 2) || [];
@@ -127,6 +133,13 @@ const IncidentDetailDialog = ({
   // Handler for image clicks - use onImagePreview prop instead of direct link
   const handleImageClick = (fileUrl: string, fileTitle: string) => {
     onImagePreview(fileUrl, fileTitle);
+  };
+  
+  // Handler for viewing order details
+  const handleViewOrder = () => {
+    if (incident.order?.orderId) {
+      navigate(`/staff-menu/orders/${incident.order.orderId}`);
+    }
   };
   
   return (
@@ -215,7 +228,7 @@ const IncidentDetailDialog = ({
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/staff-menu/orders/${incident.trip.order.orderId}`);
+                          navigate(`/staff-menu/orders/${incident.order.orderId}`);
                         }}
                       >
                         {incident.trackingCode}
@@ -439,25 +452,38 @@ const IncidentDetailDialog = ({
       <DialogActions>
         {/* Show button only if incident is not completed OR if incident cannot be repaired OR requires assistance */}
         {(incident.status === "Handling" && (incident.type === 2 || incident.type === 3)) && (
-          <Button 
-            variant="contained" 
-            color="primary"
-            onClick={() => setOpenReplaceTripModal(true)}
-            disabled={tripReplaced} // Disable button if trip has been replaced
-            sx={{
-              ...(tripReplaced && {
-                backgroundColor: 'rgba(0, 0, 0, 0.12)',
-                color: 'rgba(0, 0, 0, 0.26)',
-                boxShadow: 'none',
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.12)',
-                  boxShadow: 'none',
-                }
-              })
-            }}
-          >
-            {tripReplaced ? "Đã tạo chuyến thay thế" : "Tạo chuyến thay thế"}
-          </Button>
+          <>
+            {hasReplacementTrip ? (
+              <Button 
+                variant="outlined" 
+                color="primary"
+                onClick={handleViewOrder}
+                startIcon={<OpenInNewIcon />}
+              >
+                Đã có chuyến thay thế, nhấn để xem
+              </Button>
+            ) : (
+              <Button 
+                variant="contained" 
+                color="primary"
+                onClick={() => setOpenReplaceTripModal(true)}
+                disabled={tripReplaced}
+                sx={{
+                  ...(tripReplaced && {
+                    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                    color: 'rgba(0, 0, 0, 0.26)',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                      boxShadow: 'none',
+                    }
+                  })
+                }}
+              >
+                {tripReplaced ? "Đã tạo chuyến thay thế" : "Tạo chuyến thay thế"}
+              </Button>
+            )}
+          </>
         )}
         <Button onClick={onClose}>Đóng</Button>
       </DialogActions>
@@ -467,7 +493,7 @@ const IncidentDetailDialog = ({
         open={openReplaceTripModal}
         onClose={() => setOpenReplaceTripModal(false)}
         tripId={incident.tripId}
-        orderId={incident.trip.order.orderId}
+        orderId={incident.order.orderId}
         onSuccess={() => handleReplaceTripSuccess(true)}
         onError={() => handleReplaceTripSuccess(false)}
         vehicleType={incident.vehicleType}
@@ -485,6 +511,15 @@ const IncidentManagement = () => {
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  
+  // Thêm state cho chức năng sắp xếp
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'asc' | 'desc' | null;
+  }>({
+    key: 'createdDate',
+    direction: null,
+  });
   
   // Add state for image preview
   const [imagePreview, setImagePreview] = useState<{
@@ -549,6 +584,16 @@ const IncidentManagement = () => {
   const handleCardClick = (tabIndex: number) => {
     setTabValue(tabIndex);
     setPage(0); // Reset to first page when changing filter
+  };
+
+  // Thêm hàm xử lý sắp xếp theo thời gian báo cáo
+  const handleRequestSort = () => {
+    const isAsc = sortConfig.key === 'createdDate' && sortConfig.direction === 'asc';
+    setSortConfig({
+      key: 'createdDate',
+      direction: isAsc ? 'desc' : 'asc',
+    });
+    setPage(0); // Reset về trang đầu khi sắp xếp
   };
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -627,19 +672,35 @@ const IncidentManagement = () => {
   });
 
   const getFilteredIncidentsByStatus = (status: string) => {
+    let result;
+    
     if (status === "all") {
-      return filteredIncidents;
-    }
-    if (status === "Completed") {
+      result = filteredIncidents;
+    } else if (status === "Completed") {
       // Include all non-handling and non-pending statuses as "Đã xử lý"
-      return filteredIncidents.filter((incident) => 
+      result = filteredIncidents.filter((incident) => 
         incident.status === "Completed" || 
         incident.status === "Cancelled" || 
         incident.status === "Canceled" ||
         (incident.status !== "Handling" && incident.status !== "Pending")
       );
+    } else {
+      result = filteredIncidents.filter((incident) => incident.status === status);
     }
-    return filteredIncidents.filter((incident) => incident.status === status);
+    
+    // Áp dụng sắp xếp theo thời gian báo cáo nếu có
+    if (sortConfig.key === 'createdDate' && sortConfig.direction) {
+      result = [...result].sort((a, b) => {
+        const dateA = new Date(a.createdDate).getTime();
+        const dateB = new Date(b.createdDate).getTime();
+        
+        return sortConfig.direction === 'asc' 
+          ? dateA - dateB 
+          : dateB - dateA;
+      });
+    }
+    
+    return result;
   };
 
   return (
@@ -935,7 +996,16 @@ const IncidentManagement = () => {
                         <TableCell align="center">Mã vận chuyển</TableCell>
                         <TableCell align="center">Loại sự cố</TableCell>
                         <TableCell align="center">Loại</TableCell>
-                        <TableCell align="center">Thời gian Báo cáo</TableCell>
+                        <TableCell align="center">
+                          <TableSortLabel
+                            active={sortConfig.key === 'createdDate'}
+                            direction={sortConfig.direction === null ? 'asc' : sortConfig.direction}
+                            onClick={handleRequestSort}
+                            sx={{ whiteSpace: 'nowrap' }}
+                          >
+                            Thời gian báo cáo
+                          </TableSortLabel>
+                        </TableCell>
                         <TableCell align="center">Trạng thái</TableCell>                        
                       </TableRow>
                     </TableHead>
