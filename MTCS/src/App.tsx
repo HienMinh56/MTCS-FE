@@ -19,6 +19,7 @@ import CustomerDetailPage from "./pages/CustomerDetailPage";
 import DistanceCalculatorPage from "./pages/DistanceCalculatorPage";
 import AdminFinanceDashboard from "./pages/AdminPage";
 import TrackingOrder from "./pages/TrackingOrder";
+import FloatingChatButton from "./components/Chat/FloatingChatButton";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 const HomeRoute = () => {
@@ -33,6 +34,11 @@ const HomeRoute = () => {
   }
 
   return <MTCSLogistics />;
+};
+
+// Chat wrapper component to integrate FloatingChatButton with Auth context
+const ChatWrapper = () => {
+  return <FloatingChatButton />;
 };
 
 function App() {
@@ -114,6 +120,10 @@ function App() {
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+
+            {/* Add Floating Chat Button outside of Routes */}
+            <ChatWrapper />
+
             <SpeedInsights />
           </BrowserRouter>
         </AuthProvider>
