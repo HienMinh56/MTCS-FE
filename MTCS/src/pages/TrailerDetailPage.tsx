@@ -80,7 +80,7 @@ import { ContainerSize } from "../forms/trailer/trailerSchema";
 import TrailerUpdate from "../components/Trailer/TrailerUpdate";
 import TrailerUseHistoryTable from "../components/Trailer/TrailerUseHistoryTable";
 import TrailerIncidentHistoryTable from "../components/Trailer/TrailerIncidentHistoryTable";
-import { useAuth } from "../contexts/AuthContext"; // Import useAuth hook
+import { useAuth } from "../contexts/AuthContext";
 
 const FILE_CATEGORIES = ["Giấy Đăng ký", "Giấy Kiểm định", "Khác"];
 
@@ -112,8 +112,8 @@ const TrailerDetailPage = () => {
   const { trailerId } = useParams<{ trailerId: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
-  const { user } = useAuth(); // Get the user from auth context
-  const isAdmin = user?.role === "Admin"; // Check if user is Admin
+  const { user } = useAuth();
+  const isAdmin = user?.role === "Admin";
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
   const [details, setDetails] = useState<ITrailerDetails | null>(null);
@@ -123,6 +123,8 @@ const TrailerDetailPage = () => {
   const [actionType, setActionType] = useState<"activate" | "deactivate">(
     "deactivate"
   );
+  const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+
   const [alert, setAlert] = useState<{
     open: boolean;
     message: string;
@@ -569,7 +571,7 @@ const TrailerDetailPage = () => {
             underline="hover"
             color="inherit"
             sx={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-            onClick={() => navigate("/staff-menu/trailers")}
+            onClick={() => navigate(`${prefix}/trailers`)}
           >
             <AirportShuttleIcon sx={{ mr: 0.5 }} fontSize="small" />
             Danh sách rơ-moóc

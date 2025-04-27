@@ -114,6 +114,8 @@ const TractorDetailPage = () => {
   const [actionType, setActionType] = useState<"activate" | "deactivate">(
     "deactivate"
   );
+  const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+
   const [alert, setAlert] = useState<{
     open: boolean;
     message: string;
@@ -555,7 +557,7 @@ const TractorDetailPage = () => {
             underline="hover"
             color="inherit"
             sx={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-            onClick={() => navigate("/staff-menu/tractors")}
+            onClick={() => navigate(`${prefix}/tractors`)}
           >
             <LocalShippingIcon sx={{ mr: 0.5 }} fontSize="small" />
             Danh sách đầu kéo

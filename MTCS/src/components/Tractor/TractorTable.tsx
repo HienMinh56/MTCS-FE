@@ -17,6 +17,7 @@ import { getTractors } from "../../services/tractorApi";
 import { Tractor, TractorStatus, ContainerType } from "../../types/tractor";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import { useAuth } from "../../contexts/AuthContext"; // Fixed import path
 
 interface TractorTableProps {
   searchTerm?: string;
@@ -42,6 +43,8 @@ const TractorTable: React.FC<TractorTableProps> = ({
   refreshTrigger = 0,
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [page, setPage] = useState(1);
   const [rowsPerPage] = useState(8);
   const [tractors, setTractors] = useState<Tractor[]>([]);
@@ -164,7 +167,8 @@ const TractorTable: React.FC<TractorTableProps> = ({
   };
 
   const handleRowClick = (id: string) => {
-    navigate(`/staff-menu/tractors/${id}`);
+    const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+    navigate(`${prefix}/tractors/${id}`);
   };
 
   const from = (page - 1) * rowsPerPage + 1;

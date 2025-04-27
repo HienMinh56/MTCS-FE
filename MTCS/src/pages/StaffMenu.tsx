@@ -128,7 +128,7 @@ const StaffMenu: React.FC = () => {
       text: "Rơ-moóc",
       icon: <DirectionsCarFilledIcon />,
       selected: activeTab === "trailers",
-    },    
+    },
   ];
 
   const renderActiveComponent = () => {
@@ -312,11 +312,16 @@ const StaffMenu: React.FC = () => {
             borderRight: "1px solid rgba(0, 0, 0, 0.08)",
             backgroundColor: "#f8f9fa",
             zIndex: 1,
+            boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+            transition: theme.transitions.create(["width", "box-shadow"], {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.standard,
+            }),
+            overflowX: "hidden",
           },
         }}
       >
         <Box
-          className="flex items-center p-4"
           sx={{
             display: "flex",
             alignItems: "center",
@@ -328,44 +333,70 @@ const StaffMenu: React.FC = () => {
           <Avatar
             alt="Staff User"
             src="/static/avatar.jpg"
-            className="mr-3"
             sx={{
+              mr: 2,
               border: `2px solid ${theme.palette.mtcs.secondary}`,
               bgcolor: theme.palette.mtcs.primary,
+              transition: theme.transitions.create(
+                ["transform", "box-shadow"],
+                {
+                  duration: 200,
+                }
+              ),
+              "&:hover": {
+                transform: "scale(1.05)",
+                boxShadow: "0 3px 10px rgba(0,0,0,0.1)",
+              },
             }}
           />
-          <div>
-            <Typography
-              variant="subtitle1"
-              className="font-medium"
-              sx={{ color: theme.palette.mtcs.primary }}
-            >
-              Nhân viên
-            </Typography>
-          </div>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 500,
+              color: theme.palette.mtcs.primary,
+              transition: theme.transitions.create(["opacity", "transform"], {
+                duration: theme.transitions.duration.standard,
+              }),
+            }}
+          >
+            Nhân viên
+          </Typography>
         </Box>
         <Divider />
-        <List className="mt-2">
+        <List sx={{ mt: 2, px: 1 }}>
           {menuItems.map((item) => (
-            <ListItem key={item.id} disablePadding sx={{ display: "block" }}>
+            <ListItem
+              key={item.id}
+              disablePadding
+              sx={{ display: "block", mb: 0.5 }}
+            >
               <ListItemButton
                 onClick={() => handleTabChange(item.id)}
                 sx={{
                   minHeight: 48,
                   px: 2.5,
-                  my: 0.5,
-                  mx: 1,
-                  borderRadius: 1,
+                  py: 1,
+                  borderRadius: 1.5,
                   background: item.selected
-                    ? "linear-gradient(135deg, rgba(1, 70, 199, 0.1), rgba(117, 237, 209, 0.2))"
-                    : "inherit",
+                    ? "linear-gradient(135deg, rgba(1, 70, 199, 0.13), rgba(117, 237, 209, 0.23))"
+                    : "transparent",
                   "&:hover": {
-                    background:
-                      "linear-gradient(135deg, rgba(1, 70, 199, 0.05), rgba(117, 237, 209, 0.1))",
+                    background: item.selected
+                      ? "linear-gradient(135deg, rgba(1, 70, 199, 0.15), rgba(117, 237, 209, 0.25))"
+                      : "linear-gradient(135deg, rgba(1, 70, 199, 0.07), rgba(117, 237, 209, 0.12))",
                   },
+                  transition: theme.transitions.create(
+                    ["background-color", "box-shadow"],
+                    {
+                      duration: 100,
+                    }
+                  ),
                   borderLeft: item.selected
                     ? `4px solid ${theme.palette.mtcs.primary}`
                     : "4px solid transparent",
+                  boxShadow: item.selected
+                    ? "0 2px 5px rgba(0,0,0,0.08)"
+                    : "none",
                 }}
               >
                 <ListItemIcon
@@ -376,6 +407,13 @@ const StaffMenu: React.FC = () => {
                     color: item.selected
                       ? theme.palette.mtcs.primary
                       : "inherit",
+                    transition: theme.transitions.create(
+                      ["color", "transform"],
+                      {
+                        duration: 200,
+                      }
+                    ),
+                    transform: item.selected ? "scale(1.1)" : "scale(1)",
                   }}
                 >
                   {item.icon}
@@ -384,11 +422,18 @@ const StaffMenu: React.FC = () => {
                   primary={item.text}
                   primaryTypographyProps={{
                     fontWeight: item.selected ? "medium" : "normal",
+                    fontSize: "0.94rem",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                   sx={{
                     color: item.selected
                       ? theme.palette.mtcs.primary
                       : "inherit",
+                    transition: theme.transitions.create(["color"], {
+                      duration: 200,
+                    }),
                   }}
                 />
               </ListItemButton>
@@ -398,23 +443,37 @@ const StaffMenu: React.FC = () => {
         <Box
           sx={{
             mt: "auto",
-            p: 2,
+            mb: 2,
+            mx: 2,
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
           }}
         >
           <Paper
-            elevation={3}
+            elevation={0}
             sx={{
-              p: 1,
+              p: 1.5,
               borderRadius: 2,
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
+              width: "100%",
+              bgcolor: "rgba(1, 70, 199, 0.04)",
+              border: "1px solid rgba(1, 70, 199, 0.1)",
+              transition: theme.transitions.create(
+                ["transform", "box-shadow"],
+                {
+                  duration: 200,
+                }
+              ),
+              "&:hover": {
+                transform: "translateY(-2px)",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                bgcolor: "rgba(1, 70, 199, 0.06)",
+              },
             }}
-          >
-          </Paper>
+          ></Paper>
         </Box>
       </Drawer>
 

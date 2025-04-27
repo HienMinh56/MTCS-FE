@@ -182,7 +182,7 @@ const CustomerDetailPage = () => {
     src: "",
     title: "",
   });
-  
+
   // State để hiển thị document preview
   const [documentPreview, setDocumentPreview] = useState<{
     open: boolean;
@@ -193,7 +193,7 @@ const CustomerDetailPage = () => {
     open: false,
     src: "",
     title: "",
-    fileType: ""
+    fileType: "",
   });
 
   const getStatusDisplay = (status: OrderStatus) => {
@@ -247,7 +247,8 @@ const CustomerDetailPage = () => {
   };
 
   const handleBack = () => {
-    navigate(-1);
+    const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+    navigate(`${prefix}/customers`);
   };
 
   const handleEdit = () => {
@@ -494,7 +495,8 @@ const CustomerDetailPage = () => {
   // Add a new function to navigate to order details
   const handleViewOrderDetail = (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation(); // Prevent event bubbling
-    navigate(`/staff-menu/orders/${orderId}`);
+    const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+    navigate(`${prefix}/orders/${orderId}`);
   };
 
   // Hàm xem file hợp đồng với popup preview
@@ -510,7 +512,8 @@ const CustomerDetailPage = () => {
     ) {
       // Get the file URL from the first file in the contract
       const fileUrl = contract.contractFiles[0].fileUrl;
-      const fileName = contract.contractFiles[0].fileName || `Contract_${contract.contractId}`;
+      const fileName =
+        contract.contractFiles[0].fileName || `Contract_${contract.contractId}`;
       const fileType = contract.contractFiles[0].fileType || null;
 
       if (fileUrl) {
@@ -1020,19 +1023,38 @@ const CustomerDetailPage = () => {
   };
 
   // Hàm phát hiện loại file và hiển thị phù hợp
-  const handleFileClick = (fileUrl: string, fileName: string, fileType: string | null) => {
+  const handleFileClick = (
+    fileUrl: string,
+    fileName: string,
+    fileType: string | null
+  ) => {
     // Kiểm tra loại file dựa trên phần mở rộng
-    const fileExtension = fileUrl.split('.').pop()?.toLowerCase();
-    
+    const fileExtension = fileUrl.split(".").pop()?.toLowerCase();
+
     // Phát hiện loại file
-    const isPdf = fileExtension === 'pdf' || fileType === 'PDF Document' || (fileType && fileType.toLowerCase().includes('pdf'));
-    const isDocx = fileExtension === 'doc' || fileExtension === 'docx' || fileType === 'Word Document' || (fileType && fileType.toLowerCase().includes('word'));
-    const isXlsx = fileExtension === 'xls' || fileExtension === 'xlsx' || fileType === 'Excel Spreadsheet' || (fileType && fileType.toLowerCase().includes('excel'));
-    const isPptx = fileExtension === 'ppt' || fileExtension === 'pptx' || fileType === 'PowerPoint Presentation' || (fileType && fileType.toLowerCase().includes('powerpoint'));
+    const isPdf =
+      fileExtension === "pdf" ||
+      fileType === "PDF Document" ||
+      (fileType && fileType.toLowerCase().includes("pdf"));
+    const isDocx =
+      fileExtension === "doc" ||
+      fileExtension === "docx" ||
+      fileType === "Word Document" ||
+      (fileType && fileType.toLowerCase().includes("word"));
+    const isXlsx =
+      fileExtension === "xls" ||
+      fileExtension === "xlsx" ||
+      fileType === "Excel Spreadsheet" ||
+      (fileType && fileType.toLowerCase().includes("excel"));
+    const isPptx =
+      fileExtension === "ppt" ||
+      fileExtension === "pptx" ||
+      fileType === "PowerPoint Presentation" ||
+      (fileType && fileType.toLowerCase().includes("powerpoint"));
     const isOfficeFile = isDocx || isXlsx || isPptx;
-    
+
     // Xác định nếu là ảnh
-    const isImage = fileType 
+    const isImage = fileType
       ? fileType === "Image" || fileType.toLowerCase().includes("image/")
       : /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(fileUrl);
 
@@ -1046,11 +1068,16 @@ const CustomerDetailPage = () => {
         open: true,
         src: fileUrl,
         title: fileName,
-        fileType: 'pdf'
+        fileType: "pdf",
       });
     } else {
       // Các loại file khác (bao gồm Office files), mở trong tab mới với Office Online Viewer
-      window.open(`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`, '_blank');
+      window.open(
+        `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
+          fileUrl
+        )}`,
+        "_blank"
+      );
     }
   };
 
@@ -2073,20 +2100,30 @@ const CustomerDetailPage = () => {
       {/* Document Preview Dialog */}
       <Dialog
         open={documentPreview.open}
-        onClose={() => setDocumentPreview({...documentPreview, open: false})}
+        onClose={() => setDocumentPreview({ ...documentPreview, open: false })}
         maxWidth="lg"
         fullWidth
         TransitionComponent={Fade}
-        PaperProps={{ sx: { borderRadius: 2, height: '80vh' } }}
+        PaperProps={{ sx: { borderRadius: 2, height: "80vh" } }}
       >
         <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
-          {documentPreview.fileType === 'pdf' && <PictureAsPdfIcon sx={{ mr: 1 }} color="error" />}
-          {documentPreview.fileType === 'docx' && <DescriptionIcon sx={{ mr: 1 }} color="primary" />}
-          {documentPreview.fileType === 'xlsx' && <ArticleIcon sx={{ mr: 1 }} color="success" />}
-          {documentPreview.fileType === 'pptx' && <ArticleIcon sx={{ mr: 1 }} color="warning" />}
+          {documentPreview.fileType === "pdf" && (
+            <PictureAsPdfIcon sx={{ mr: 1 }} color="error" />
+          )}
+          {documentPreview.fileType === "docx" && (
+            <DescriptionIcon sx={{ mr: 1 }} color="primary" />
+          )}
+          {documentPreview.fileType === "xlsx" && (
+            <ArticleIcon sx={{ mr: 1 }} color="success" />
+          )}
+          {documentPreview.fileType === "pptx" && (
+            <ArticleIcon sx={{ mr: 1 }} color="warning" />
+          )}
           {documentPreview.title}
           <IconButton
-            onClick={() => setDocumentPreview({...documentPreview, open: false})}
+            onClick={() =>
+              setDocumentPreview({ ...documentPreview, open: false })
+            }
             sx={{
               position: "absolute",
               right: 8,
@@ -2096,13 +2133,24 @@ const CustomerDetailPage = () => {
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5", height: 'calc(100% - 64px)' }}>
-          <iframe 
-            src={documentPreview.fileType === 'pdf' 
-              ? documentPreview.src 
-              : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentPreview.src)}`}
-            width="100%" 
-            height="100%" 
+        <DialogContent
+          sx={{
+            p: 0,
+            textAlign: "center",
+            bgcolor: "#f5f5f5",
+            height: "calc(100% - 64px)",
+          }}
+        >
+          <iframe
+            src={
+              documentPreview.fileType === "pdf"
+                ? documentPreview.src
+                : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
+                    documentPreview.src
+                  )}`
+            }
+            width="100%"
+            height="100%"
             frameBorder="0"
             title={documentPreview.title}
           />
@@ -2119,7 +2167,9 @@ const CustomerDetailPage = () => {
             Tải xuống
           </Button>
           <Button
-            onClick={() => setDocumentPreview({...documentPreview, open: false})}
+            onClick={() =>
+              setDocumentPreview({ ...documentPreview, open: false })
+            }
             color="primary"
             variant="contained"
           >

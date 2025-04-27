@@ -116,7 +116,7 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
                 Chi Phí Nhiên Liệu
               </TableCell>
               <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
-                Lợi Nhuận
+                Chênh lệch
               </TableCell>
             </TableRow>
           </TableHead>

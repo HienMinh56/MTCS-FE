@@ -18,6 +18,7 @@ import { Trailer, TrailerStatus } from "../../types/trailer";
 import { ContainerSize } from "../../forms/trailer/trailerSchema";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface TrailerTableProps {
   searchTerm?: string;
@@ -169,8 +170,10 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
     }
   };
 
+  const { user } = useAuth();
   const handleRowClick = (id: string) => {
-    navigate(`/staff-menu/trailers/${id}`);
+    const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+    navigate(`${prefix}/trailers/${id}`);
   };
 
   const from = (page - 1) * rowsPerPage + 1;

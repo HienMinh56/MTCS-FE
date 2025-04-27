@@ -21,6 +21,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Collapse,
 } from "@mui/material";
 import {
   AccountCircle,
@@ -29,11 +30,15 @@ import {
   PersonOutlined,
   PriceChangeOutlined,
   BarChartOutlined,
+  ShoppingCart as ShoppingCartIcon,
   MenuOpen,
   ChevronLeft,
   Menu as MenuIcon,
   Settings as SettingsIcon,
   ManageAccounts as ManageAccountsIcon,
+  ExpandLess,
+  ExpandMore,
+  Inventory as InventoryIcon,
 } from "@mui/icons-material";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
@@ -59,6 +64,7 @@ import PriceTableComponent from "../components/Price/PriceTable";
 import UserManagement from "../components/User/UserManagement";
 import Drivers from "./Drivers";
 import Tractors from "./Tractors";
+import OrderTable from "../components/Order/OrderTable";
 import Trailers from "./Trailers";
 import StraightenIcon from "@mui/icons-material/Straighten";
 import DeliveryStatusPage from "./DeliveryStatusPage";
@@ -70,6 +76,7 @@ const AdminFinanceDashboard: React.FC = () => {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(true);
+  const [resourcesOpen, setResourcesOpen] = useState(false); // State for resource group
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const userId = localStorage.getItem("userId") || "admin-user";
@@ -110,11 +117,15 @@ const AdminFinanceDashboard: React.FC = () => {
     window.open("/tracking-order", "_blank");
   };
 
+  const handleResourcesToggle = () => {
+    setResourcesOpen(!resourcesOpen);
+  };
+
   const handleSideTabChange = (tab: string) => {
     navigate(`/admin/${tab}`);
   };
 
-  const sidebarItems = [
+  const mainSidebarItems = [
     {
       id: "finance",
       text: "Báo Cáo Hoạt Động",
@@ -130,11 +141,42 @@ const AdminFinanceDashboard: React.FC = () => {
       path: "/admin/user-management",
     },
     {
+      id: "pricing",
+      text: "Bảng Giá",
+      icon: <PriceChangeOutlined />,
+      selected: activeSideTab === "pricing",
+      path: "/admin/pricing",
+    },
+    {
+      id: "system-config",
+      text: "Cấu Hình Hệ Thống",
+      icon: <SettingsIcon />,
+      selected: activeSideTab === "system-config",
+      path: "/admin/system-config",
+    },
+    {
+      id: "delivery-status",
+      text: "Trạng thái giao hàng",
+      icon: <StraightenIcon />,
+      selected: activeSideTab === "delivery-status",
+      path: "/admin/delivery-status",
+    },
+  ];
+
+  const resourcesItems = [
+    {
       id: "customers",
       text: "Khách Hàng",
       icon: <PersonOutlined />,
       selected: activeSideTab === "customers",
       path: "/admin/customers",
+    },
+    {
+      id: "orders",
+      text: "Đơn hàng",
+      icon: <ShoppingCartIcon />,
+      selected: activeSideTab === "orders",
+      path: "/admin/orders",
     },
     {
       id: "drivers",
@@ -156,27 +198,6 @@ const AdminFinanceDashboard: React.FC = () => {
       icon: <DirectionsCarFilledIcon />,
       selected: activeSideTab === "trailers",
       path: "/admin/trailers",
-    },
-    {
-      id: "pricing",
-      text: "Bảng Giá",
-      icon: <PriceChangeOutlined />,
-      selected: activeSideTab === "pricing",
-      path: "/admin/pricing",
-    },
-    {
-      id: "system-config",
-      text: "Cấu Hình Hệ Thống",
-      icon: <SettingsIcon />,
-      selected: activeSideTab === "system-config",
-      path: "/admin/system-config",
-    },
-    {
-      id: "delivery-status",
-      text: "Trạng thái giao hàng",
-      icon: <StraightenIcon />, // You can replace this icon with a more suitable one
-      selected: activeSideTab === "delivery-status",
-      path: "/admin/delivery-status",
     },
   ];
 
@@ -354,19 +375,22 @@ const AdminFinanceDashboard: React.FC = () => {
         variant="permanent"
         open={drawerOpen}
         sx={{
-          width: drawerOpen ? 240 : 64,
+          width: drawerOpen ? 240 : 70,
           flexShrink: 0,
           [`& .MuiDrawer-paper`]: {
-            width: drawerOpen ? 240 : 64,
+            width: drawerOpen ? 240 : 70,
             boxSizing: "border-box",
             borderRight: "1px solid rgba(0, 0, 0, 0.08)",
             backgroundColor: "#f8f9fa",
             zIndex: 1,
-            transition: theme.transitions.create("width", {
+            transition: theme.transitions.create(["width", "margin"], {
               easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
+              duration: theme.transitions.duration.standard,
             }),
             overflowX: "hidden",
+            "&:hover": {
+              boxShadow: drawerOpen ? "none" : "4px 0px 10px rgba(0,0,0,0.05)",
+            },
           },
         }}
       >
@@ -385,39 +409,69 @@ const AdminFinanceDashboard: React.FC = () => {
               mr: drawerOpen ? 2 : 0,
               border: `2px solid ${theme.palette.mtcs.secondary}`,
               bgcolor: theme.palette.mtcs.primary,
+              transition: theme.transitions.create(["margin"], {
+                duration: theme.transitions.duration.standard,
+              }),
             }}
           />
           {drawerOpen && (
             <Typography
               variant="subtitle1"
-              sx={{ fontWeight: 500, color: theme.palette.mtcs.primary }}
+              sx={{
+                fontWeight: 500,
+                color: theme.palette.mtcs.primary,
+                opacity: drawerOpen ? 1 : 0,
+                transition: theme.transitions.create(["opacity", "transform"], {
+                  duration: theme.transitions.duration.standard,
+                }),
+                transform: drawerOpen ? "translateX(0)" : "translateX(-20px)",
+              }}
             >
               Quản trị viên
             </Typography>
           )}
         </Box>
         <Divider />
-        <List sx={{ mt: 2 }}>
-          {sidebarItems.map((item) => (
-            <ListItem key={item.id} disablePadding sx={{ display: "block" }}>
+        <List
+          sx={{
+            mt: 2,
+            px: 1,
+          }}
+        >
+          {mainSidebarItems.map((item) => (
+            <ListItem
+              key={item.id}
+              disablePadding
+              sx={{ display: "block", mb: 0.5 }}
+            >
               <ListItemButton
                 onClick={() => handleSideTabChange(item.id)}
                 sx={{
                   minHeight: 48,
                   px: 2.5,
-                  my: 0.5,
-                  mx: 1,
-                  borderRadius: 1,
+                  py: 1,
+                  borderRadius: 1.5,
+                  justifyContent: drawerOpen ? "initial" : "center",
                   background: item.selected
-                    ? "linear-gradient(135deg, rgba(1, 70, 199, 0.1), rgba(117, 237, 209, 0.2))"
-                    : "inherit",
+                    ? "linear-gradient(135deg, rgba(1, 70, 199, 0.13), rgba(117, 237, 209, 0.23))"
+                    : "transparent",
                   "&:hover": {
-                    background:
-                      "linear-gradient(135deg, rgba(1, 70, 199, 0.05), rgba(117, 237, 209, 0.1))",
+                    background: item.selected
+                      ? "linear-gradient(135deg, rgba(1, 70, 199, 0.15), rgba(117, 237, 209, 0.25))"
+                      : "linear-gradient(135deg, rgba(1, 70, 199, 0.07), rgba(117, 237, 209, 0.12))",
                   },
+                  transition: theme.transitions.create(
+                    ["background-color", "box-shadow"],
+                    {
+                      duration: 100,
+                    }
+                  ),
                   borderLeft: item.selected
                     ? `4px solid ${theme.palette.mtcs.primary}`
                     : "4px solid transparent",
+                  boxShadow: item.selected
+                    ? "0 2px 5px rgba(0,0,0,0.08)"
+                    : "none",
                 }}
               >
                 <ListItemIcon
@@ -428,6 +482,13 @@ const AdminFinanceDashboard: React.FC = () => {
                     color: item.selected
                       ? theme.palette.mtcs.primary
                       : "inherit",
+                    transition: theme.transitions.create(
+                      ["color", "transform"],
+                      {
+                        duration: 200,
+                      }
+                    ),
+                    transform: item.selected ? "scale(1.1)" : "scale(1)",
                   }}
                 >
                   {item.icon}
@@ -437,17 +498,212 @@ const AdminFinanceDashboard: React.FC = () => {
                     primary={item.text}
                     primaryTypographyProps={{
                       fontWeight: item.selected ? "medium" : "normal",
+                      fontSize: "0.94rem",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                     }}
                     sx={{
                       color: item.selected
                         ? theme.palette.mtcs.primary
                         : "inherit",
+                      opacity: drawerOpen ? 1 : 0,
+                      transition: theme.transitions.create(
+                        ["opacity", "transform"],
+                        {
+                          duration: 200,
+                        }
+                      ),
                     }}
                   />
                 )}
               </ListItemButton>
             </ListItem>
           ))}
+        </List>
+        <Divider sx={{ my: 1.5 }} />
+        <List sx={{ px: 1 }}>
+          {/* Resources group header */}
+          <ListItem disablePadding sx={{ display: "block", mb: 0.5 }}>
+            <ListItemButton
+              onClick={handleResourcesToggle}
+              sx={{
+                minHeight: 48,
+                px: 2.5,
+                py: 1,
+                borderRadius: 1.5,
+                justifyContent: drawerOpen ? "initial" : "center",
+                background: resourcesItems.some((item) => item.selected)
+                  ? "linear-gradient(135deg, rgba(76, 175, 80, 0.08), rgba(76, 175, 80, 0.15))"
+                  : "transparent",
+                "&:hover": {
+                  background:
+                    "linear-gradient(135deg, rgba(76, 175, 80, 0.08), rgba(76, 175, 80, 0.15))",
+                },
+                borderLeft: resourcesItems.some((item) => item.selected)
+                  ? `4px solid ${theme.palette.success.main}`
+                  : "4px solid transparent",
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: drawerOpen ? 2 : 0,
+                  justifyContent: "center",
+                  color: resourcesItems.some((item) => item.selected)
+                    ? theme.palette.success.main
+                    : "inherit",
+                }}
+              >
+                <InventoryIcon />
+              </ListItemIcon>
+              {drawerOpen && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexGrow: 1,
+                    opacity: drawerOpen ? 1 : 0,
+                    transition: theme.transitions.create(["opacity"], {
+                      duration: 200,
+                    }),
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontWeight: resourcesItems.some((item) => item.selected)
+                        ? 500
+                        : 400,
+                      color: resourcesItems.some((item) => item.selected)
+                        ? theme.palette.success.main
+                        : "inherit",
+                      fontSize: "0.94rem",
+                    }}
+                  >
+                    Quản lý tài nguyên
+                  </Typography>
+                  {resourcesOpen ? (
+                    <ExpandLess
+                      sx={{
+                        color: resourcesItems.some((item) => item.selected)
+                          ? theme.palette.success.main
+                          : "inherit",
+                        transition: theme.transitions.create(["transform"], {
+                          duration: 300,
+                        }),
+                      }}
+                    />
+                  ) : (
+                    <ExpandMore
+                      sx={{
+                        color: resourcesItems.some((item) => item.selected)
+                          ? theme.palette.success.main
+                          : "inherit",
+                        transition: theme.transitions.create(["transform"], {
+                          duration: 300,
+                        }),
+                      }}
+                    />
+                  )}
+                </Box>
+              )}
+            </ListItemButton>
+          </ListItem>
+
+          {/* Collapsible resources items */}
+          <Collapse
+            in={resourcesOpen}
+            timeout="auto"
+            sx={{
+              transition: theme.transitions.create(["height"], {
+                duration: 400,
+                easing: theme.transitions.easing.easeInOut,
+              }),
+            }}
+          >
+            {resourcesItems.map((item) => (
+              <ListItem
+                key={item.id}
+                disablePadding
+                sx={{ display: "block", mb: 0.5 }}
+              >
+                <ListItemButton
+                  onClick={() => handleSideTabChange(item.id)}
+                  sx={{
+                    minHeight: 44,
+                    px: 2.5,
+                    py: 0.75,
+                    ml: drawerOpen ? 1.5 : 0,
+                    mr: drawerOpen ? 1 : 0,
+                    borderRadius: 1.5,
+                    justifyContent: drawerOpen ? "initial" : "center",
+                    background: item.selected
+                      ? "linear-gradient(135deg, rgba(76, 175, 80, 0.12), rgba(76, 175, 80, 0.23))"
+                      : "transparent",
+                    "&:hover": {
+                      background: item.selected
+                        ? "linear-gradient(135deg, rgba(76, 175, 80, 0.14), rgba(76, 175, 80, 0.24))"
+                        : "linear-gradient(135deg, rgba(76, 175, 80, 0.07), rgba(76, 175, 80, 0.15))",
+                    },
+                    borderLeft: item.selected
+                      ? `3px solid ${theme.palette.success.main}`
+                      : "3px solid transparent",
+                    boxShadow: item.selected
+                      ? "0 1px 4px rgba(0,0,0,0.06)"
+                      : "none",
+                    transition: theme.transitions.create(
+                      ["background-color", "box-shadow"],
+                      {
+                        duration: 100,
+                      }
+                    ),
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      mr: drawerOpen ? 2 : 0,
+                      justifyContent: "center",
+                      color: item.selected
+                        ? theme.palette.success.main
+                        : "inherit",
+                      transition: theme.transitions.create(
+                        ["color", "transform"],
+                        {
+                          duration: 200,
+                        }
+                      ),
+                      transform: item.selected ? "scale(1.08)" : "scale(1)",
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  {drawerOpen && (
+                    <ListItemText
+                      primary={item.text}
+                      primaryTypographyProps={{
+                        fontWeight: item.selected ? "medium" : "normal",
+                        fontSize: "0.875rem",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      sx={{
+                        color: item.selected
+                          ? theme.palette.success.main
+                          : "inherit",
+                        opacity: drawerOpen ? 1 : 0,
+                        transition: theme.transitions.create(["opacity"], {
+                          duration: 200,
+                        }),
+                      }}
+                    />
+                  )}
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </Collapse>
         </List>
       </Drawer>
 
@@ -469,6 +725,7 @@ const AdminFinanceDashboard: React.FC = () => {
               <Route path="/finance" element={<FinanceDashboard />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/drivers" element={<Drivers />} />
+              <Route path="/orders" element={<OrderTable />} />
               <Route path="/tractors" element={<Tractors />} />
               <Route path="/trailers" element={<Trailers />} />
               <Route path="/pricing" element={<PriceTableComponent />} />

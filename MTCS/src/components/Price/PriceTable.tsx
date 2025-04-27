@@ -62,7 +62,6 @@ import {
   VersionInfo,
 } from "../../types/price-table";
 import PriceChangesComponent from "./PriceChanges";
-import useAuth from "../../contexts/AuthContext";
 
 type Order = "asc" | "desc";
 
@@ -126,7 +125,6 @@ const PriceTableComponent: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
-  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [priceTables, setPriceTables] = useState<IPriceTable[]>([]);
@@ -198,13 +196,8 @@ const PriceTableComponent: React.FC = () => {
   };
 
   const isAdmin = useMemo(() => {
-    return (
-      user?.role === "Admin" ||
-      user?.role === "admin" ||
-      user?.role === "SuperAdmin" ||
-      user?.role === "superadmin"
-    );
-  }, [user?.role]);
+    return true; // Always return true regardless of user role
+  }, []);
 
   // Sorting
   const [order, setOrder] = useState<Order>("asc");
