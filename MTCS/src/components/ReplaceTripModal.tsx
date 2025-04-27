@@ -9,12 +9,7 @@ import {
   CircularProgress,
   Typography,
   Alert,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Box,
-  FormHelperText,
   Autocomplete,
   TextField,
 } from "@mui/material";
@@ -24,8 +19,6 @@ import { getDriverList } from "../services/DriverApi";
 import { getTractors } from "../services/tractorApi";
 import { getTrailers } from "../services/trailerApi";
 import { getOrderDetails } from "../services/orderApi";
-import { ContainerType } from "../types/order";
-
 interface ReplaceTripModalProps {
   open: boolean;
   onClose: () => void;

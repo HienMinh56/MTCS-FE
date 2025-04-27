@@ -37,7 +37,6 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
-import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ImageIcon from "@mui/icons-material/Image";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import CloseIcon from "@mui/icons-material/Close";
@@ -219,12 +218,30 @@ const IncidentDetailDialog = ({
                       <Typography 
                         variant="body1" 
                         component="span"
-                        sx={{ 
-                          cursor: 'pointer', 
-                          color: 'primary.main',
-                          '&:hover': { 
-                            textDecoration: 'underline' 
-                          } 
+                        sx={{
+                          color: "primary.main",
+                          cursor: "pointer",
+                          fontWeight: 500,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          position: "relative",
+                          transition: "all 0.3s ease",
+                          "&:after": {
+                            content: '""',
+                            position: "absolute",
+                            width: "0%",
+                            height: "2px",
+                            bottom: 0,
+                            left: 0,
+                            backgroundColor: "primary.dark",
+                            transition: "width 0.3s ease",
+                          },
+                          "&:hover": {
+                            color: "primary.dark",
+                            "&:after": {
+                              width: "100%",
+                            },
+                          },
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -993,7 +1010,7 @@ const IncidentManagement = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell align="center">Mã sự cố</TableCell>
-                        <TableCell align="center">Mã vận chuyển</TableCell>
+                        <TableCell align="center">Mã vận đơn</TableCell>
                         <TableCell align="center">Loại sự cố</TableCell>
                         <TableCell align="center">Loại</TableCell>
                         <TableCell align="center">

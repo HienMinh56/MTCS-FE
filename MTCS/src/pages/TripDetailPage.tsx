@@ -552,9 +552,26 @@ const TripDetailPage: React.FC = () => {
                     sx={{
                       color: "primary.main",
                       cursor: "pointer",
-                      textDecoration: "underline",
+                      fontWeight: 500,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      position: "relative",
+                      transition: "all 0.3s ease",
+                      "&:after": {
+                        content: '""',
+                        position: "absolute",
+                        width: "0%",
+                        height: "2px",
+                        bottom: 0,
+                        left: 0,
+                        backgroundColor: "primary.dark",
+                        transition: "width 0.3s ease",
+                      },
                       "&:hover": {
                         color: "primary.dark",
+                        "&:after": {
+                          width: "100%",
+                        },
                       },
                     }}
                     onClick={() => handleOrderClick(tripData.orderId)}
@@ -1096,13 +1113,33 @@ const TripDetailPage: React.FC = () => {
                         variant="body2"
                         color="primary"
                         sx={{
+                          color: "primary.main",
                           cursor: "pointer",
-                          textDecoration: "underline",
-                          "&:hover": { color: "primary.dark" },
+                          fontWeight: 500,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          position: "relative",
+                          transition: "all 0.3s ease",
+                          "&:after": {
+                            content: '""',
+                            position: "absolute",
+                            width: "0%",
+                            height: "2px",
+                            bottom: 0,
+                            left: 0,
+                            backgroundColor: "primary.dark",
+                            transition: "width 0.3s ease",
+                          },
+                          "&:hover": {
+                            color: "primary.dark",
+                            "&:after": {
+                              width: "100%",
+                            },
+                          },
                         }}
                         onClick={() => handleDriverClick(tripData.driverId)}
                       >
-                        Mã tài xế: {tripData.driverId}
+                        {tripData.driver.fullName}
                       </Typography>
                       {tripData.driver?.phone && (
                         <Typography
@@ -1168,11 +1205,28 @@ const TripDetailPage: React.FC = () => {
                           <Typography
                             variant="body1"
                             sx={{
-                              cursor: "pointer",
                               color: "primary.main",
+                              cursor: "pointer",
+                              fontWeight: 500,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              position: "relative",
+                              transition: "all 0.3s ease",
+                              "&:after": {
+                                content: '""',
+                                position: "absolute",
+                                width: "0%",
+                                height: "2px",
+                                bottom: 0,
+                                left: 0,
+                                backgroundColor: "primary.dark",
+                                transition: "width 0.3s ease",
+                              },
                               "&:hover": {
-                                textDecoration: "underline",
                                 color: "primary.dark",
+                                "&:after": {
+                                  width: "100%",
+                                },
                               },
                             }}
                             onClick={() =>
@@ -1241,11 +1295,28 @@ const TripDetailPage: React.FC = () => {
                           <Typography
                             variant="body1"
                             sx={{
-                              cursor: "pointer",
                               color: "primary.main",
+                              cursor: "pointer",
+                              fontWeight: 500,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              position: "relative",
+                              transition: "all 0.3s ease",
+                              "&:after": {
+                                content: '""',
+                                position: "absolute",
+                                width: "0%",
+                                height: "2px",
+                                bottom: 0,
+                                left: 0,
+                                backgroundColor: "primary.dark",
+                                transition: "width 0.3s ease",
+                              },
                               "&:hover": {
-                                textDecoration: "underline",
                                 color: "primary.dark",
+                                "&:after": {
+                                  width: "100%",
+                                },
                               },
                             }}
                             onClick={() =>

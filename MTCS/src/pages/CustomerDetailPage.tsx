@@ -37,29 +37,30 @@ import {
   MenuItem,
   FormHelperText,
   List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   Checkbox,
   TablePagination,
+  Fade,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Business as BusinessIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
-  Receipt as ReceiptIcon,
   Assignment as AssignmentIcon,
   LocalShipping as LocalShippingIcon,
-  CalendarToday as CalendarTodayIcon,
   Visibility as VisibilityIcon,
   Add as AddIcon,
   Edit as EditOutlinedIcon,
   AttachFile as AttachFileIcon,
   Delete as DeleteOutlinedIcon,
   Download as DownloadIcon,
+  Image as ImageIcon,
+  Close as CloseIcon,
+  OpenInNew as OpenInNewIcon,
+  Description as DescriptionIcon,
+  Article as ArticleIcon,
+  PictureAsPdf as PictureAsPdfIcon,
 } from "@mui/icons-material";
 import {
   getCustomerById,
@@ -69,9 +70,8 @@ import {
 import { OrderStatus } from "../types/order";
 import { updateContract } from "../services/contractApi";
 import { CustomerDetail } from "../types/customer";
-import { ContractFile } from "../types/contract";
 import AddContractFileModal from "../components/contract/AddContractFileModal";
-import { useAuth } from "../contexts/AuthContext"; // Thêm import useAuth
+import { useAuth } from "../contexts/AuthContext"; // Thêm import useAuth hook
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -99,7 +99,6 @@ const CustomerDetailPage = () => {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth(); // Lấy thông tin user từ useAuth hook
-  const isAdmin = user?.role === "Admin"; // Kiểm tra xem người dùng có role Admin không
 
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -172,6 +171,30 @@ const CustomerDetailPage = () => {
   // Add state for contracts pagination
   const [contractsPage, setContractsPage] = useState(0);
   const [contractsRowsPerPage, setContractsRowsPerPage] = useState(5);
+
+  // State để hiển thị image preview
+  const [imagePreview, setImagePreview] = useState<{
+    open: boolean;
+    src: string;
+    title: string;
+  }>({
+    open: false,
+    src: "",
+    title: "",
+  });
+  
+  // State để hiển thị document preview
+  const [documentPreview, setDocumentPreview] = useState<{
+    open: boolean;
+    src: string;
+    title: string;
+    fileType: string;
+  }>({
+    open: false,
+    src: "",
+    title: "",
+    fileType: ""
+  });
 
   const getStatusDisplay = (status: OrderStatus) => {
     switch (status) {
@@ -474,7 +497,7 @@ const CustomerDetailPage = () => {
     navigate(`/staff-menu/orders/${orderId}`);
   };
 
-  // Replace the contract handler with a function to download file from Firebase URL
+  // Hàm xem file hợp đồng với popup preview
   const handleViewContractFile = (e: React.MouseEvent, contract: any) => {
     e.stopPropagation(); // Prevent event bubbling
 
@@ -487,26 +510,12 @@ const CustomerDetailPage = () => {
     ) {
       // Get the file URL from the first file in the contract
       const fileUrl = contract.contractFiles[0].fileUrl;
-      const fileName =
-        contract.contractFiles[0].fileName ||
-        `Contract_${contract.contractId}.pdf`;
+      const fileName = contract.contractFiles[0].fileName || `Contract_${contract.contractId}`;
+      const fileType = contract.contractFiles[0].fileType || null;
 
       if (fileUrl) {
-        // Create a temporary anchor element to trigger the download
-        const link = document.createElement("a");
-        link.href = fileUrl;
-        link.target = "_blank"; // Open in a new tab first
-        link.download = fileName; // Suggest a filename for the download
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // Show success message
-        setSnackbar({
-          open: true,
-          message: "Đang tải file hợp đồng...",
-          severity: "info",
-        });
+        // Sử dụng handleFileClick để mở file phù hợp với loại file
+        handleFileClick(fileUrl, fileName, fileType);
       } else {
         // Show snackbar if no file URL is available
         setSnackbar({
@@ -519,12 +528,13 @@ const CustomerDetailPage = () => {
       // Show snackbar if no contract files are available
       setSnackbar({
         open: true,
-        message: "Không có file hợp đồng để tải",
+        message: "Không có file hợp đồng để xem",
         severity: "info",
       });
     }
   };
 
+  // Replace the contract handler with a function to download file from Firebase URL
   const handleEditContractClick = (contract: any) => {
     setSelectedContract(contract);
 
@@ -839,7 +849,7 @@ const CustomerDetailPage = () => {
                               color={hasFiles ? "primary" : "default"}
                               sx={{ mr: 1 }}
                             >
-                              <DownloadIcon fontSize="small" />
+                              <VisibilityIcon fontSize="small" />
                             </IconButton>
                             {user?.role === "Staff" && (
                               <IconButton
@@ -991,6 +1001,58 @@ const CustomerDetailPage = () => {
       )}
     </TabPanel>
   );
+
+  // Hàm mở image preview
+  const openImagePreview = (src: string, title: string = "Image Preview") => {
+    setImagePreview({
+      open: true,
+      src,
+      title,
+    });
+  };
+
+  // Hàm đóng image preview
+  const closeImagePreview = () => {
+    setImagePreview({
+      ...imagePreview,
+      open: false,
+    });
+  };
+
+  // Hàm phát hiện loại file và hiển thị phù hợp
+  const handleFileClick = (fileUrl: string, fileName: string, fileType: string | null) => {
+    // Kiểm tra loại file dựa trên phần mở rộng
+    const fileExtension = fileUrl.split('.').pop()?.toLowerCase();
+    
+    // Phát hiện loại file
+    const isPdf = fileExtension === 'pdf' || fileType === 'PDF Document' || (fileType && fileType.toLowerCase().includes('pdf'));
+    const isDocx = fileExtension === 'doc' || fileExtension === 'docx' || fileType === 'Word Document' || (fileType && fileType.toLowerCase().includes('word'));
+    const isXlsx = fileExtension === 'xls' || fileExtension === 'xlsx' || fileType === 'Excel Spreadsheet' || (fileType && fileType.toLowerCase().includes('excel'));
+    const isPptx = fileExtension === 'ppt' || fileExtension === 'pptx' || fileType === 'PowerPoint Presentation' || (fileType && fileType.toLowerCase().includes('powerpoint'));
+    const isOfficeFile = isDocx || isXlsx || isPptx;
+    
+    // Xác định nếu là ảnh
+    const isImage = fileType 
+      ? fileType === "Image" || fileType.toLowerCase().includes("image/")
+      : /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(fileUrl);
+
+    // Hiển thị file theo loại phù hợp
+    if (isImage) {
+      // Nếu là ảnh, hiển thị trong image preview
+      openImagePreview(fileUrl, fileName);
+    } else if (isPdf) {
+      // Nếu là PDF, hiển thị trong Document Preview
+      setDocumentPreview({
+        open: true,
+        src: fileUrl,
+        title: fileName,
+        fileType: 'pdf'
+      });
+    } else {
+      // Các loại file khác (bao gồm Office files), mở trong tab mới với Office Online Viewer
+      window.open(`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`, '_blank');
+    }
+  };
 
   if (loading) {
     return (
@@ -1184,14 +1246,6 @@ const CustomerDetailPage = () => {
               </Box>
 
               <Divider sx={{ my: 2 }} />
-
-              <Typography
-                variant="subtitle2"
-                color="text.secondary"
-                gutterBottom
-              >
-                Thông tin hồ sơ
-              </Typography>
 
               <Box
                 sx={{
@@ -1959,6 +2013,120 @@ const CustomerDetailPage = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Image Preview Dialog */}
+      <Dialog
+        open={imagePreview.open}
+        onClose={closeImagePreview}
+        maxWidth="lg"
+        fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
+          <ImageIcon sx={{ mr: 1 }} color="primary" />
+          {imagePreview.title}
+          <IconButton
+            onClick={closeImagePreview}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}>
+          <img
+            src={imagePreview.src}
+            alt={imagePreview.title}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+              padding: 16,
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            component="a"
+            href={imagePreview.src}
+            target="_blank"
+            rel="noopener noreferrer"
+            startIcon={<OpenInNewIcon />}
+            variant="outlined"
+          >
+            Mở trong cửa sổ mới
+          </Button>
+          <Button
+            onClick={closeImagePreview}
+            color="primary"
+            variant="contained"
+          >
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Document Preview Dialog */}
+      <Dialog
+        open={documentPreview.open}
+        onClose={() => setDocumentPreview({...documentPreview, open: false})}
+        maxWidth="lg"
+        fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{ sx: { borderRadius: 2, height: '80vh' } }}
+      >
+        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
+          {documentPreview.fileType === 'pdf' && <PictureAsPdfIcon sx={{ mr: 1 }} color="error" />}
+          {documentPreview.fileType === 'docx' && <DescriptionIcon sx={{ mr: 1 }} color="primary" />}
+          {documentPreview.fileType === 'xlsx' && <ArticleIcon sx={{ mr: 1 }} color="success" />}
+          {documentPreview.fileType === 'pptx' && <ArticleIcon sx={{ mr: 1 }} color="warning" />}
+          {documentPreview.title}
+          <IconButton
+            onClick={() => setDocumentPreview({...documentPreview, open: false})}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5", height: 'calc(100% - 64px)' }}>
+          <iframe 
+            src={documentPreview.fileType === 'pdf' 
+              ? documentPreview.src 
+              : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentPreview.src)}`}
+            width="100%" 
+            height="100%" 
+            frameBorder="0"
+            title={documentPreview.title}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            component="a"
+            href={documentPreview.src}
+            target="_blank"
+            rel="noopener noreferrer"
+            startIcon={<OpenInNewIcon />}
+            variant="outlined"
+          >
+            Tải xuống
+          </Button>
+          <Button
+            onClick={() => setDocumentPreview({...documentPreview, open: false})}
+            color="primary"
+            variant="contained"
+          >
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
