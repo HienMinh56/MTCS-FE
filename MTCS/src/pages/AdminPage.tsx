@@ -720,7 +720,13 @@ const AdminFinanceDashboard: React.FC = () => {
         }}
       >
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="vi">
-          <Box sx={{ px: { xs: 2, sm: 3 }, py: 3, maxWidth: "100%" }}>
+          <Box
+            sx={{
+              px: { xs: 2, sm: 3 },
+              py: { xs: 1, sm: 2 }, // Reduced top padding
+              maxWidth: "100%",
+            }}
+          >
             <Routes>
               <Route path="/finance" element={<FinanceDashboard />} />
               <Route path="/customers" element={<Customers />} />
@@ -730,7 +736,14 @@ const AdminFinanceDashboard: React.FC = () => {
               <Route path="/trailers" element={<Trailers />} />
               <Route path="/pricing" element={<PriceTableComponent />} />
               <Route path="/system-config" element={<SystemConfiguration />} />
-              <Route path="/user-management" element={<UserManagement />} />
+              <Route
+                path="/user-management"
+                element={
+                  <Box sx={{ pt: 0 }}>
+                    <UserManagement />
+                  </Box>
+                }
+              />
               <Route path="/delivery-status" element={<DeliveryStatusPage />} />
               <Route
                 path="/"

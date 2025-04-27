@@ -111,6 +111,13 @@ const UserEditModal: React.FC<UserEditModalProps> = ({
     return phoneRegex.test(phone);
   };
 
+  // Add full name validation - no special characters
+  const validateFullName = (name: string) => {
+    // Check if the name contains any common special characters
+    const specialCharsRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
+    return !specialCharsRegex.test(name);
+  };
+
   const validateForm = () => {
     const errors: {
       fullName?: string;
@@ -121,6 +128,10 @@ const UserEditModal: React.FC<UserEditModalProps> = ({
 
     if (formData.fullName && formData.fullName.length > 25) {
       errors.fullName = "Họ và tên không được quá 25 ký tự";
+    }
+
+    if (formData.fullName && !validateFullName(formData.fullName)) {
+      errors.fullName = "Họ và tên không được chứa ký tự đặc biệt";
     }
 
     if (formData.email && !validateEmail(formData.email)) {
