@@ -394,7 +394,8 @@ const TripDetailPage: React.FC = () => {
 
   // Navigate back
   const handleBack = () => {
-    navigate("/staff-menu/orders"); // Adjust this path if needed
+    const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+    navigate(`${prefix}/orders`);
   };
 
   // Navigate to driver details
@@ -407,7 +408,8 @@ const TripDetailPage: React.FC = () => {
   // Navigate to order details
   const handleOrderClick = (orderId: string | null) => {
     if (orderId) {
-      navigate(`/staff-menu/orders/${orderId}`);
+      const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+      navigate(`${prefix}/orders/${orderId}`);
     }
   };
 
@@ -1229,11 +1231,15 @@ const TripDetailPage: React.FC = () => {
                                 },
                               },
                             }}
-                            onClick={() =>
+                            onClick={() => {
+                              const prefix =
+                                user?.role === "Admin"
+                                  ? "/admin"
+                                  : "/staff-menu";
                               navigate(
-                                `/staff-menu/tractors/${tripData.tractorId}`
-                              )
-                            }
+                                `${prefix}/tractors/${tripData.tractorId}`
+                              );
+                            }}
                           >
                             {tripData.tractorId}
                           </Typography>
@@ -1321,7 +1327,11 @@ const TripDetailPage: React.FC = () => {
                             }}
                             onClick={() =>
                               navigate(
-                                `/staff-menu/trailers/${tripData.trailerId}`
+                                `${
+                                  user?.role === "Admin"
+                                    ? "/admin"
+                                    : "/staff-menu"
+                                }/trailers/${tripData.trailerId}`
                               )
                             }
                           >

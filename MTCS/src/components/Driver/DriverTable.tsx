@@ -23,6 +23,7 @@ import {
   PaginatedData,
   getDriverStatusText,
 } from "../../types/driver";
+import { useAuth } from "../../contexts/AuthContext";
 
 // Component props
 interface DriverTableProps {
@@ -58,6 +59,9 @@ const DriverTable: React.FC<DriverTableProps> = ({
   const shouldFetchDataRef = useRef(true);
   const prevStatusFilterRef = useRef(statusFilter);
   const prevSearchTermRef = useRef(searchTerm);
+  const { user } = useAuth();
+
+  const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
 
   // Load drivers data
   const loadDrivers = useCallback(async () => {
@@ -200,7 +204,7 @@ const DriverTable: React.FC<DriverTableProps> = ({
 
   // Navigation
   const handleDriverClick = (driverId: string) => {
-    navigate(`/staff-menu/drivers/${driverId}`);
+    navigate(`${prefix}/drivers/${driverId}`);
   };
 
   // Render status chip based on driver status

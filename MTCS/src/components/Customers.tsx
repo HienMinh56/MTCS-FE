@@ -206,7 +206,9 @@ const Customers = () => {
   };
 
   const handleViewCustomerDetail = (customerId: string) => {
-    navigate(`/staff-menu/customers/${customerId}`);
+    const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+
+    navigate(`${prefix}/customers/${customerId}`);
   };
 
   const handleOpenCreateDialog = () => {

@@ -514,7 +514,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                 <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                   <CheckCircle fontSize="small" color="success" />
                   <Typography variant="body1" fontWeight="medium">
-                    Đã thanh toán
+                    Đã thu
                   </Typography>
                 </Stack>
                 <Typography variant="h5" fontWeight="bold">
@@ -596,7 +596,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                 <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                   <AccessTime fontSize="small" color="warning" />
                   <Typography variant="body1" fontWeight="medium">
-                    Chưa thanh toán
+                    Chưa thu
                   </Typography>
                 </Stack>
                 <Typography variant="h5" fontWeight="bold">

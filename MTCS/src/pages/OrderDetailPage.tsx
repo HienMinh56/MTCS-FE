@@ -192,7 +192,8 @@ const OrderDetailPage: React.FC = () => {
     src: "",
     title: "",
   });
-  
+  const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+
   // State để hiển thị document preview
   const [documentPreview, setDocumentPreview] = useState<{
     open: boolean;
@@ -203,7 +204,7 @@ const OrderDetailPage: React.FC = () => {
     open: false,
     src: "",
     title: "",
-    fileType: ""
+    fileType: "",
   });
 
   // Close loading snackbar
@@ -394,8 +395,10 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+  // Navigate back
   const handleBack = () => {
-    navigate("/staff-menu/orders");
+    const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+    navigate(`${prefix}/orders`);
   };
 
   const handleOpenAddContractModal = () => {
@@ -1224,19 +1227,38 @@ const OrderDetailPage: React.FC = () => {
   };
 
   // Hàm phát hiện loại file và hiển thị phù hợp
-  const handleFileClick = (fileUrl: string, fileName: string, fileType: string | null) => {
+  const handleFileClick = (
+    fileUrl: string,
+    fileName: string,
+    fileType: string | null
+  ) => {
     // Kiểm tra loại file dựa trên phần mở rộng
-    const fileExtension = fileUrl.split('.').pop()?.toLowerCase();
-    
+    const fileExtension = fileUrl.split(".").pop()?.toLowerCase();
+
     // Phát hiện loại file
-    const isPdf = fileExtension === 'pdf' || fileType === 'PDF Document' || (fileType && fileType.toLowerCase().includes('pdf'));
-    const isDocx = fileExtension === 'doc' || fileExtension === 'docx' || fileType === 'Word Document' || (fileType && fileType.toLowerCase().includes('word'));
-    const isXlsx = fileExtension === 'xls' || fileExtension === 'xlsx' || fileType === 'Excel Spreadsheet' || (fileType && fileType.toLowerCase().includes('excel'));
-    const isPptx = fileExtension === 'ppt' || fileExtension === 'pptx' || fileType === 'PowerPoint Presentation' || (fileType && fileType.toLowerCase().includes('powerpoint'));
+    const isPdf =
+      fileExtension === "pdf" ||
+      fileType === "PDF Document" ||
+      (fileType && fileType.toLowerCase().includes("pdf"));
+    const isDocx =
+      fileExtension === "doc" ||
+      fileExtension === "docx" ||
+      fileType === "Word Document" ||
+      (fileType && fileType.toLowerCase().includes("word"));
+    const isXlsx =
+      fileExtension === "xls" ||
+      fileExtension === "xlsx" ||
+      fileType === "Excel Spreadsheet" ||
+      (fileType && fileType.toLowerCase().includes("excel"));
+    const isPptx =
+      fileExtension === "ppt" ||
+      fileExtension === "pptx" ||
+      fileType === "PowerPoint Presentation" ||
+      (fileType && fileType.toLowerCase().includes("powerpoint"));
     const isOfficeFile = isDocx || isXlsx || isPptx;
-    
+
     // Xác định nếu là ảnh
-    const isImage = fileType 
+    const isImage = fileType
       ? fileType === "Image" || fileType.toLowerCase().includes("image/")
       : /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(fileUrl);
 
@@ -1250,11 +1272,14 @@ const OrderDetailPage: React.FC = () => {
         open: true,
         src: fileUrl,
         title: fileName,
-        fileType: 'pdf'
+        fileType: "pdf",
       });
     } else {
       // Các loại file khác (bao gồm Office files), mở trong tab mới để tải xuống
-      window.open(`https://view.officeapps.live.com/op/embed.aspx?src=${fileUrl}`, '_blank');
+      window.open(
+        `https://view.officeapps.live.com/op/embed.aspx?src=${fileUrl}`,
+        "_blank"
+      );
     }
   };
 
@@ -1397,16 +1422,19 @@ const OrderDetailPage: React.FC = () => {
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={7}>
-          <Paper elevation={2} sx={{ 
-            p: 3, 
-            mb: 3,
-            borderRadius: 2,
-            transition: "all 0.3s ease-in-out",
-            "&:hover": {
-              boxShadow: 6,
-              transform: "translateY(-2px)"
-            }
-          }}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 3,
+              mb: 3,
+              borderRadius: 2,
+              transition: "all 0.3s ease-in-out",
+              "&:hover": {
+                boxShadow: 6,
+                transform: "translateY(-2px)",
+              },
+            }}
+          >
             <Box
               sx={{
                 p: 1.5,
@@ -1514,9 +1542,7 @@ const OrderDetailPage: React.FC = () => {
                     }}
                     onClick={() =>
                       orderDetails.customerId &&
-                      navigate(
-                        `/staff-menu/customers/${orderDetails.customerId}`
-                      )
+                      navigate(`${prefix}/customers/${orderDetails.customerId}`)
                     }
                   >
                     {orderDetails.companyName || "N/A"}
@@ -1885,39 +1911,49 @@ const OrderDetailPage: React.FC = () => {
                                   {fileName || `Hình ảnh ${index + 1}`}
                                 </Typography>
                               </>
-                            ) : fileType === 'PDF Document' || 
-                               (fileType && fileType.toLowerCase().includes('pdf')) || 
-                               fileUrl.toLowerCase().endsWith('.pdf') ? (
+                            ) : fileType === "PDF Document" ||
+                              (fileType &&
+                                fileType.toLowerCase().includes("pdf")) ||
+                              fileUrl.toLowerCase().endsWith(".pdf") ? (
                               <>
                                 <Box
                                   sx={{
                                     width: "100%",
                                     height: 100,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    background: '#f5f5f5',
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    background: "#f5f5f5",
                                     cursor: "pointer",
                                     borderRadius: 1,
-                                    border: '1px solid #e0e0e0',
-                                    position: 'relative',
-                                    overflow: 'hidden'
+                                    border: "1px solid #e0e0e0",
+                                    position: "relative",
+                                    overflow: "hidden",
                                   }}
-                                  onClick={() => handleFileClick(fileUrl, fileName || `file-${index + 1}`, fileType)}
+                                  onClick={() =>
+                                    handleFileClick(
+                                      fileUrl,
+                                      fileName || `file-${index + 1}`,
+                                      fileType
+                                    )
+                                  }
                                 >
-                                  <PictureAsPdfIcon sx={{ fontSize: 40, color: '#f44336' }} />
+                                  <PictureAsPdfIcon
+                                    sx={{ fontSize: 40, color: "#f44336" }}
+                                  />
                                   <Typography variant="caption" sx={{ mt: 1 }}>
                                     Xem PDF
                                   </Typography>
                                   <Box
                                     sx={{
-                                      position: 'absolute',
+                                      position: "absolute",
                                       bottom: 0,
                                       left: 0,
-                                      width: '100%',
-                                      height: '4px',
-                                      background: 'linear-gradient(90deg, #f44336 0%, #ff9800 100%)'
+                                      width: "100%",
+                                      height: "4px",
+                                      background:
+                                        "linear-gradient(90deg, #f44336 0%, #ff9800 100%)",
                                     }}
                                   />
                                 </Box>
@@ -1938,35 +1974,61 @@ const OrderDetailPage: React.FC = () => {
                               >
                                 <Box component="span" mr={0.5}>
                                   {/* Icon based on file type */}
-                                  {fileType === 'Word Document' || 
-                                   (fileType && fileType.toLowerCase().includes('word')) || 
-                                   fileUrl.toLowerCase().endsWith('.doc') || 
-                                   fileUrl.toLowerCase().endsWith('.docx') ? 
-                                    <DescriptionIcon fontSize="small" color="primary" /> : 
-                                   fileType === 'Excel Spreadsheet' || 
-                                   (fileType && fileType.toLowerCase().includes('excel')) || 
-                                   fileUrl.toLowerCase().endsWith('.xls') || 
-                                   fileUrl.toLowerCase().endsWith('.xlsx') ?
-                                    <ArticleIcon fontSize="small" color="success" /> :
-                                   fileType === 'PowerPoint Presentation' || 
-                                   (fileType && fileType.toLowerCase().includes('powerpoint')) || 
-                                   fileUrl.toLowerCase().endsWith('.ppt') || 
-                                   fileUrl.toLowerCase().endsWith('.pptx') ?
-                                    <ArticleIcon fontSize="small" color="warning" /> :
-                                    <AttachFileIcon fontSize="small" color="action" />
-                                  }
+                                  {fileType === "Word Document" ||
+                                  (fileType &&
+                                    fileType.toLowerCase().includes("word")) ||
+                                  fileUrl.toLowerCase().endsWith(".doc") ||
+                                  fileUrl.toLowerCase().endsWith(".docx") ? (
+                                    <DescriptionIcon
+                                      fontSize="small"
+                                      color="primary"
+                                    />
+                                  ) : fileType === "Excel Spreadsheet" ||
+                                    (fileType &&
+                                      fileType
+                                        .toLowerCase()
+                                        .includes("excel")) ||
+                                    fileUrl.toLowerCase().endsWith(".xls") ||
+                                    fileUrl.toLowerCase().endsWith(".xlsx") ? (
+                                    <ArticleIcon
+                                      fontSize="small"
+                                      color="success"
+                                    />
+                                  ) : fileType === "PowerPoint Presentation" ||
+                                    (fileType &&
+                                      fileType
+                                        .toLowerCase()
+                                        .includes("powerpoint")) ||
+                                    fileUrl.toLowerCase().endsWith(".ppt") ||
+                                    fileUrl.toLowerCase().endsWith(".pptx") ? (
+                                    <ArticleIcon
+                                      fontSize="small"
+                                      color="warning"
+                                    />
+                                  ) : (
+                                    <AttachFileIcon
+                                      fontSize="small"
+                                      color="action"
+                                    />
+                                  )}
                                 </Box>
-                                <Box 
+                                <Box
                                   component="span"
-                                  sx={{ 
+                                  sx={{
                                     cursor: "pointer",
                                     color: "primary.main",
-                                    "&:hover": { 
+                                    "&:hover": {
                                       textDecoration: "underline",
-                                      color: "primary.dark"
-                                    }
+                                      color: "primary.dark",
+                                    },
                                   }}
-                                  onClick={() => handleFileClick(fileUrl, fileName || `file-${index + 1}`, fileType)}
+                                  onClick={() =>
+                                    handleFileClick(
+                                      fileUrl,
+                                      fileName || `file-${index + 1}`,
+                                      fileType
+                                    )
+                                  }
                                 >
                                   {fileName || `File ${index + 1}`}
                                 </Box>
@@ -2044,27 +2106,35 @@ const OrderDetailPage: React.FC = () => {
               {contractFiles && contractFiles.length > 0 ? (
                 <Grid container spacing={2}>
                   {contractFiles.map((file, index) => {
-                    const isPdf = file.fileType === "PDF Document" || 
-                               (file.fileType && file.fileType.toLowerCase().includes('pdf')) || 
-                               file.fileUrl.toLowerCase().endsWith('.pdf');
-                    
-                    const isDocx = file.fileType === 'Word Document' || 
-                               (file.fileType && file.fileType.toLowerCase().includes('word')) || 
-                               file.fileUrl.toLowerCase().endsWith('.doc') || 
-                               file.fileUrl.toLowerCase().endsWith('.docx');
-                    
-                    const isXlsx = file.fileType === 'Excel Spreadsheet' || 
-                               (file.fileType && file.fileType.toLowerCase().includes('excel')) || 
-                               file.fileUrl.toLowerCase().endsWith('.xls') || 
-                               file.fileUrl.toLowerCase().endsWith('.xlsx');
-                    
-                    const isPptx = file.fileType === 'PowerPoint Presentation' || 
-                               (file.fileType && file.fileType.toLowerCase().includes('powerpoint')) || 
-                               file.fileUrl.toLowerCase().endsWith('.ppt') || 
-                               file.fileUrl.toLowerCase().endsWith('.pptx');
-                    
+                    const isPdf =
+                      file.fileType === "PDF Document" ||
+                      (file.fileType &&
+                        file.fileType.toLowerCase().includes("pdf")) ||
+                      file.fileUrl.toLowerCase().endsWith(".pdf");
+
+                    const isDocx =
+                      file.fileType === "Word Document" ||
+                      (file.fileType &&
+                        file.fileType.toLowerCase().includes("word")) ||
+                      file.fileUrl.toLowerCase().endsWith(".doc") ||
+                      file.fileUrl.toLowerCase().endsWith(".docx");
+
+                    const isXlsx =
+                      file.fileType === "Excel Spreadsheet" ||
+                      (file.fileType &&
+                        file.fileType.toLowerCase().includes("excel")) ||
+                      file.fileUrl.toLowerCase().endsWith(".xls") ||
+                      file.fileUrl.toLowerCase().endsWith(".xlsx");
+
+                    const isPptx =
+                      file.fileType === "PowerPoint Presentation" ||
+                      (file.fileType &&
+                        file.fileType.toLowerCase().includes("powerpoint")) ||
+                      file.fileUrl.toLowerCase().endsWith(".ppt") ||
+                      file.fileUrl.toLowerCase().endsWith(".pptx");
+
                     const isOfficeFile = isDocx || isXlsx || isPptx;
-                    
+
                     const isImage =
                       file.fileType === "Image" ||
                       (file.fileType &&
@@ -2123,31 +2193,41 @@ const OrderDetailPage: React.FC = () => {
                                   sx={{
                                     width: "100%",
                                     height: 100,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    background: '#f5f5f5',
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    background: "#f5f5f5",
                                     cursor: "pointer",
                                     borderRadius: 1,
-                                    border: '1px solid #e0e0e0',
-                                    position: 'relative',
-                                    overflow: 'hidden'
+                                    border: "1px solid #e0e0e0",
+                                    position: "relative",
+                                    overflow: "hidden",
                                   }}
-                                  onClick={() => handleFileClick(file.fileUrl, file.fileName || `contract-file-${index + 1}`, file.fileType)}
+                                  onClick={() =>
+                                    handleFileClick(
+                                      file.fileUrl,
+                                      file.fileName ||
+                                        `contract-file-${index + 1}`,
+                                      file.fileType
+                                    )
+                                  }
                                 >
-                                  <PictureAsPdfIcon sx={{ fontSize: 40, color: '#f44336' }} />
+                                  <PictureAsPdfIcon
+                                    sx={{ fontSize: 40, color: "#f44336" }}
+                                  />
                                   <Typography variant="caption" sx={{ mt: 1 }}>
                                     Xem PDF
                                   </Typography>
                                   <Box
                                     sx={{
-                                      position: 'absolute',
+                                      position: "absolute",
                                       bottom: 0,
                                       left: 0,
-                                      width: '100%',
-                                      height: '4px',
-                                      background: 'linear-gradient(90deg, #f44336 0%, #ff9800 100%)'
+                                      width: "100%",
+                                      height: "4px",
+                                      background:
+                                        "linear-gradient(90deg, #f44336 0%, #ff9800 100%)",
                                     }}
                                   />
                                 </Box>
@@ -2168,28 +2248,48 @@ const OrderDetailPage: React.FC = () => {
                               >
                                 <Box component="span" mr={0.5}>
                                   {isDocx ? (
-                                    <DescriptionIcon fontSize="small" color="primary" />
+                                    <DescriptionIcon
+                                      fontSize="small"
+                                      color="primary"
+                                    />
                                   ) : isXlsx ? (
-                                    <ArticleIcon fontSize="small" color="success" />
+                                    <ArticleIcon
+                                      fontSize="small"
+                                      color="success"
+                                    />
                                   ) : isPptx ? (
-                                    <ArticleIcon fontSize="small" color="warning" />
+                                    <ArticleIcon
+                                      fontSize="small"
+                                      color="warning"
+                                    />
                                   ) : (
-                                    <AttachFileIcon fontSize="small" color="action" />
+                                    <AttachFileIcon
+                                      fontSize="small"
+                                      color="action"
+                                    />
                                   )}
                                 </Box>
-                                <Box 
+                                <Box
                                   component="span"
-                                  sx={{ 
+                                  sx={{
                                     cursor: "pointer",
                                     color: "primary.main",
-                                    "&:hover": { 
+                                    "&:hover": {
                                       textDecoration: "underline",
-                                      color: "primary.dark"
-                                    }
+                                      color: "primary.dark",
+                                    },
                                   }}
-                                  onClick={() => handleFileClick(file.fileUrl, file.fileName || `contract-file-${index + 1}`, file.fileType)}
+                                  onClick={() =>
+                                    handleFileClick(
+                                      file.fileUrl,
+                                      file.fileName ||
+                                        `contract-file-${index + 1}`,
+                                      file.fileType
+                                    )
+                                  }
                                 >
-                                  {file.fileName || `Tài liệu hợp đồng ${index + 1}`}
+                                  {file.fileName ||
+                                    `Tài liệu hợp đồng ${index + 1}`}
                                 </Box>
                               </Typography>
                             )}
@@ -2283,7 +2383,7 @@ const OrderDetailPage: React.FC = () => {
               <DirectionsIcon sx={{ color: "inherit" }} />
               <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Thông tin chuyến đi
-                           </Typography>
+              </Typography>
             </Box>
             <Divider sx={{ mb: 2 }} />
 
@@ -2457,7 +2557,8 @@ const OrderDetailPage: React.FC = () => {
                           }}
                           onClick={() => navigate(`/drivers/${trip.driverId}`)}
                         >
-                          <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} /> {trip.driverName}
+                          <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} />{" "}
+                          {trip.driverName}
                         </Typography>
                       </Grid>
                     )}
@@ -2488,7 +2589,7 @@ const OrderDetailPage: React.FC = () => {
                             size="small"
                             startIcon={<DirectionsIcon />}
                             onClick={() =>
-                              navigate(`/staff-menu/trips/${trip.tripId}`)
+                              navigate(`${prefix}/trips/${trip.tripId}`)
                             }
                           >
                             Chi tiết chuyến đi
@@ -2569,7 +2670,7 @@ const OrderDetailPage: React.FC = () => {
           sx: { borderRadius: 2, maxHeight: "90vh" },
         }}
       >
-               <DialogTitle>
+        <DialogTitle>
           Cập nhật đơn hàng - {orderDetails?.trackingCode}
         </DialogTitle>
         <DialogContent>
@@ -3164,20 +3265,30 @@ const OrderDetailPage: React.FC = () => {
 
       <Dialog
         open={documentPreview.open}
-        onClose={() => setDocumentPreview({...documentPreview, open: false})}
+        onClose={() => setDocumentPreview({ ...documentPreview, open: false })}
         maxWidth="lg"
         fullWidth
         TransitionComponent={Fade}
-        PaperProps={{ sx: { borderRadius: 2, height: '80vh' } }}
+        PaperProps={{ sx: { borderRadius: 2, height: "80vh" } }}
       >
         <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center" }}>
-          {documentPreview.fileType === 'pdf' && <PictureAsPdfIcon sx={{ mr: 1 }} color="error" />}
-          {documentPreview.fileType === 'docx' && <DescriptionIcon sx={{ mr: 1 }} color="primary" />}
-          {documentPreview.fileType === 'xlsx' && <ArticleIcon sx={{ mr: 1 }} color="success" />}
-          {documentPreview.fileType === 'pptx' && <ArticleIcon sx={{ mr: 1 }} color="warning" />}
+          {documentPreview.fileType === "pdf" && (
+            <PictureAsPdfIcon sx={{ mr: 1 }} color="error" />
+          )}
+          {documentPreview.fileType === "docx" && (
+            <DescriptionIcon sx={{ mr: 1 }} color="primary" />
+          )}
+          {documentPreview.fileType === "xlsx" && (
+            <ArticleIcon sx={{ mr: 1 }} color="success" />
+          )}
+          {documentPreview.fileType === "pptx" && (
+            <ArticleIcon sx={{ mr: 1 }} color="warning" />
+          )}
           {documentPreview.title}
           <IconButton
-            onClick={() => setDocumentPreview({...documentPreview, open: false})}
+            onClick={() =>
+              setDocumentPreview({ ...documentPreview, open: false })
+            }
             sx={{
               position: "absolute",
               right: 8,
@@ -3187,13 +3298,22 @@ const OrderDetailPage: React.FC = () => {
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5", height: 'calc(100% - 64px)' }}>
-          <iframe 
-            src={documentPreview.fileType === 'pdf' 
-              ? documentPreview.src 
-              : `https://view.officeapps.live.com/op/embed.aspx?src=${documentPreview.src}`}
-            width="100%" 
-            height="100%" 
+        <DialogContent
+          sx={{
+            p: 0,
+            textAlign: "center",
+            bgcolor: "#f5f5f5",
+            height: "calc(100% - 64px)",
+          }}
+        >
+          <iframe
+            src={
+              documentPreview.fileType === "pdf"
+                ? documentPreview.src
+                : `https://view.officeapps.live.com/op/embed.aspx?src=${documentPreview.src}`
+            }
+            width="100%"
+            height="100%"
             frameBorder="0"
             title={documentPreview.title}
           />
@@ -3211,7 +3331,9 @@ const OrderDetailPage: React.FC = () => {
             Tải xuống
           </Button> */}
           <Button
-            onClick={() => setDocumentPreview({...documentPreview, open: false})}
+            onClick={() =>
+              setDocumentPreview({ ...documentPreview, open: false })
+            }
             color="primary"
             variant="contained"
           >
@@ -3225,38 +3347,40 @@ const OrderDetailPage: React.FC = () => {
         autoHideDuration={loadingSnackbar.autoHideDuration}
         onClose={handleCloseLoadingSnackbar}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        TransitionComponent={(props) => (
-          <Slide {...props} direction="up" />
-        )}
+        TransitionComponent={(props) => <Slide {...props} direction="up" />}
       >
-        <Alert 
+        <Alert
           severity={loadingSnackbar.severity}
           onClose={handleCloseLoadingSnackbar}
-          sx={{ 
+          sx={{
             width: "100%",
             boxShadow: 3,
-            border: loadingSnackbar.severity === 'success' ? '1px solid #4caf50' : 
-                    loadingSnackbar.severity === 'error' ? '1px solid #f44336' : 
-                    loadingSnackbar.severity === 'warning' ? '1px solid #ff9800' : 
-                    '1px solid #2196f3',
-            '& .MuiAlert-icon': {
-              fontSize: '1.25rem'
+            border:
+              loadingSnackbar.severity === "success"
+                ? "1px solid #4caf50"
+                : loadingSnackbar.severity === "error"
+                ? "1px solid #f44336"
+                : loadingSnackbar.severity === "warning"
+                ? "1px solid #ff9800"
+                : "1px solid #2196f3",
+            "& .MuiAlert-icon": {
+              fontSize: "1.25rem",
             },
-            '& .MuiAlert-message': {
-              fontSize: '0.95rem',
-              fontWeight: 500
+            "& .MuiAlert-message": {
+              fontSize: "0.95rem",
+              fontWeight: 500,
             },
-            animation: 'fadeIn 0.5s ease-in-out',
-            '@keyframes fadeIn': {
-              '0%': {
+            animation: "fadeIn 0.5s ease-in-out",
+            "@keyframes fadeIn": {
+              "0%": {
                 opacity: 0,
-                transform: 'scale(0.9)'
+                transform: "scale(0.9)",
               },
-              '100%': {
+              "100%": {
                 opacity: 1,
-                transform: 'scale(1)'
-              }
-            }
+                transform: "scale(1)",
+              },
+            },
           }}
         >
           {loadingSnackbar.message}

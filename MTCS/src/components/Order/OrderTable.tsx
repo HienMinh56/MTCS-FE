@@ -42,6 +42,7 @@ import { DatePicker } from "@mui/x-date-pickers";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -73,7 +74,7 @@ function a11yProps(index: number) {
 }
 
 // Define search field types
-type SearchField = 'trackingCode' | 'customer' | 'deliveryType' | 'all';
+type SearchField = "trackingCode" | "customer" | "deliveryType" | "all";
 
 const OrderManagement: React.FC = () => {
   const [page, setPage] = useState(0);
@@ -88,29 +89,29 @@ const OrderManagement: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const navigate = useNavigate();
-  
+
   // Export feature states
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [fromDateStr, setFromDate] = useState<dayjs.Dayjs | null>(null);
   const [toDateStr, setToDate] = useState<dayjs.Dayjs | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
-  
+
   // Payment filter state
   const [paymentFilter, setPaymentFilter] = useState<IsPay | null>(null);
-  
+
   // State for all orders (not filtered) to use for counts
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loadingAllOrders, setLoadingAllOrders] = useState(false);
   const [allFetchedOrders, setAllFetchedOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [isFiltering, setIsFiltering] = useState(false);
-  
+
   // Thêm state cho chức năng sắp xếp
   const [sortConfig, setSortConfig] = useState<{
     key: string;
-    direction: 'asc' | 'desc' | null;
+    direction: "asc" | "desc" | null;
   }>({
-    key: 'deliveryDate',
+    key: "deliveryDate",
     direction: null,
   });
 
@@ -147,7 +148,7 @@ const OrderManagement: React.FC = () => {
       try {
         // Map tab values to correct OrderStatus values
         let statusFilter: OrderStatus | undefined;
-        
+
         switch (tabValue) {
           case 0: // All orders
             statusFilter = undefined;
@@ -195,26 +196,28 @@ const OrderManagement: React.FC = () => {
 
         // Store fetched orders before filtering
         setAllFetchedOrders(fetchedOrders);
-        
+
         // Apply search filtering if there's a search term
-        if (searchTerm.trim() === '') {
+        if (searchTerm.trim() === "") {
           setOrders(fetchedOrders);
           setFilteredOrders(fetchedOrders);
           setIsFiltering(false);
         } else {
           // Apply filtering
           const lowerSearchTerm = searchTerm.toLowerCase();
-          
+
           const filtered = fetchedOrders.filter((order) => {
             return (
-              (order.trackingCode && 
+              (order.trackingCode &&
                 order.trackingCode.toLowerCase().includes(lowerSearchTerm)) ||
-              (order.customerId && 
+              (order.customerId &&
                 order.customerId.toLowerCase().includes(lowerSearchTerm)) ||
-              (getDeliveryTypeDisplay(order.deliveryType).toLowerCase().includes(lowerSearchTerm))
+              getDeliveryTypeDisplay(order.deliveryType)
+                .toLowerCase()
+                .includes(lowerSearchTerm)
             );
           });
-          
+
           setOrders(filtered);
           setFilteredOrders(filtered);
           setIsFiltering(true);
@@ -236,13 +239,24 @@ const OrderManagement: React.FC = () => {
   // Calculate order counts from the allOrders state
   const orderCounts = {
     total: allOrders.length,
-    pending: allOrders.filter(order => order.status === OrderStatus.Pending).length,
-    complete: allOrders.filter(order => order.status === OrderStatus.Completed).length,
-    cancelled: allOrders.filter(order => 
-      order.status === "Cancelled" as any || order.status === "Canceled" as any).length,
-    scheduled: allOrders.filter(order => order.status === OrderStatus.Scheduled).length,
-    delivering: allOrders.filter(order => order.status === OrderStatus.Delivering).length,
-    shipped: allOrders.filter(order => order.status === OrderStatus.Shipped).length
+    pending: allOrders.filter((order) => order.status === OrderStatus.Pending)
+      .length,
+    complete: allOrders.filter(
+      (order) => order.status === OrderStatus.Completed
+    ).length,
+    cancelled: allOrders.filter(
+      (order) =>
+        order.status === ("Cancelled" as any) ||
+        order.status === ("Canceled" as any)
+    ).length,
+    scheduled: allOrders.filter(
+      (order) => order.status === OrderStatus.Scheduled
+    ).length,
+    delivering: allOrders.filter(
+      (order) => order.status === OrderStatus.Delivering
+    ).length,
+    shipped: allOrders.filter((order) => order.status === OrderStatus.Shipped)
+      .length,
   };
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -270,8 +284,12 @@ const OrderManagement: React.FC = () => {
     navigate(`/staff-menu/orders/${orderId}`);
   };
 
+  const { user } = useAuth();
+
   const handleViewOrderDetail = (orderId: string) => {
-    navigate(`/staff-menu/orders/${orderId}`);
+    const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+
+    navigate(`${prefix}/orders/${orderId}`);
   };
 
   const handleAddNew = () => {
@@ -285,10 +303,10 @@ const OrderManagement: React.FC = () => {
   const handleOrderCreationSuccess = () => {
     // Đóng dialog tạo đơn hàng
     setCreateDialogOpen(false);
-    
+
     // Đặt lại về trang đầu tiên
     setPage(0);
-    
+
     // Làm mới dữ liệu đơn hàng
     const fetchOrders = async () => {
       setLoading(true);
@@ -297,24 +315,45 @@ const OrderManagement: React.FC = () => {
         const allOrdersResult = await getOrders(1, 1000);
         if (Array.isArray(allOrdersResult)) {
           setAllOrders(allOrdersResult);
-        } else if (allOrdersResult && allOrdersResult.orders && allOrdersResult.orders.items) {
+        } else if (
+          allOrdersResult &&
+          allOrdersResult.orders &&
+          allOrdersResult.orders.items
+        ) {
           setAllOrders(allOrdersResult.orders.items);
         }
-        
+
         // Lấy dữ liệu đơn hàng theo tab hiện tại
         let statusFilter: OrderStatus | undefined;
         switch (tabValue) {
-          case 0: statusFilter = undefined; break;
-          case 1: statusFilter = OrderStatus.Pending; break;
-          case 2: statusFilter = OrderStatus.Scheduled; break;
-          case 3: statusFilter = OrderStatus.Delivering; break;
-          case 4: statusFilter = OrderStatus.Completed; break;
-          default: statusFilter = undefined;
+          case 0:
+            statusFilter = undefined;
+            break;
+          case 1:
+            statusFilter = OrderStatus.Pending;
+            break;
+          case 2:
+            statusFilter = OrderStatus.Scheduled;
+            break;
+          case 3:
+            statusFilter = OrderStatus.Delivering;
+            break;
+          case 4:
+            statusFilter = OrderStatus.Completed;
+            break;
+          default:
+            statusFilter = undefined;
         }
-        
+
         // Lấy dữ liệu đơn hàng từ API
-        const result = await getOrders(1, 1000, "", statusFilter, paymentFilter);
-        
+        const result = await getOrders(
+          1,
+          1000,
+          "",
+          statusFilter,
+          paymentFilter
+        );
+
         let fetchedOrders: Order[] = [];
         if (Array.isArray(result)) {
           fetchedOrders = result;
@@ -323,47 +362,48 @@ const OrderManagement: React.FC = () => {
           fetchedOrders = result.orders.items || [];
           setTotalOrders(result.orders.totalCount || 0);
         }
-        
+
         // Cập nhật state với dữ liệu mới
         setAllFetchedOrders(fetchedOrders);
         setOrders(fetchedOrders);
         setFilteredOrders(fetchedOrders);
         setIsFiltering(false);
         setSearchTerm(""); // Xóa bất kỳ tìm kiếm hiện tại
-        
       } catch (error) {
         console.error("Lỗi khi làm mới dữ liệu đơn hàng:", error);
       } finally {
         setLoading(false);
       }
     };
-    
+
     // Thực hiện fetch dữ liệu
     fetchOrders();
   };
-  
+
   // New functions for export feature
   const handleOpenExportModal = () => {
     setExportModalOpen(true);
   };
-  
+
   const handleCloseExportModal = () => {
     setExportModalOpen(false);
     setFromDate(null);
     setToDate(null);
   };
-  
+
   const handleExportExcel = async () => {
     try {
       setExportLoading(true);
-      
+
       // Format dates as strings in YYYY-MM-DD format
-      const fromDateString = fromDateStr ? fromDateStr.format('YYYY-MM-DD') : null;
-      const toDateString = toDateStr ? toDateStr.format('YYYY-MM-DD') : null;
-      
+      const fromDateString = fromDateStr
+        ? fromDateStr.format("YYYY-MM-DD")
+        : null;
+      const toDateString = toDateStr ? toDateStr.format("YYYY-MM-DD") : null;
+
       // Call exportExcel with individual parameters, not as an object
       await exportExcel(fromDateString, toDateString);
-      
+
       // Close the modal after export completes
       handleCloseExportModal();
     } catch (error) {
@@ -419,7 +459,7 @@ const OrderManagement: React.FC = () => {
   const getDeliveryTypeDisplay = (type: DeliveryType) => {
     return type === DeliveryType.Import ? "Nhập" : "Xuất";
   };
-  
+
   // Helper function to get payment status display
   const getPaymentStatusDisplay = (isPay: IsPay | null) => {
     switch (isPay) {
@@ -434,7 +474,7 @@ const OrderManagement: React.FC = () => {
 
   // Update the orders to display (filtered or all)
   const displayedOrders = useMemo(() => {
-    return searchTerm.trim() !== '' ? filteredOrders : allFetchedOrders;
+    return searchTerm.trim() !== "" ? filteredOrders : allFetchedOrders;
   }, [searchTerm, filteredOrders, allFetchedOrders]);
 
   // Calculate count of filtered results for display
@@ -453,22 +493,21 @@ const OrderManagement: React.FC = () => {
   // Get current orders for display with client-side pagination
   const getCurrentOrders = () => {
     const statusValue = orderStatusOptions[tabValue].value;
-    let filtered = typeof statusValue === "string" && statusValue === "all" 
-      ? filteredOrders 
-      : filteredOrders.filter(order => order.status === statusValue);
-    
+    let filtered =
+      typeof statusValue === "string" && statusValue === "all"
+        ? filteredOrders
+        : filteredOrders.filter((order) => order.status === statusValue);
+
     // Áp dụng sắp xếp theo ngày giao hàng nếu có
-    if (sortConfig.key === 'deliveryDate' && sortConfig.direction) {
+    if (sortConfig.key === "deliveryDate" && sortConfig.direction) {
       filtered = [...filtered].sort((a, b) => {
         const dateA = new Date(a.deliveryDate).getTime();
         const dateB = new Date(b.deliveryDate).getTime();
-        
-        return sortConfig.direction === 'asc' 
-          ? dateA - dateB 
-          : dateB - dateA;
+
+        return sortConfig.direction === "asc" ? dateA - dateB : dateB - dateA;
       });
     }
-      
+
     return filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   };
 
@@ -480,10 +519,11 @@ const OrderManagement: React.FC = () => {
 
   // Thêm hàm xử lý sắp xếp cho cột ngày giao hàng
   const handleRequestSort = () => {
-    const isAsc = sortConfig.key === 'deliveryDate' && sortConfig.direction === 'asc';
+    const isAsc =
+      sortConfig.key === "deliveryDate" && sortConfig.direction === "asc";
     setSortConfig({
-      key: 'deliveryDate',
-      direction: isAsc ? 'desc' : 'asc',
+      key: "deliveryDate",
+      direction: isAsc ? "desc" : "asc",
     });
     setPage(0); // Reset về trang đầu khi sắp xếp
   };
@@ -493,18 +533,18 @@ const OrderManagement: React.FC = () => {
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid item xs={12} sm={6} md={2}>
-          <Card 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
               height: "100%",
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: tabValue === 0 ? '3px solid #1976d2' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom: tabValue === 0 ? "3px solid #1976d2" : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              } 
+              },
             }}
             onClick={() => handleCardClick(0)} // All orders - index 0
           >
@@ -525,7 +565,11 @@ const OrderManagement: React.FC = () => {
                     Tổng số đơn
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {loadingAllOrders ? <CircularProgress size={20} /> : orderCounts.total}
+                    {loadingAllOrders ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      orderCounts.total
+                    )}
                   </Typography>
                 </Box>
                 <Box
@@ -542,18 +586,18 @@ const OrderManagement: React.FC = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={2.5}>
-          <Card 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
               height: "100%",
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: tabValue === 1 ? '3px solid #ff9800' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom: tabValue === 1 ? "3px solid #ff9800" : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              } 
+              },
             }}
             onClick={() => handleCardClick(1)} // Pending - index 1
           >
@@ -574,7 +618,11 @@ const OrderManagement: React.FC = () => {
                     Chờ xử lý
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {loadingAllOrders ? <CircularProgress size={20} /> : orderCounts.pending}
+                    {loadingAllOrders ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      orderCounts.pending
+                    )}
                   </Typography>
                 </Box>
                 <Box
@@ -591,18 +639,18 @@ const OrderManagement: React.FC = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={2.5}>
-          <Card 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
               height: "100%",
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: tabValue === 2 ? '3px solid #2196f3' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom: tabValue === 2 ? "3px solid #2196f3" : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              } 
+              },
             }}
             onClick={() => handleCardClick(2)} // Scheduled - index 2
           >
@@ -623,7 +671,11 @@ const OrderManagement: React.FC = () => {
                     Đã lên lịch
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {loadingAllOrders ? <CircularProgress size={20} /> : orderCounts.scheduled}
+                    {loadingAllOrders ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      orderCounts.scheduled
+                    )}
                   </Typography>
                 </Box>
                 <Box
@@ -640,18 +692,18 @@ const OrderManagement: React.FC = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={2.5}>
-          <Card 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
               height: "100%",
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: tabValue === 3 ? '3px solid #00acc1' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom: tabValue === 3 ? "3px solid #00acc1" : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              } 
+              },
             }}
             onClick={() => handleCardClick(3)} // Delivering - index 3
           >
@@ -672,7 +724,11 @@ const OrderManagement: React.FC = () => {
                     Đang giao
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {loadingAllOrders ? <CircularProgress size={20} /> : orderCounts.delivering}
+                    {loadingAllOrders ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      orderCounts.delivering
+                    )}
                   </Typography>
                 </Box>
                 <Box
@@ -689,18 +745,18 @@ const OrderManagement: React.FC = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={2.5}>
-          <Card 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
               height: "100%",
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: tabValue === 4 ? '3px solid #4caf50' : 'none', // Changed from 5 to 4
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom: tabValue === 4 ? "3px solid #4caf50" : "none", // Changed from 5 to 4
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              } 
+              },
             }}
             onClick={() => handleCardClick(4)} // Changed from 5 to 4
           >
@@ -721,7 +777,11 @@ const OrderManagement: React.FC = () => {
                     Hoàn thành
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {loadingAllOrders ? <CircularProgress size={20} /> : orderCounts.complete}
+                    {loadingAllOrders ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      orderCounts.complete
+                    )}
                   </Typography>
                 </Box>
                 <Box
@@ -765,16 +825,22 @@ const OrderManagement: React.FC = () => {
             <Typography variant="h6" component="div" fontWeight={500}>
               Danh sách đơn hàng
               {isFiltering && (
-                <Typography 
-                  component="span" 
-                  color="text.secondary" 
-                  sx={{ ml: 1, fontSize: '0.875rem' }}
+                <Typography
+                  component="span"
+                  color="text.secondary"
+                  sx={{ ml: 1, fontSize: "0.875rem" }}
                 >
                   (Đã lọc: {filteredCount} kết quả)
                 </Typography>
               )}
             </Typography>
-            <Box sx={{ display: "flex", gap: 1, width: { xs: "100%", sm: "auto" } }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                width: { xs: "100%", sm: "auto" },
+              }}
+            >
               {/* Simplified search input that searches across all fields */}
               <TextField
                 size="small"
@@ -792,7 +858,7 @@ const OrderManagement: React.FC = () => {
                       <IconButton
                         edge="end"
                         size="small"
-                        onClick={() => setSearchTerm('')}
+                        onClick={() => setSearchTerm("")}
                         aria-label="clear search"
                       >
                         <CancelIcon fontSize="small" />
@@ -851,12 +917,21 @@ const OrderManagement: React.FC = () => {
           </Box>
         </Box>
 
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: "hidden" }}>
-          <TableContainer sx={{ flexGrow: 1, overflow: "auto", position: "relative", }}>
+        <Box
+          sx={{
+            flexGrow: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          <TableContainer
+            sx={{ flexGrow: 1, overflow: "auto", position: "relative" }}
+          >
             <Table
               stickyHeader
               size="small"
-              sx={{ 
+              sx={{
                 minWidth: 650,
                 "& .MuiTableHead-root": {
                   position: "sticky",
@@ -866,8 +941,8 @@ const OrderManagement: React.FC = () => {
                 },
                 "& .MuiTableCell-stickyHeader": {
                   backgroundColor: "background.paper", // Phù hợp với theme
-                  boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.1)" // Thêm đổ bóng nhẹ
-                }
+                  boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.1)", // Thêm đổ bóng nhẹ
+                },
               }}
               aria-label="orders table"
             >
@@ -877,10 +952,14 @@ const OrderManagement: React.FC = () => {
                   <TableCell align="center">Khách hàng</TableCell>
                   <TableCell align="center">
                     <TableSortLabel
-                      active={sortConfig.key === 'deliveryDate'}
-                      direction={sortConfig.direction === null ? 'asc' : sortConfig.direction}
+                      active={sortConfig.key === "deliveryDate"}
+                      direction={
+                        sortConfig.direction === null
+                          ? "asc"
+                          : sortConfig.direction
+                      }
                       onClick={handleRequestSort}
-                      sx={{ whiteSpace: 'nowrap' }}
+                      sx={{ whiteSpace: "nowrap" }}
                     >
                       Ngày giao hàng
                     </TableSortLabel>
@@ -942,7 +1021,9 @@ const OrderManagement: React.FC = () => {
                         <Chip
                           size="small"
                           label={getPaymentStatusDisplay(order.isPay).label}
-                          color={getPaymentStatusDisplay(order.isPay).color as any}
+                          color={
+                            getPaymentStatusDisplay(order.isPay).color as any
+                          }
                         />
                       </TableCell>
                     </TableRow>
@@ -951,7 +1032,9 @@ const OrderManagement: React.FC = () => {
                   <TableRow>
                     <TableCell colSpan={9} align="center">
                       <Typography variant="body2" color="text.secondary" py={3}>
-                        {searchTerm ? "Không tìm thấy đơn hàng phù hợp" : "Không có dữ liệu"}
+                        {searchTerm
+                          ? "Không tìm thấy đơn hàng phù hợp"
+                          : "Không có dữ liệu"}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -966,7 +1049,8 @@ const OrderManagement: React.FC = () => {
               orderStatusOptions[tabValue].value === "all"
                 ? filteredOrders.length
                 : filteredOrders.filter(
-                    (order) => order.status === orderStatusOptions[tabValue].value
+                    (order) =>
+                      order.status === orderStatusOptions[tabValue].value
                   ).length
             }
             rowsPerPage={rowsPerPage}
@@ -1002,18 +1086,16 @@ const OrderManagement: React.FC = () => {
           />
         </DialogContent>
       </Dialog>
-      
+
       {/* Excel Export Dialog */}
       <Dialog
         open={exportModalOpen}
         onClose={handleCloseExportModal}
         PaperProps={{
-          sx: { borderRadius: 2 }
+          sx: { borderRadius: 2 },
         }}
       >
-        <DialogTitle>
-          Xuất dữ liệu đơn hàng
-        </DialogTitle>
+        <DialogTitle>Xuất dữ liệu đơn hàng</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1, width: 400 }}>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -1026,10 +1108,10 @@ const OrderManagement: React.FC = () => {
                   onChange={(newValue) => setFromDate(newValue)}
                   format="DD/MM/YYYY"
                   slotProps={{
-                    textField: { 
-                      fullWidth: true, 
-                      size: "small" 
-                    }
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                    },
                   }}
                 />
               </Box>
@@ -1042,10 +1124,10 @@ const OrderManagement: React.FC = () => {
                   onChange={(newValue) => setToDate(newValue)}
                   format="DD/MM/YYYY"
                   slotProps={{
-                    textField: { 
-                      fullWidth: true, 
-                      size: "small" 
-                    }
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                    },
                   }}
                 />
               </Box>
@@ -1053,11 +1135,9 @@ const OrderManagement: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCloseExportModal}>
-            Hủy
-          </Button>
-          <Button 
-            variant="contained" 
+          <Button onClick={handleCloseExportModal}>Hủy</Button>
+          <Button
+            variant="contained"
             onClick={handleExportExcel}
             startIcon={<DownloadIcon />}
             disabled={exportLoading}

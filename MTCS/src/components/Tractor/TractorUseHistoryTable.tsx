@@ -27,6 +27,7 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import { TractorUseHistory } from "../../types/tractor";
 import { Link as RouterLink } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext"; // Import useAuth hook
 
 interface TractorUseHistoryTableProps {
   historyData: {
@@ -192,6 +193,8 @@ const TractorUseHistoryTable: React.FC<TractorUseHistoryTableProps> = ({
   onPageChange,
   onPageSizeChange,
 }) => {
+  const { user } = useAuth(); // Get the user from auth context
+
   const handleChangePage = (_event: unknown, newPage: number) => {
     onPageChange(newPage + 1); // +1 because API is 1-indexed but MUI is 0-indexed
   };
@@ -348,7 +351,9 @@ const TractorUseHistoryTable: React.FC<TractorUseHistoryTableProps> = ({
                   <TableCell>
                     <Link
                       component={RouterLink}
-                      to={`/staff-menu/trips/${history.tripId}`}
+                      to={`${
+                        user?.role === "Admin" ? "/admin" : "/staff-menu"
+                      }/trips/${history.tripId}`}
                       color="primary"
                       underline="hover"
                       sx={{

@@ -318,16 +318,16 @@ const UserManagement: React.FC = () => {
               variant="fullWidth"
             >
               <Tab
-                icon={<AdminPanelSettingsIcon />}
-                iconPosition="start"
-                label="Quản trị viên"
-                {...a11yProps(0)}
-              />
-              <Tab
                 icon={<SupportAgentIcon />}
                 iconPosition="start"
                 label="Nhân viên"
                 {...a11yProps(1)}
+              />
+              <Tab
+                icon={<AdminPanelSettingsIcon />}
+                iconPosition="start"
+                label="Quản trị viên"
+                {...a11yProps(0)}
               />
             </Tabs>
           </Box>
