@@ -94,6 +94,7 @@ const DriverProfile: React.FC = () => {
   const [statusUpdateError, setStatusUpdateError] = useState<string | null>(
     null
   );
+  const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
 
   const fetchDriverProfile = async () => {
     if (!driverId) {
@@ -394,7 +395,7 @@ const DriverProfile: React.FC = () => {
             underline="hover"
             color="inherit"
             sx={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-            onClick={() => navigate("/staff-menu/drivers")}
+            onClick={() => navigate(`${prefix}/drivers`)}
           >
             <PersonIcon sx={{ mr: 0.5 }} fontSize="small" />
             Danh sách tài xế

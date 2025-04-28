@@ -28,8 +28,11 @@ import ProfileForm, { genderOptions } from "../forms/ProfileForm";
 import { ProfileFormValues } from "../forms/profileSchema";
 import { getProfile, updateProfile, UserProfile } from "../services/authApi";
 import { format } from "date-fns";
+import { useAuth } from "../contexts/AuthContext";
 
 const ProfilePage: React.FC = () => {
+  const { user } = useAuth();
+
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +41,7 @@ const ProfilePage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const theme = useTheme();
+  const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -233,7 +237,7 @@ const ProfilePage: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<ArrowBackIcon />}
-            onClick={() => navigate("/staff-menu/orders")}
+            onClick={() => navigate(`${prefix}/orders`)}
             size="small"
           >
             Quay lại
