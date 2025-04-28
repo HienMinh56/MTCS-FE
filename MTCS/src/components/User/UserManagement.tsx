@@ -63,18 +63,12 @@ const UserManagement: React.FC = () => {
     active: 0,
     inactive: 0,
   });
-  const isManualRefreshRef = useRef(false);
   const [tabValue, setTabValue] = useState(0);
   const [openStaffDialog, setOpenStaffDialog] = useState(false);
   const [openAdminDialog, setOpenAdminDialog] = useState(false);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
-  };
-
-  const refreshData = () => {
-    isManualRefreshRef.current = true;
-    setRefreshTrigger((prev) => prev + 1);
   };
 
   const handleUpdateSummary = (
@@ -102,27 +96,33 @@ const UserManagement: React.FC = () => {
 
   return (
     <Box
-      sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        p: { xs: 1, md: 1.5 },
+        pt: 0.5, // Reduced top padding significantly to remove space
+      }}
     >
-      <Grid container spacing={2} sx={{ mb: 2 }}>
+      <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
         <Grid item xs={12} sm={4} md={4}>
           <Card
             elevation={1}
             sx={{
-              borderRadius: 2,
+              borderRadius: 1.5,
               height: "100%",
               transition: "transform 0.2s, box-shadow 0.2s",
               "&:hover": {
-                transform: "translateY(-3px)",
-                boxShadow: 3,
+                transform: "translateY(-2px)",
+                boxShadow: 2,
               },
             }}
           >
-            <CardContent sx={{ py: 1.5, px: 2 }}>
+            <CardContent sx={{ py: 1, px: 2 }}>
               <Box
                 sx={{
                   display: "flex",
-                  alignItems: "flex-start",
+                  alignItems: "center", // Changed from flex-start to center for better alignment
                   justifyContent: "space-between",
                 }}
               >
@@ -130,7 +130,7 @@ const UserManagement: React.FC = () => {
                   <Typography
                     color="text.secondary"
                     variant="body2"
-                    gutterBottom
+                    sx={{ mb: 0.5 }} // Reduced gutterBottom spacing
                   >
                     Tổng số tài khoản
                   </Typography>
@@ -141,7 +141,7 @@ const UserManagement: React.FC = () => {
                 <Box
                   sx={{
                     backgroundColor: "rgba(25, 118, 210, 0.08)",
-                    p: 1,
+                    p: 0.75,
                     borderRadius: "50%",
                   }}
                 >
@@ -155,20 +155,20 @@ const UserManagement: React.FC = () => {
           <Card
             elevation={1}
             sx={{
-              borderRadius: 2,
+              borderRadius: 1.5,
               height: "100%",
               transition: "transform 0.2s, box-shadow 0.2s",
               "&:hover": {
-                transform: "translateY(-3px)",
-                boxShadow: 3,
+                transform: "translateY(-2px)",
+                boxShadow: 2,
               },
             }}
           >
-            <CardContent sx={{ py: 1.5, px: 2 }}>
+            <CardContent sx={{ py: 1, px: 2 }}>
               <Box
                 sx={{
                   display: "flex",
-                  alignItems: "flex-start",
+                  alignItems: "center", // Changed from flex-start to center for better alignment
                   justifyContent: "space-between",
                 }}
               >
@@ -176,7 +176,7 @@ const UserManagement: React.FC = () => {
                   <Typography
                     color="text.secondary"
                     variant="body2"
-                    gutterBottom
+                    sx={{ mb: 0.5 }} // Reduced gutterBottom spacing
                   >
                     Đang hoạt động
                   </Typography>
@@ -187,7 +187,7 @@ const UserManagement: React.FC = () => {
                 <Box
                   sx={{
                     backgroundColor: "rgba(76, 175, 80, 0.08)",
-                    p: 1,
+                    p: 0.75,
                     borderRadius: "50%",
                   }}
                 >
@@ -201,20 +201,20 @@ const UserManagement: React.FC = () => {
           <Card
             elevation={1}
             sx={{
-              borderRadius: 2,
+              borderRadius: 1.5,
               height: "100%",
               transition: "transform 0.2s, box-shadow 0.2s",
               "&:hover": {
-                transform: "translateY(-3px)",
-                boxShadow: 3,
+                transform: "translateY(-2px)",
+                boxShadow: 2,
               },
             }}
           >
-            <CardContent sx={{ py: 1.5, px: 2 }}>
+            <CardContent sx={{ py: 1, px: 2 }}>
               <Box
                 sx={{
                   display: "flex",
-                  alignItems: "flex-start",
+                  alignItems: "center", // Changed from flex-start to center for better alignment
                   justifyContent: "space-between",
                 }}
               >
@@ -222,7 +222,7 @@ const UserManagement: React.FC = () => {
                   <Typography
                     color="text.secondary"
                     variant="body2"
-                    gutterBottom
+                    sx={{ mb: 0.5 }} // Reduced gutterBottom spacing
                   >
                     Không hoạt động
                   </Typography>
@@ -233,7 +233,7 @@ const UserManagement: React.FC = () => {
                 <Box
                   sx={{
                     backgroundColor: "rgba(244, 67, 54, 0.08)",
-                    p: 1,
+                    p: 0.75,
                     borderRadius: "50%",
                   }}
                 >
@@ -304,9 +304,6 @@ const UserManagement: React.FC = () => {
                   Thêm quản trị viên
                 </Button>
               )}
-              <Button variant="outlined" size="small" onClick={refreshData}>
-                Làm mới
-              </Button>
             </Box>
           </Box>
 
@@ -358,7 +355,7 @@ const UserManagement: React.FC = () => {
           fullWidth
         >
           <DialogContent>
-            <StaffRegistration />
+            <StaffRegistration onClose={handleDialogClose} />
           </DialogContent>
         </Dialog>
 
@@ -369,7 +366,7 @@ const UserManagement: React.FC = () => {
           fullWidth
         >
           <DialogContent>
-            <AdminRegistration />
+            <AdminRegistration onClose={handleDialogClose} />
           </DialogContent>
         </Dialog>
       </Paper>

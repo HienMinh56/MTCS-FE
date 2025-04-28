@@ -4,7 +4,11 @@ import UserRegistrationForm from "./UserRegistrationForm";
 import { registerAdmin } from "../../services/authApi";
 import { RegisterUserDTO } from "../../types/auth";
 
-const AdminRegistration: React.FC = () => {
+interface AdminRegistrationProps {
+  onClose?: () => void;
+}
+
+const AdminRegistration: React.FC<AdminRegistrationProps> = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -17,6 +21,13 @@ const AdminRegistration: React.FC = () => {
     try {
       const response = await registerAdmin(data);
       setSuccess("Đăng ký tài khoản quản trị viên thành công");
+
+      // After successful registration, wait briefly and then close the dialog
+      setTimeout(() => {
+        if (onClose) {
+          onClose();
+        }
+      }, 1000);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -30,15 +41,6 @@ const AdminRegistration: React.FC = () => {
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-      <Box textAlign="center" mb={4}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Đăng Ký Tài Khoản Quản Trị Viên
-        </Typography>
-        <Typography color="textSecondary">
-          Điền đầy đủ thông tin để tạo tài khoản quản trị viên mới
-        </Typography>
-      </Box>
-
       <UserRegistrationForm
         onSubmit={handleSubmit}
         userType="admin"

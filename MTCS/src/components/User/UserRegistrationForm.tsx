@@ -12,8 +12,8 @@ import {
   Typography,
   InputAdornment,
   IconButton,
-  Paper,
   Alert,
+  SelectChangeEvent,
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -63,6 +63,13 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({
     return phoneRegex.test(phone);
   };
 
+  // New validator for full name - no special characters allowed
+  const validateFullName = (name: string) => {
+    // Check if the name contains any common special characters
+    const specialCharsRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
+    return !specialCharsRegex.test(name);
+  };
+
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
@@ -71,6 +78,8 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({
       errors.fullName = "Họ và tên không được để trống";
     } else if (formData.fullName.length > 25) {
       errors.fullName = "Họ và tên không được quá 25 ký tự";
+    } else if (!validateFullName(formData.fullName)) {
+      errors.fullName = "Họ và tên không được chứa ký tự đặc biệt";
     }
 
     // Validate email
@@ -113,12 +122,41 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({
     }
   };
 
+  const handleSelectChange = (e: SelectChangeEvent<Gender>) => {
+    const { name, value } = e.target;
+    if (name) {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
   const handleDateChange = (date: Date | null) => {
     if (date && isValid(date)) {
+      // Check if user is at least 18 years old
+      const today = new Date();
+      const birthDate = new Date(date);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+      ) {
+        age--;
+      }
+
+      if (age < 18) {
+        setFormErrors((prev) => ({
+          ...prev,
+          birthDate: "Người dùng phải đủ 18 tuổi trở lên",
+        }));
+        return;
+      }
+
       // Ensure date is in format yyyy-MM-dd with no time component
       const formattedDate = format(date, "yyyy-MM-dd");
-      console.log("Formatted date:", formattedDate);
       setFormData((prev) => ({ ...prev, birthDate: formattedDate }));
+      // Clear any previous birthDate error if validation passes
+      setFormErrors((prev) => ({ ...prev, birthDate: "" }));
     }
   };
 
@@ -139,7 +177,7 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 3, maxWidth: 600, mx: "auto" }}>
+    <Box sx={{ maxWidth: 600, mx: "auto" }}>
       <Typography variant="h5" component="h2" gutterBottom align="center">
         {userType === "admin"
           ? "Đăng ký tài khoản Quản trị viên"
@@ -241,7 +279,7 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({
                 name="gender"
                 value={formData.gender}
                 label="Giới tính"
-                onChange={handleChange}
+                onChange={handleSelectChange}
                 disabled={loading}
               >
                 <MenuItem value={Gender.Male}>Nam</MenuItem>
@@ -289,7 +327,7 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({
           </Grid>
         </Grid>
       </Box>
-    </Paper>
+    </Box>
   );
 };
 
