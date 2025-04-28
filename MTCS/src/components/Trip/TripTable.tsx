@@ -29,7 +29,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import PersonIcon from "@mui/icons-material/Person";
 import PendingIcon from "@mui/icons-material/Pending"; // Import icon for not started
 import DirectionsIcon from "@mui/icons-material/Directions"; // Import icon for going to port
-import { getAllTrip } from "../../services/tripApi";
+import { getTripForTable } from "../../services/tripApi";
 import { getDeliveryStatus } from "../../services/deliveryStatus";
 import { trip } from "../../types/trip";
 
@@ -145,7 +145,7 @@ const TripTable: React.FC = () => {
     const fetchTrips = async () => {
       setLoading(true);
       try {
-        const result = await getAllTrip();
+        const result = await getTripForTable();
         
         if (Array.isArray(result)) {
           setTrips(result);
