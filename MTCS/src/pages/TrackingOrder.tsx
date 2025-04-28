@@ -302,11 +302,17 @@ const TrackingOrder: React.FC = () => {
       fetchLocations();
     } catch (err: any) {
       console.error("Error tracking order:", err);
-      // Check for completed order error
+      // Check for specific error types
       if (err.message === "ORDER_COMPLETED") {
         setError("Đơn hàng đã hoàn thành không thể tiến hành theo dõi.");
+      } else if (err.message === "ORDER_PENDING") {
+        setError("Đơn hàng chưa bắt đầu vận chuyển và vẫn đang chờ xử lý.");
+      } else if (err.message === "ORDER_SCHEDULED") {
+        setError("Đơn hàng chưa bắt đầu vận chuyển nhưng đã lên lịch.");
+      } else if (err.message === "ORDER_SHIPPED") {
+        setError("Đơn hàng đã vận chuyển.");
       } else {
-        setError("Không thể tìm thấy mã vận chuyển của bạn. Vui lòng kiểm tra xem mã có đã đúng hay đơn hàng đã hoàn thành.");
+        setError("Không thể tìm thấy mã vận chuyển của bạn. Vui lòng kiểm tra xem mã có đã đúng hay không.");
       }
       setTrackingData(null);
     } finally {
@@ -1097,14 +1103,14 @@ const TrackingOrder: React.FC = () => {
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center" }}>
-              <IconButton
+              {/* <IconButton
                 onClick={handleGoBack}
                 sx={{ mr: 1, mb: 1 }}
                 color="primary"
                 aria-label="back"
               >
                 <ArrowBackIcon fontSize="large" />
-              </IconButton>
+              </IconButton> */}
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 <Typography
                   variant= "h1"

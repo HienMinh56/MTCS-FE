@@ -1896,10 +1896,7 @@ const OrderDetailPage: React.FC = () => {
                                     borderRadius: 1,
                                   }}
                                   onClick={() =>
-                                    openImagePreview(
-                                      fileUrl,
-                                      fileName || `Order file ${index + 1}`
-                                    )
+                                    openImagePreview(fileUrl, fileName)
                                   }
                                 />
                                 <Typography
@@ -2417,56 +2414,228 @@ const OrderDetailPage: React.FC = () => {
               </Alert>
             )}
 
-            {!tripLoading &&
-              !tripError &&
-              (!tripData || tripData.length === 0) && (
-                <>
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    Chưa có thông tin chuyến đi cho đơn hàng này
-                  </Alert>
-
-                  {orderDetails.orderFiles &&
-                  orderDetails.orderFiles.length > 0 &&
-                  contractFiles &&
-                  contractFiles.length > 0 ? (
-                    <Box display="flex" justifyContent="space-between">
-                      {user?.role === "Staff" && (
-                        <>
-                          <Box display="flex" justifyContent="center" mt={2}>
-                            <Button
-                              variant="outlined"
-                              color="primary"
-                              startIcon={<AddIcon />}
-                              onClick={handleAutoScheduleTrip}
-                              disabled={autoScheduleLoading}
-                            >
-                              {autoScheduleLoading
-                                ? "Đang xếp chuyến..."
-                                : "Hệ thống xếp chuyến"}
-                            </Button>
-                          </Box>
-
-                          <Box display="flex" justifyContent="center" mt={2}>
-                            <Button
-                              variant="outlined"
-                              color="primary"
-                              startIcon={<AddIcon />}
-                              onClick={handleOpenCreateTripDialog}
-                            >
-                              Tạo chuyến thủ công
-                            </Button>
-                          </Box>
-                        </>
-                      )}
-                    </Box>
-                  ) : (
-                    <Alert severity="warning" sx={{ mt: 2 }}>
-                      Cần có tài liệu đơn hàng và tài liệu hợp đồng để tạo
-                      chuyến đi
+            {!tripLoading && !tripError && (
+              <>
+                {/* Case 1: No trips exist */}
+                {(!tripData || tripData.length === 0) && (
+                  <>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      Chưa có thông tin chuyến đi cho đơn hàng này
                     </Alert>
-                  )}
-                </>
-              )}
+
+                    {orderDetails.orderFiles &&
+                    orderDetails.orderFiles.length > 0 &&
+                    contractFiles &&
+                    contractFiles.length > 0 ? (
+                      <Box display="flex" justifyContent="space-between">
+                        {user?.role === "Staff" && (
+                          <>
+                            <Box display="flex" justifyContent="center" mt={2}>
+                              <Button
+                                variant="outlined"
+                                color="primary"
+                                startIcon={<AddIcon />}
+                                onClick={handleAutoScheduleTrip}
+                                disabled={autoScheduleLoading}
+                              >
+                                {autoScheduleLoading
+                                  ? "Đang xếp chuyến..."
+                                  : "Hệ thống xếp chuyến"}
+                              </Button>
+                            </Box>
+
+                            <Box display="flex" justifyContent="center" mt={2}>
+                              <Button
+                                variant="outlined"
+                                color="primary"
+                                startIcon={<AddIcon />}
+                                onClick={handleOpenCreateTripDialog}
+                              >
+                                Tạo chuyến thủ công
+                              </Button>
+                            </Box>
+                          </>
+                        )}
+                      </Box>
+                    ) : (
+                      <Alert severity="warning" sx={{ mt: 2 }}>
+                        Cần có tài liệu đơn hàng và tài liệu hợp đồng để tạo
+                        chuyến đi
+                      </Alert>
+                    )}
+                  </>
+                )}
+
+                {/* Case 2: Trips exist */}
+                {tripData && tripData.length > 0 && (
+                  <>
+                    {/* Check if all trips are canceled to show create buttons */}
+                    {tripData.every(trip => trip.status === "canceled") && 
+                    orderDetails.orderFiles &&
+                    orderDetails.orderFiles.length > 0 &&
+                    contractFiles &&
+                    contractFiles.length > 0 && user?.role === "Staff" && (
+                      <Box display="flex" justifyContent="space-between" mb={2}>
+                        <Box display="flex" justifyContent="center" mt={2}>
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<AddIcon />}
+                            onClick={handleAutoScheduleTrip}
+                            disabled={autoScheduleLoading}
+                          >
+                            {autoScheduleLoading
+                              ? "Đang xếp chuyến..."
+                              : "Hệ thống xếp chuyến"}
+                          </Button>
+                        </Box>
+
+                        <Box display="flex" justifyContent="center" mt={2}>
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<AddIcon />}
+                            onClick={handleOpenCreateTripDialog}
+                          >
+                            Tạo chuyến thủ công
+                          </Button>
+                        </Box>
+                      </Box>
+                    )}
+
+                    {/* Display trips */}
+                    {tripData.map((trip, index) => (
+                      <Box
+                        key={trip.tripId || index}
+                        sx={{
+                          mb: index < tripData.length - 1 ? 3 : 0,
+                          pb: index < tripData.length - 1 ? 3 : 0,
+                          borderBottom:
+                            index < tripData.length - 1
+                              ? "1px dashed rgba(0, 0, 0, 0.12)"
+                              : "none",
+                        }}
+                      >
+                        {index > 0 && (
+                          <Typography
+                            variant="subtitle1"
+                            fontWeight="medium"
+                            gutterBottom
+                            mt={2}
+                          >
+                            Chuyến đi {index + 1}
+                          </Typography>
+                        )}
+                        <Grid container spacing={2}>
+                          <Grid item xs={12}>
+                            <Box
+                              display="flex"
+                              justifyContent="space-between"
+                              alignItems="center"
+                              mb={1}
+                            >
+                              <Typography variant="subtitle2" color="text.secondary">
+                                Trạng thái chuyến đi
+                              </Typography>
+                              <Chip
+                                size="small"
+                                label={getTripStatusDisplay(trip.status).label}
+                                color={getTripStatusDisplay(trip.status).color as any}
+                              />
+                            </Box>
+                          </Grid>
+
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" color="text.secondary">
+                              Mã chuyến đi
+                            </Typography>
+                            <Typography variant="body1" gutterBottom>
+                              {trip.tripId || "N/A"}
+                            </Typography>
+                          </Grid>
+
+                          {trip.driverId && (
+                            <Grid item xs={12} sm={6}>
+                              <Typography variant="subtitle2" color="text.secondary">
+                                Mã tài xế
+                              </Typography>
+                              <Typography
+                                variant="body1"
+                                gutterBottom
+                                sx={{
+                                  color: "primary.main",
+                                  cursor: "pointer",
+                                  fontWeight: 500,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  position: "relative",
+                                  transition: "all 0.3s ease",
+                                  "&:after": {
+                                    content: '""',
+                                    position: "absolute",
+                                    width: "0%",
+                                    height: "2px",
+                                    bottom: 0,
+                                    left: 0,
+                                    backgroundColor: "primary.dark",
+                                    transition: "width 0.3s ease",
+                                  },
+                                  "&:hover": {
+                                    color: "primary.dark",
+                                    "&:after": {
+                                      width: "100%",
+                                    },
+                                  },
+                                }}
+                                onClick={() => navigate(`/staff-menu/drivers/${trip.driverId}`)}
+                              >
+                                <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} />{" "}
+                                {trip.driverName}
+                              </Typography>
+                            </Grid>
+                          )}
+
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" color="text.secondary">
+                              Thời gian bắt đầu
+                            </Typography>
+                            <Typography variant="body1" gutterBottom>
+                              {formatDateTime(trip.startTime)}
+                            </Typography>
+                          </Grid>
+
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" color="text.secondary">
+                              Thời gian kết thúc
+                            </Typography>
+                            <Typography variant="body1" gutterBottom>
+                              {formatDateTime(trip.endTime)}
+                            </Typography>
+                          </Grid>
+
+                          {trip.tripId && (
+                            <Grid item xs={12}>
+                              <Box mt={1}>
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  startIcon={<DirectionsIcon />}
+                                  onClick={() =>
+                                    navigate(`${prefix}/trips/${trip.tripId}`)
+                                  }
+                                >
+                                  Chi tiết chuyến đi
+                                </Button>
+                              </Box>
+                            </Grid>
+                          )}
+                        </Grid>
+                      </Box>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
 
             {!tripLoading &&
               !tripError &&
@@ -2555,7 +2724,7 @@ const OrderDetailPage: React.FC = () => {
                               },
                             },
                           }}
-                          onClick={() => navigate(`/drivers/${trip.driverId}`)}
+                          onClick={() => navigate(`/staff-menu/drivers/${trip.driverId}`)}
                         >
                           <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} />{" "}
                           {trip.driverName}

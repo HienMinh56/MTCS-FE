@@ -52,14 +52,14 @@ const DistanceCalculatorPage: React.FC = () => {
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center" }}>
-              <IconButton
+              {/* <IconButton
                 onClick={handleGoBack}
                 sx={{ mr: 1 }}
                 color="primary"
                 aria-label="back"
               >
                 <ArrowBackIcon />
-              </IconButton>
+              </IconButton> */}
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 <StraightenIcon sx={{ mr: 1.5, color: "primary.main" }} />
                 <Typography

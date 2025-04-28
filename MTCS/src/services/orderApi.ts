@@ -399,9 +399,21 @@ export const trackingOrder = async (trackingCode: string) => {
   try {
     const response = await axiosInstance.get(`/api/order/${trackingCode}`);
 
-    // Check if the order is completed
-    if (response.data && response.data.status === OrderStatus.Completed) {
-      throw new Error("ORDER_COMPLETED");
+    // Check if the order status is not "Delivering"
+    if (response.data && response.data.status !== OrderStatus.Delivering) {
+      // Check which specific non-Delivering status it is and throw appropriate error
+      if (response.data.status === OrderStatus.Completed) {
+        throw new Error("ORDER_COMPLETED");
+      } 
+      else if (response.data.status === OrderStatus.Scheduled){
+        throw new Error("ORDER_SCHEDULED");
+      }
+      else if (response.data.status === OrderStatus.Shipped) {
+        throw new Error("ORDER_SHIPPED");
+      }
+      else if (response.data.status === OrderStatus.Pending) {
+        throw new Error("ORDER_PENDING");
+      }
     }
 
     return response;

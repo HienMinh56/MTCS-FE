@@ -291,8 +291,8 @@ const IncidentDetailDialog = ({
                     <Typography variant="caption" color="text.secondary">Loại</Typography>
                     <Typography variant="body1">
                       {incident.type === 1 ? "Có thể sửa" : 
-                       incident.type === 2 ? "Cần hỗ trợ" :
-                       incident.type === 3 ? "Không thể sửa" :
+                       incident.type === 2 ? "Cần hỗ trợ loại 1" :
+                       incident.type === 3 ? "Cần hỗ trợ loại 2" :
                        "N/A"}
                     </Typography>
                   </Box>
@@ -1046,9 +1046,9 @@ const IncidentManagement = () => {
                                 {incident.type === 1 
                                   ? "Có thể sửa" 
                                   : incident.type === 2 
-                                  ? "Cần hỗ trợ"
+                                  ? "Cần hỗ trợ loại 1"
                                   : incident.type === 3 
-                                  ? "Không thể sửa" 
+                                  ? "Cần hỗ trợ loại 2" 
                                   : incident.type}
                               </TableCell>
                               <TableCell align="center">
