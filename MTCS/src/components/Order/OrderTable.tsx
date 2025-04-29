@@ -878,15 +878,17 @@ const OrderManagement: React.FC = () => {
               >
                 Xuất Excel
               </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AddIcon />}
-                size="small"
-                onClick={handleAddNew}
-              >
-                Thêm mới
-              </Button>
+              {user?.role !== "Admin" && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  size="small"
+                  onClick={handleAddNew}
+                >
+                  Thêm mới
+                </Button>
+              )}
             </Box>
           </Box>
 
