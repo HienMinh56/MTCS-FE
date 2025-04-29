@@ -148,18 +148,18 @@ const AdminFinanceDashboard: React.FC = () => {
       path: "/admin/pricing",
     },
     {
-      id: "system-config",
-      text: "Cấu Hình Hệ Thống",
-      icon: <SettingsIcon />,
-      selected: activeSideTab === "system-config",
-      path: "/admin/system-config",
-    },
-    {
       id: "delivery-status",
       text: "Trạng thái giao hàng",
       icon: <StraightenIcon />,
       selected: activeSideTab === "delivery-status",
       path: "/admin/delivery-status",
+    },
+    {
+      id: "system-config",
+      text: "Cấu Hình Hệ Thống",
+      icon: <SettingsIcon />,
+      selected: activeSideTab === "system-config",
+      path: "/admin/system-config",
     },
   ];
 

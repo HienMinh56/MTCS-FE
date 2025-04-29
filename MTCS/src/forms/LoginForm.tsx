@@ -109,18 +109,6 @@ const LoginForm: React.FC<LoginFormProps> = ({
         helperText={errors.password}
         disabled={isLoading}
       />
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
-        <Link
-          component="button"
-          variant="body2"
-          onClick={handleForgotPassword}
-          disabled={isLoading}
-          tabIndex={-1} // Ngăn nút này nhận focus khi nhấn Tab
-          type="button" // Xác định rõ đây không phải nút submit
-        >
-          Quên mật khẩu?
-        </Link>
-      </Box>
       <Button
         type="submit"
         fullWidth
