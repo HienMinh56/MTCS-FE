@@ -44,30 +44,8 @@ import { getAllIncidentReports, getIncidentReportById, IncidentReports } from ".
 import ReplaceTripModal from "./ReplaceTripModal";
 import TableSortLabel from '@mui/material/TableSortLabel';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps & { sx?: any }) {
-  const { children, value, index, sx, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`incident-tabpanel-${index}`}
-      aria-labelledby={`incident-tab-${index}`}
-      style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-      {...other}
-      sx={sx}
-    >
-      {value === index && <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>{children}</Box>}
-    </div>
-  );
-}
-
+// Remove TabPanel-related interface and component
+// Keep only a11yProps function for accessibility
 function a11yProps(index: number) {
   return {
     id: `incident-tab-${index}`,
@@ -529,16 +507,21 @@ const IncidentManagement = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   
-  // Thêm state cho chức năng sắp xếp
+  // Add these new states for better filtering like in TripTable
+  const [allIncidents, setAllIncidents] = useState<Incident[]>([]);
+  const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>([]);
+  const [isFiltering, setIsFiltering] = useState(false);
+  
+  // Keep the existing sort config state
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: 'asc' | 'desc' | null;
-  }>({
+  }>( {
     key: 'createdDate',
     direction: null,
   });
   
-  // Add state for image preview
+  // Keep the image preview state
   const [imagePreview, setImagePreview] = useState<{
     open: boolean;
     src: string;
@@ -549,13 +532,15 @@ const IncidentManagement = () => {
     title: "",
   });
 
-  // Fetch incident reports from API
+  // Fetch incident reports from API - update to set all state values
   useEffect(() => {
     const fetchIncidentReports = async () => {
       setLoading(true);
       try {
         const data = await getAllIncidentReports();
         setIncidents(data);
+        setAllIncidents(data);  // Store all incidents for filtering
+        setFilteredIncidents(data);
       } catch (error) {
         console.error("Error fetching incident reports:", error);
       } finally {
@@ -565,6 +550,59 @@ const IncidentManagement = () => {
     
     fetchIncidentReports();
   }, []);
+  
+  // Add new effect for filtering when tab or search term changes
+  useEffect(() => {
+    if (!allIncidents.length) return;
+
+    // Start with all incidents
+    let filtered = [...allIncidents];
+    
+    // Apply search filter if there's a search term
+    if (searchTerm.trim() !== '') {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      filtered = filtered.filter(incident => {
+        // Search by multiple fields
+        return (
+          (incident.reportId && incident.reportId.toLowerCase().includes(lowerSearchTerm)) ||
+          (incident.trackingCode && incident.trackingCode.toLowerCase().includes(lowerSearchTerm)) ||
+          (incident.orderId && incident.orderId.toLowerCase().includes(lowerSearchTerm)) ||
+          (incident.incidentType && incident.incidentType.toLowerCase().includes(lowerSearchTerm))
+        );
+      });
+      setIsFiltering(true);
+    } else {
+      setIsFiltering(false);
+    }
+    
+    // Apply tab filtering
+    if (tabValue === 1) {  // Handling
+      filtered = filtered.filter(incident => incident.status === "Handling");
+    } else if (tabValue === 2) {  // Completed/Resolved
+      filtered = filtered.filter(incident => 
+        incident.status === "Completed" || 
+        incident.status === "Cancelled" || 
+        incident.status === "Canceled" ||
+        (incident.status !== "Handling" && incident.status !== "Pending")
+      );
+    }
+    
+    // Apply sorting if configured
+    if (sortConfig.key === 'createdDate' && sortConfig.direction) {
+      filtered = [...filtered].sort((a, b) => {
+        const dateA = new Date(a.createdDate).getTime();
+        const dateB = new Date(b.createdDate).getTime();
+        
+        return sortConfig.direction === 'asc' 
+          ? dateA - dateB 
+          : dateB - dateA;
+      });
+    }
+    
+    setFilteredIncidents(filtered);
+    // Reset page when filters change
+    setPage(0);
+  }, [tabValue, searchTerm, allIncidents, sortConfig]);
 
   // Handle view incident details with API data
   const handleViewIncident = async (reportId: string) => {
@@ -671,54 +709,10 @@ const IncidentManagement = () => {
     }
   ];
 
-  const filteredIncidents = incidents.filter((incident) => {
-    if (!searchTerm.trim()) return true;
-    
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    
-    return (
-      // Search by Incident ID
-      (incident.reportId && incident.reportId.toLowerCase().includes(lowerSearchTerm)) ||
-      // Search by Trip ID
-      (incident.trackingCode && incident.trackingCode.toLowerCase().includes(lowerSearchTerm)) ||
-      // Search by Order ID
-      (incident.orderId && incident.orderId.toLowerCase().includes(lowerSearchTerm)) ||
-      // Search by Incident Type
-      (incident.incidentType && incident.incidentType.toLowerCase().includes(lowerSearchTerm))
-    );
-  });
-
-  const getFilteredIncidentsByStatus = (status: string) => {
-    let result;
-    
-    if (status === "all") {
-      result = filteredIncidents;
-    } else if (status === "Completed") {
-      // Include all non-handling and non-pending statuses as "Đã xử lý"
-      result = filteredIncidents.filter((incident) => 
-        incident.status === "Completed" || 
-        incident.status === "Cancelled" || 
-        incident.status === "Canceled" ||
-        (incident.status !== "Handling" && incident.status !== "Pending")
-      );
-    } else {
-      result = filteredIncidents.filter((incident) => incident.status === status);
-    }
-    
-    // Áp dụng sắp xếp theo thời gian báo cáo nếu có
-    if (sortConfig.key === 'createdDate' && sortConfig.direction) {
-      result = [...result].sort((a, b) => {
-        const dateA = new Date(a.createdDate).getTime();
-        const dateB = new Date(b.createdDate).getTime();
-        
-        return sortConfig.direction === 'asc' 
-          ? dateA - dateB 
-          : dateB - dateA;
-      });
-    }
-    
-    return result;
-  };
+  // Use this to get the current page items
+  const getCurrentIncidents = () => {
+    return filteredIncidents.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  }
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -901,7 +895,7 @@ const IncidentManagement = () => {
           >
             <Typography variant="h6" component="div" fontWeight={500}>
               Danh sách sự cố
-              {searchTerm.trim() !== '' && (
+              {isFiltering && (
                 <Typography 
                   component="span" 
                   color="text.secondary" 
@@ -912,7 +906,6 @@ const IncidentManagement = () => {
               )}
             </Typography>
             <Box sx={{ display: "flex", gap: 1, width: { xs: "100%", sm: "auto" } }}>
-              {/* Updated search input to match OrderTable style */}
               <TextField
                 size="small"
                 placeholder="Tìm kiếm theo mã sự cố, mã chuyến, loại..."
@@ -975,153 +968,137 @@ const IncidentManagement = () => {
           </Box>
         </Box>
 
+        {/* Modified table container that follows TripTable approach exactly */}
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: "hidden" }}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
               <CircularProgress />
             </Box>
           ) : (
-            incidentStatusOptions.map((status, index) => (
-              <TabPanel key={index} value={tabValue} index={index}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  flexGrow: 1, 
-                  overflow: 'hidden',
-                  position: 'relative' // Thêm position relative để giữ vị trí cố định
-                }}>
-                <TableContainer sx={{ 
-                  flexGrow: 1, 
-                  overflow: "auto",
-                  position: "relative",
-                  display: 'flex',
-                  flexDirection: 'column',
-                  border: '1px solid rgba(224, 224, 224, 1)', 
-                  borderRadius: '4px', 
-                  boxSizing: 'border-box',
-                  minHeight: 0 // Thêm minHeight: 0 để đảm bảo flexbox hoạt động đúng
-                }}>
-                  <Table
-                    stickyHeader
-                    size="small"
-                    sx={{ 
-                      minWidth: 650,
-                      "& .MuiTableHead-root": {
-                        position: "sticky",
-                        top: 0,
-                        zIndex: 2,
-                        backgroundColor: "background.paper",
-                      },
-                      "& .MuiTableCell-stickyHeader": {
-                        backgroundColor: "background.paper",
-                        boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.1)"
-                      }
-                    }}
-                    aria-label="incidents table"
-                  >
-                    <TableHead>
-                      <TableRow>
-                        <TableCell align="center">Mã sự cố</TableCell>
-                        <TableCell align="center">Mã vận đơn</TableCell>
-                        <TableCell align="center">Loại sự cố</TableCell>
-                        <TableCell align="center">Loại</TableCell>
-                        <TableCell align="center">
-                          <TableSortLabel
-                            active={sortConfig.key === 'createdDate'}
-                            direction={sortConfig.direction === null ? 'asc' : sortConfig.direction}
-                            onClick={handleRequestSort}
-                            sx={{ whiteSpace: 'nowrap' }}
-                          >
-                            Thời gian báo cáo
-                          </TableSortLabel>
-                        </TableCell>
-                        <TableCell align="center">Trạng thái</TableCell>                        
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {getFilteredIncidentsByStatus(status.value)
-                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                        .length > 0 ? (
-                        getFilteredIncidentsByStatus(status.value)
-                          .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                          .map((incident) => (
-                            <TableRow
-                              key={incident.reportId}
-                              hover
-                              onClick={() => handleOpenDialog(incident)}
-                              sx={{ cursor: "pointer" }}
-                            >
-                              <TableCell align="center">{incident.reportId}</TableCell>
-                              <TableCell align="center">{incident.trackingCode}</TableCell>
-                              <TableCell align="center">{incident.incidentType}</TableCell>
-                              <TableCell align="center">
-                                {incident.type === 1 
-                                  ? "Có thể sửa" 
-                                  : incident.type === 2 
-                                  ? "Cần hỗ trợ loại 1"
-                                  : incident.type === 3 
-                                  ? "Cần hỗ trợ loại 2" 
-                                  : incident.type}
-                              </TableCell>
-                              <TableCell align="center">
-                                {incident.createdDate ? 
-                                  `${new Date(incident.createdDate).toLocaleDateString('vi-VN')} ${new Date(incident.createdDate).toLocaleTimeString('vi-VN')}` : 
-                                  ''}
-                              </TableCell>
-                              <TableCell align="center">
-                                <Chip
-                                  size="small"
-                                  label={
-                                    incident.status === "Pending"
-                                      ? "Chờ xử lý"
-                                      : incident.status === "Handling"
-                                      ? "Đang xử lý"
-                                      : "Đã xử lý" // Changed to always show "Đã xử lý" for non-handling/pending statuses
-                                  }
-                                  color={
-                                    incident.status === "Pending"
-                                      ? "warning"
-                                      : incident.status === "Handling"
-                                      ? "info"
-                                      : "success" // Changed to always show success color for non-handling/pending statuses
-                                  }
-                                />
-                              </TableCell>
-                            </TableRow>
-                          ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} align="center">
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              py={3}
-                            >
-                              Không có dữ liệu
-                            </Typography>
+            <>
+              <TableContainer sx={{ 
+                flexGrow: 1, 
+                overflow: "auto", 
+                position: "relative",
+                border: '1px solid rgba(224, 224, 224, 1)', 
+                borderRadius: '4px',
+                boxSizing: 'border-box',
+              }}>
+                <Table
+                  stickyHeader
+                  size="small"
+                  sx={{ 
+                    minWidth: 650,
+                    "& .MuiTableHead-root": {
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 1,
+                      backgroundColor: "background.paper",
+                    },
+                    "& .MuiTableCell-stickyHeader": {
+                      backgroundColor: "background.paper",
+                      boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.1)"
+                    }
+                  }}
+                  aria-label="incidents table"
+                >
+                  <TableHead>
+                    <TableRow>
+                      <TableCell align="center">Mã sự cố</TableCell>
+                      <TableCell align="center">Mã vận đơn</TableCell>
+                      <TableCell align="center">Loại sự cố</TableCell>
+                      <TableCell align="center">Loại</TableCell>
+                      <TableCell align="center">
+                        <TableSortLabel
+                          active={sortConfig.key === 'createdDate'}
+                          direction={sortConfig.direction === null ? 'asc' : sortConfig.direction}
+                          onClick={handleRequestSort}
+                          sx={{ whiteSpace: 'nowrap' }}
+                        >
+                          Thời gian báo cáo
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell align="center">Trạng thái</TableCell>                        
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {getCurrentIncidents().length > 0 ? (
+                      getCurrentIncidents().map((incident) => (
+                        <TableRow
+                          key={incident.reportId}
+                          hover
+                          onClick={() => handleOpenDialog(incident)}
+                          sx={{ cursor: "pointer" }}
+                        >
+                          <TableCell align="center">{incident.reportId}</TableCell>
+                          <TableCell align="center">{incident.trackingCode}</TableCell>
+                          <TableCell align="center">{incident.incidentType}</TableCell>
+                          <TableCell align="center">
+                            {incident.type === 1 
+                              ? "Có thể sửa" 
+                              : incident.type === 2 
+                              ? "Cần hỗ trợ loại 1"
+                              : incident.type === 3 
+                              ? "Cần hỗ trợ loại 2" 
+                              : incident.type}
+                          </TableCell>
+                          <TableCell align="center">
+                            {incident.createdDate ? 
+                              `${new Date(incident.createdDate).toLocaleDateString('vi-VN')} ${new Date(incident.createdDate).toLocaleTimeString('vi-VN')}` : 
+                              ''}
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip
+                              size="small"
+                              label={
+                                incident.status === "Pending"
+                                  ? "Chờ xử lý"
+                                  : incident.status === "Handling"
+                                  ? "Đang xử lý"
+                                  : "Đã xử lý"
+                              }
+                              color={
+                                incident.status === "Pending"
+                                  ? "warning"
+                                  : incident.status === "Handling"
+                                  ? "info"
+                                  : "success"
+                              }
+                            />
                           </TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                <TablePagination
-                  rowsPerPageOptions={[5, 10, 25]}
-                  component="div"
-                  count={getFilteredIncidentsByStatus(status.value).length}
-                  rowsPerPage={rowsPerPage}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                  labelRowsPerPage="Dòng mỗi trang:"
-                  labelDisplayedRows={({ from, to, count }) =>
-                    `${from}-${to} trên ${count !== -1 ? count : `hơn ${to}`}`
-                  }
-                  sx={{ borderTop: "1px solid rgba(224, 224, 224, 1)" }}
-                />
-                </Box>
-              </TabPanel>
-            ))
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            py={3}
+                          >
+                            {searchTerm ? "Không tìm thấy sự cố phù hợp" : "Không có dữ liệu"}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25]}
+                component="div"
+                count={filteredIncidents.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                labelRowsPerPage="Dòng mỗi trang:"
+                labelDisplayedRows={({ from, to, count }) =>
+                  `${from}-${to} trên ${count !== -1 ? count : `hơn ${to}`}`
+                }
+                sx={{ borderTop: "1px solid rgba(224, 224, 224, 1)" }}
+              />
+            </>
           )}
         </Box>
       </Paper>
