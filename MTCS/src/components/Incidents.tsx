@@ -983,11 +983,23 @@ const IncidentManagement = () => {
           ) : (
             incidentStatusOptions.map((status, index) => (
               <TabPanel key={index} value={tabValue} index={index}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  flexGrow: 1, 
+                  overflow: 'hidden',
+                  position: 'relative' // Thêm position relative để giữ vị trí cố định
+                }}>
                 <TableContainer sx={{ 
                   flexGrow: 1, 
                   overflow: "auto",
                   position: "relative",
+                  display: 'flex',
+                  flexDirection: 'column',
+                  border: '1px solid rgba(224, 224, 224, 1)', 
+                  borderRadius: '4px', 
+                  boxSizing: 'border-box',
+                  minHeight: 0 // Thêm minHeight: 0 để đảm bảo flexbox hoạt động đúng
                 }}>
                   <Table
                     stickyHeader
