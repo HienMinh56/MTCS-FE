@@ -162,19 +162,20 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       return false;
     }
 
-    if (!dateRegex.test(startDate)) {
-      setError('Định dạng ngày bắt đầu không hợp lệ');
-      return false;
-    }
-
-    if (!dateRegex.test(endDate)) {
-      setError('Định dạng ngày kết thúc không hợp lệ');
-      return false;
-    }
-
     const timeRegex = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(signedTime)) {
       setError('Định dạng giờ ký không hợp lệ');
+      return false;
+    }
+
+    const datetimeRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+    if (!datetimeRegex.test(startDate)) {
+      setError('Định dạng ngày và giờ bắt đầu không hợp lệ');
+      return false;
+    }
+
+    if (!datetimeRegex.test(endDate)) {
+      setError('Định dạng ngày và giờ kết thúc không hợp lệ');
       return false;
     }
 
@@ -371,7 +372,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
             <Grid item xs={12} sm={6}>
               <TextField
                 label="Ngày bắt đầu"
-                type="date"
+                type="datetime-local"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 InputLabelProps={{
@@ -385,7 +386,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
             <Grid item xs={12} sm={6}>
               <TextField
                 label="Ngày kết thúc"
-                type="date"
+                type="datetime-local"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 InputLabelProps={{

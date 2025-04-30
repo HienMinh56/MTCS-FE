@@ -1883,6 +1883,7 @@ const CustomerDetailPage = () => {
 
                                 <Box>
                                   <IconButton
+                                    component="a"
                                     size="small"
                                     href={file.fileUrl}
                                     target="_blank"
@@ -2164,7 +2165,7 @@ const CustomerDetailPage = () => {
             startIcon={<OpenInNewIcon />}
             variant="outlined"
           >
-            Tải xuống
+            Mở trong cửa số mới
           </Button>
           <Button
             onClick={() =>
