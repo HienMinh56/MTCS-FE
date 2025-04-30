@@ -159,6 +159,7 @@ const SystemConfiguration: React.FC = () => {
       Total_orders_per_day: "Số đơn hàng tối đa nhận trong ngày",
       Maintenance_Due_Alert: "Hạn cảnh báo bảo trì",
       Registration_Expiry_Alert: "Hạn cảnh báo đăng kiểm",
+      Contract_Expiry_Alert: "Hạn cảnh báo hợp đồng",
     };
 
     return labels[key] || key;

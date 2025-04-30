@@ -93,7 +93,6 @@ const storeTokens = (tokens: TokenData) => {
   const tokenData = parseJwt(tokens.token);
   if (tokenData && tokenData.sub) {
     localStorage.setItem("userId", tokenData.sub);
-    // Remove storing userRole in localStorage - it will be handled by the context
   }
 };
 
@@ -110,7 +109,7 @@ export const login = async (
       throw new Error(
         response.data.messageVN || // Backend logic error (primary error message)
           response.data.message ||
-          "Login failed"
+          "Đăng nhập thất bại"
       );
     }
 
@@ -128,17 +127,31 @@ export const login = async (
     throw new Error("Invalid token data received");
   } catch (error) {
     if (axios.isAxiosError(error)) {
+      // If the server returned an error response with data, use that message
       if (error.response?.data) {
-        throw error;
+        const responseData = error.response.data as any;
+        // Use Vietnamese message if available
+        if (responseData.messageVN) {
+          throw new Error(responseData.messageVN);
+        } else if (responseData.message) {
+          throw new Error(responseData.message);
+        }
       }
 
+      // Handle specific HTTP error codes based on the backend exceptions
       if (error.response?.status === 404) {
         throw new Error("Không tìm thấy người dùng");
       }
 
+      if (error.response?.status === 401) {
+        throw new Error("Email hoặc mật khẩu không chính xác");
+      }
+
+      // Generic error for other status codes
       throw new Error("Đăng nhập thất bại");
     }
 
+    // If it's not an Axios error, still provide a user-friendly message
     throw new Error("Đăng nhập thất bại");
   }
 };

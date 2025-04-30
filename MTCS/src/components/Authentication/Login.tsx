@@ -12,7 +12,6 @@ import {
   Snackbar,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import ForgotPassword from "../ForgotPassword";
 import Register from "./Register";
 import { login, LoginRequest } from "../../services/authApi";
 import { useNavigate } from "react-router-dom";
@@ -100,15 +99,37 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
         }, 1500);
       }, 500);
     } catch (error) {
+      // Default error message in Vietnamese
       let errorMessage = "Đăng nhập thất bại";
 
-      if (
-        axios.isAxiosError(error) &&
-        error.response?.headers?.["token-expired"] === "true"
-      ) {
-        errorMessage = "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại";
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
+      if (axios.isAxiosError(error)) {
+        // Handle token expired error specifically
+        if (error.response?.headers?.["token-expired"] === "true") {
+          errorMessage = "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại";
+        }
+        // Always prioritize Vietnamese error messages from the backend if available
+        else if (error.response?.data) {
+          const responseData = error.response?.data as any;
+
+          if (responseData.messageVN) {
+            errorMessage = responseData.messageVN;
+          } else if (
+            responseData.message &&
+            typeof responseData.message === "string"
+          ) {
+            // Map English error messages to Vietnamese ones
+            if (responseData.message.includes("User not found")) {
+              errorMessage = "Không tìm thấy người dùng";
+            } else if (
+              responseData.message.includes("Invalid email or password")
+            ) {
+              errorMessage = "Email hoặc mật khẩu không chính xác";
+            } else if (!responseData.message.includes("Request failed")) {
+              // Use the message if it's not the default Axios error
+              errorMessage = responseData.message;
+            }
+          }
+        }
       }
 
       setErrors({ general: errorMessage });
