@@ -166,23 +166,103 @@ export const updateCustomer = async (customerData: {
       }
     );
     
-    console.log("Update response:", response.data);
+    console.log("Update response raw:", response);
+    
+    // IMPORTANT: Check if response body contains an error status code
+    // This handles cases where the API returns HTTP 200 but the response body contains an error
+    if (response.data && (response.data.status === 400 || response.data.status === 0)) {
+      console.error("Server returned error status in response body:", response.data);
+      
+      // Extract error message from different possible formats
+      let errorMessage = response.data.message || "Lỗi dữ liệu không hợp lệ";
+      
+      // Translate common error messages
+      if (errorMessage.toLowerCase().includes("phone number already exists")) {
+        throw new Error("Số điện thoại đã được sử dụng bởi khách hàng khác");
+      } else if (errorMessage.toLowerCase().includes("tax number already exists")) {
+        throw new Error("Mã số thuế đã được sử dụng bởi khách hàng khác");
+      } else if (errorMessage.toLowerCase().includes("email already exists")) {
+        throw new Error("Email đã được sử dụng bởi khách hàng khác");
+      } else {
+        throw new Error(errorMessage);
+      }
+    }
+    
+    console.log("Update response success:", response.data);
     return response.data;
   }
   catch (error: any) {
-    console.error("===== customer API ERROR =====");
+    console.error("===== updateCustomer API ERROR =====");
     console.error("Error:", error);
     
     if (error.response) {
       console.error("Status:", error.response.status);
       console.error("Response data:", error.response.data);
       
-      // If we have a specific error message from the backend, throw it
-      if (error.response.data && error.response.data.message) {
-        throw new Error(error.response.data.message);
+      // Extract error message from different possible formats
+      let errorMessage = "Lỗi cập nhật dữ liệu";
+      const errorData = error.response.data;
+      
+      if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      } else if (errorData?.message) {
+        errorMessage = errorData.message;
+      } else if (errorData?.title) {
+        errorMessage = errorData.title;
+      } else if (errorData?.error) {
+        errorMessage = errorData.error;
+      } else if (errorData?.errors) {
+        // Handle validation errors array
+        const errors = Object.values(errorData.errors).flat();
+        if (errors.length > 0) {
+          errorMessage = errors[0] as string;
+        }
+      }
+      
+      // Handle HTTP 400 error for validation failures
+      if (error.response.status === 400) {
+        // Translate common error messages
+        const lowerCaseError = errorMessage.toLowerCase();
+        if (lowerCaseError.includes("phone number already exists")) {
+          throw new Error("Số điện thoại đã được sử dụng bởi khách hàng khác");
+        } else if (lowerCaseError.includes("tax number already exists")) {
+          throw new Error("Mã số thuế đã được sử dụng bởi khách hàng khác");
+        } else if (lowerCaseError.includes("email already exists")) {
+          throw new Error("Email đã được sử dụng bởi khách hàng khác");
+        } else {
+          throw new Error(errorMessage);
+        }
+      } else if (error.response.status === 409) {
+        // Conflict errors (often used for duplicates)
+        const errorData = error.response.data;
+        let errorMessage = "Dữ liệu bị trùng lặp";
+        
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData?.message) {
+          errorMessage = errorData.message;
+        }
+        
+        // Check for specific duplication messages
+        const lowerCaseError = errorMessage.toLowerCase();
+        if (lowerCaseError.includes("phone")) {
+          throw new Error("Số điện thoại đã được sử dụng bởi khách hàng khác");
+        } else if (lowerCaseError.includes("tax")) {
+          throw new Error("Mã số thuế đã được sử dụng bởi khách hàng khác");
+        } else if (lowerCaseError.includes("email")) {
+          throw new Error("Email đã được sử dụng bởi khách hàng khác");
+        } else {
+          throw new Error(errorMessage);
+        }
       }
     }
-    throw error;
+    
+    // If error doesn't have a response or isn't a 400/409 status
+    if (error.message) {
+      throw error; // Rethrow the error with its message
+    } else {
+      throw new Error("Lỗi khi cập nhật khách hàng. Vui lòng thử lại sau.");
+    }
   }
 };
 

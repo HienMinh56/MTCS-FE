@@ -423,13 +423,26 @@ const CustomerDetailPage = () => {
     }
 
     setIsSubmitting(true);
+    let success = false; // Flag to track if operation was successful
+
     try {
       console.log("Submitting form data:", formData);
 
-      await updateCustomer(formData);
+      // Make the API request and store the response
+      const response = await updateCustomer(formData);
+      
+      // Check if the response indicates an error (similar to createCustomer)
+      if (response && typeof response === "object" && 
+          (response.status === 400 || response.status === 0)) {
+        // This is an error response from the server
+        const errorMessage = response.message || "Lỗi dữ liệu không hợp lệ";
+        throw new Error(errorMessage);
+      }
+
+      // If we get here, it was successful
+      success = true;
 
       // Close dialog and show success message
-      handleCloseEditDialog();
       setSnackbar({
         open: true,
         message: "Cập nhật thông tin khách hàng thành công!",
@@ -442,27 +455,31 @@ const CustomerDetailPage = () => {
         setCustomer(updatedCustomer);
       }
     } catch (error: any) {
+      success = false; // Ensure the success flag is false
       console.error("Error updating customer:", error);
 
       // Handle specific validation errors from backend
       const errorMessage =
         error.message || "Lỗi khi cập nhật thông tin. Vui lòng thử lại sau.";
 
-      // Set specific field errors based on backend validation messages
-      if (error.message?.includes("Email already exists")) {
+      // Set specific field errors based on backend validation messages - check for Vietnamese error messages
+      if (errorMessage.includes("Email đã được sử dụng") || 
+          errorMessage.toLowerCase().includes("email already exists")) {
         setFormErrors((prev) => ({
           ...prev,
-          email: "Email đã tồn tại trong hệ thống",
+          email: "Email đã được sử dụng bởi khách hàng khác",
         }));
-      } else if (error.message?.includes("Phone number already exists")) {
+      } else if (errorMessage.includes("Số điện thoại đã được sử dụng") || 
+                errorMessage.toLowerCase().includes("phone number already exists")) {
         setFormErrors((prev) => ({
           ...prev,
-          phoneNumber: "Số điện thoại đã tồn tại trong hệ thống",
+          phoneNumber: "Số điện thoại đã được sử dụng bởi khách hàng khác",
         }));
-      } else if (error.message?.includes("Tax number already exists")) {
+      } else if (errorMessage.includes("Mã số thuế đã được sử dụng") || 
+                errorMessage.toLowerCase().includes("tax number already exists")) {
         setFormErrors((prev) => ({
           ...prev,
-          taxNumber: "Mã số thuế đã tồn tại trong hệ thống",
+          taxNumber: "Mã số thuế đã được sử dụng bởi khách hàng khác",
         }));
       }
 
@@ -473,6 +490,10 @@ const CustomerDetailPage = () => {
         severity: "error",
       });
     } finally {
+      // Only close the dialog if the operation was successful
+      if (success) {
+        handleCloseEditDialog();
+      }
       setIsSubmitting(false);
     }
   };
