@@ -522,7 +522,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 <Controller
                   name="temperature"
                   control={control}
-                  render={({ field: { onChange, ...field } }) => (
+                  render={({ field }) => (
                     <TextField
                       {...field}
                       label="Nhiệt độ"
@@ -532,7 +532,11 @@ const OrderForm: React.FC<OrderFormProps> = ({
                           <InputAdornment position="end">°C</InputAdornment>
                         ),
                       }}
-                      onChange={(e) => onChange(Number(e.target.value))}
+                      value={field.value === 0 || field.value === "" ? "" : field.value}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value === "" ? "" : Number(value));
+                      }}
                       fullWidth
                       error={!!errors.temperature}
                       helperText={errors.temperature?.message}

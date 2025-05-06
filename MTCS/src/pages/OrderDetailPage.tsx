@@ -173,7 +173,7 @@ const OrderDetailPage: React.FC = () => {
     open: boolean;
     message: string;
     severity?: "success" | "error" | "info" | "warning";
-    autoHideDuration?: number;
+    autoHideDuration?: number | null;
   }>({
     open: false,
     message: "",
@@ -1078,7 +1078,7 @@ const OrderDetailPage: React.FC = () => {
       setLoadingSnackbar({
         open: true,
         message: "Đã xếp chuyến đi cho đơn hàng.",
-        severity: "info",
+        severity: "success",
         autoHideDuration: 3000,
       });
 
@@ -1111,6 +1111,7 @@ const OrderDetailPage: React.FC = () => {
       setCreateTripError(errorMessage);
     } finally {
       setCreateTripLoading(false);
+      setCreateTripError(null);
     }
   };
 
@@ -1119,12 +1120,12 @@ const OrderDetailPage: React.FC = () => {
     setAutoScheduleError(null);
     setAutoScheduleSuccess(null);
 
-    // Show loading notification when starting the process
+    // Hiển thị thông báo đang xử lý và không tự động đóng
     setLoadingSnackbar({
       open: true,
       message: "Đang xếp chuyến tự động...",
       severity: "info",
-      autoHideDuration: 3000,
+      autoHideDuration: null, // Không tự động đóng
     });
 
     try {
@@ -1137,13 +1138,21 @@ const OrderDetailPage: React.FC = () => {
       console.log("Auto scheduling result:", result);
 
       if (result.status == 1) {
-        // Use the message from API response for success message
+        // Cập nhật state thành công
         setAutoScheduleSuccess("Đã tạo chuyến cho đơn hàng!");
 
-        // Wait for the loading notification to complete before refreshing data
+        // Cập nhật snackbar hiện tại thành thông báo thành công
+        setLoadingSnackbar({
+          open: true,
+          message: "Đã xếp chuyến thành công cho đơn hàng!",
+          severity: "success",
+          autoHideDuration: 3000,
+        });
+
+        // Wait for the success notification to complete before refreshing data
         setTimeout(() => {
           fetchData(); // Refresh trip data
-        }, 4000); // Slightly longer than the autoHideDuration to ensure notification completes
+        }, 4000);
 
         setTimeout(() => {
           setAutoScheduleSuccess(null);
@@ -1154,7 +1163,7 @@ const OrderDetailPage: React.FC = () => {
           "Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!"
         );
 
-        // Show error notification
+        // Cập nhật snackbar hiện tại thành thông báo lỗi
         setLoadingSnackbar({
           open: true,
           message: "Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!",
@@ -1166,23 +1175,23 @@ const OrderDetailPage: React.FC = () => {
           setAutoScheduleError(null);
         }, 5000);
       }
-    } catch (error: string | null) {
-      setAutoScheduleError(error);
+    } catch (error: any) {
+      setAutoScheduleError(error?.message || "Có lỗi xảy ra khi xếp chuyến tự động");
 
-      // Show error notification
+      // Cập nhật snackbar hiện tại thành thông báo lỗi
       setLoadingSnackbar({
         open: true,
-        message: `${error} Vui lòng tạo chuyến thủ công.`,
+        message: `${error?.message || error || "Có lỗi xảy ra"} Vui lòng tạo chuyến thủ công.`,
         severity: "error",
-        autoHideDuration: 6000,
+        autoHideDuration: 5000,
       });
+
+      setTimeout(() => {
+        setAutoScheduleError(null);
+      }, 5000);
     } finally {
       setAutoScheduleLoading(false);
     }
-
-    setTimeout(() => {
-      setAutoScheduleError(null);
-    }, 5000);
   };
 
   const handleUpdatePaymentStatus = async () => {
