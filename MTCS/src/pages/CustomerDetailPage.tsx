@@ -934,7 +934,7 @@ const CustomerDetailPage = () => {
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell align="center">Mã đơn hàng</TableCell>
+                  <TableCell align="center">Mã vận đơn</TableCell>
                   <TableCell align="center">Ngày tạo</TableCell>
                   <TableCell align="right">Tổng giá trị</TableCell>
                   <TableCell align="center">Trạng thái</TableCell>
@@ -951,7 +951,7 @@ const CustomerDetailPage = () => {
                     .map((order, index) => {
                       const orderId =
                         typeof order === "object" && order !== null
-                          ? order.orderId
+                          ? order.trackingCode
                           : order;
                       const createdDate =
                         typeof order === "object" &&
@@ -973,8 +973,8 @@ const CustomerDetailPage = () => {
                           : "-";
                       return (
                         <TableRow key={index} hover>
-                          <TableCell>{orderId}</TableCell>
-                          <TableCell>{createdDate}</TableCell>
+                          <TableCell align="center">{orderId}</TableCell>
+                          <TableCell align="center">{createdDate}</TableCell>
                           <TableCell align="right">{price}</TableCell>
                           <TableCell
                             align="center"

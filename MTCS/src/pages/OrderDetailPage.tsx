@@ -1074,12 +1074,23 @@ const OrderDetailPage: React.FC = () => {
       await manualCreateTrip(createTripData);
 
       setCreateTripSuccess("Tạo chuyến đi thành công");
+
+      setLoadingSnackbar({
+        open: true,
+        message: "Đã xếp chuyến đi cho đơn hàng.",
+        severity: "info",
+        autoHideDuration: 3000,
+      });
+
       setTimeout(() => {
         setCreateTripSuccess(null);
       }, 5000);
 
       handleCloseCreateTripDialog();
-      fetchData();
+
+      setTimeout(() => {
+        fetchData(); // Refresh trip data
+      }, 4000);      
     } catch (err: any) {
       console.error("Error creating trip:", err);
 
@@ -1089,6 +1100,13 @@ const OrderDetailPage: React.FC = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
+
+      setLoadingSnackbar({
+        open: true,
+        message: "Đã có lỗi xảy ra khi tạo chuyến cho đơn hàng. Vui lòng thử lại!",
+        severity: "error",
+        autoHideDuration: 3000,
+      });
 
       setCreateTripError(errorMessage);
     } finally {
@@ -1106,7 +1124,7 @@ const OrderDetailPage: React.FC = () => {
       open: true,
       message: "Đang xếp chuyến tự động...",
       severity: "info",
-      autoHideDuration: 1500,
+      autoHideDuration: 3000,
     });
 
     try {
@@ -1122,31 +1140,26 @@ const OrderDetailPage: React.FC = () => {
         // Use the message from API response for success message
         setAutoScheduleSuccess("Đã tạo chuyến cho đơn hàng!");
 
-        // Show success notification
-        // setLoadingSnackbar({
-        //   open: true,
-        //   message: result.message,
-        //   severity: "success",
-        //   autoHideDuration: 5000
-        // });
+        // Wait for the loading notification to complete before refreshing data
+        setTimeout(() => {
+          fetchData(); // Refresh trip data
+        }, 4000); // Slightly longer than the autoHideDuration to ensure notification completes
 
         setTimeout(() => {
           setAutoScheduleSuccess(null);
         }, 5000);
-
-        fetchData(); // Refresh trip data
       } else {
-        // Use the message from API response for success message
+        // Use the message from API response for error message
         setAutoScheduleError(
           "Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!"
         );
 
-        // Show success notification
+        // Show error notification
         setLoadingSnackbar({
           open: true,
           message: "Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!",
           severity: "error",
-          autoHideDuration: 5000,
+          autoHideDuration: 3000,
         });
 
         setTimeout(() => {
