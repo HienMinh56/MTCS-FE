@@ -29,6 +29,33 @@ export interface Driver {
   files?: DriverFile[];
 }
 
+export interface DriverUseHistory {
+  tripId: string;
+  tractorId: string;
+  tractorPlate: string;
+  trailerId: string;
+  trailerPlate: string;
+  startTime: string | null;
+  endTime: string | null;
+  status: string;
+  matchBy: string;
+  matchTime: string | null;
+}
+
+export interface DriverUseHistoryPagedData {
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  totalCount: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+  items: DriverUseHistory[];
+}
+
+export interface DriverUseHistoryResponse {
+  driverUseHistories: DriverUseHistoryPagedData;
+}
+
 export enum DriverStatus {
   Inactive = 0,
   Active = 1,

@@ -51,19 +51,23 @@ import CloseIcon from "@mui/icons-material/Close";
 import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import HistoryIcon from "@mui/icons-material/History";
 import { useAuth } from "../contexts/AuthContext";
 import {
   getDriverById,
   activateDriver,
   deactivateDriver,
+  getDriverUsageHistory,
 } from "../services/DriverApi";
 import {
   Driver,
   getDriverStatusColor,
   DriverStatus,
   DriverFile,
+  DriverUseHistoryPagedData,
 } from "../types/driver";
 import DriverUpdate from "../components/Driver/DriverUpdate";
+import DriverUseHistoryTable from "../components/Driver/DriverUseHistoryTable";
 
 const DriverProfile: React.FC = () => {
   const { driverId } = useParams<{ driverId: string }>();
@@ -94,6 +98,12 @@ const DriverProfile: React.FC = () => {
   const [statusUpdateError, setStatusUpdateError] = useState<string | null>(
     null
   );
+  const [historyData, setHistoryData] =
+    useState<DriverUseHistoryPagedData | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
+
   const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
 
   const fetchDriverProfile = async () => {
@@ -114,9 +124,33 @@ const DriverProfile: React.FC = () => {
     }
   };
 
+  const fetchDriverUsageHistory = async () => {
+    if (!driverId) return;
+
+    setHistoryLoading(true);
+    try {
+      const result = await getDriverUsageHistory(
+        driverId,
+        historyPage,
+        historyPageSize
+      );
+      setHistoryData(result);
+    } catch (error) {
+      console.error("Failed to fetch driver usage history:", error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchDriverProfile();
   }, [driverId]);
+
+  useEffect(() => {
+    if (driverId) {
+      fetchDriverUsageHistory();
+    }
+  }, [driverId, historyPage, historyPageSize]);
 
   const handleBack = () => {
     navigate(-1);
@@ -349,6 +383,15 @@ const DriverProfile: React.FC = () => {
         </Box>
       );
     }
+  };
+
+  const handleHistoryPageChange = (page: number) => {
+    setHistoryPage(page);
+  };
+
+  const handleHistoryPageSizeChange = (pageSize: number) => {
+    setHistoryPageSize(pageSize);
+    setHistoryPage(1); // Reset to first page when changing page size
   };
 
   if (loading) {
@@ -774,6 +817,31 @@ const DriverProfile: React.FC = () => {
             </Grid>
           </Paper>
         )}
+
+        <Paper
+          elevation={3}
+          sx={{
+            p: { xs: 2, md: 3 },
+            mt: 3,
+            borderRadius: 2,
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+            <HistoryIcon color="primary" />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Lịch sử sử dụng xe
+            </Typography>
+          </Box>
+          <Divider sx={{ mb: 3 }} />
+          <DriverUseHistoryTable
+            data={historyData}
+            loading={historyLoading}
+            page={historyPage}
+            pageSize={historyPageSize}
+            onPageChange={handleHistoryPageChange}
+            onPageSizeChange={handleHistoryPageSizeChange}
+          />
+        </Paper>
       </Box>
 
       {!isAdmin && (

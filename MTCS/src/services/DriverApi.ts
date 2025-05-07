@@ -4,6 +4,8 @@ import {
   DriverListParams,
   PaginatedData,
   DriverStatus,
+  DriverUseHistoryResponse,
+  DriverUseHistoryPagedData,
 } from "../types/driver";
 
 export interface ApiResponse<T = any> {
@@ -236,7 +238,7 @@ export const activateDriver = async (
     console.error(`Failed to activate driver ${driverId}:`, error);
 
     if (error.response && error.response.data) {
-      return error.response.data;
+      return response.data;
     }
 
     return {
@@ -260,7 +262,7 @@ export const deactivateDriver = async (
     console.error(`Failed to deactivate driver ${driverId}:`, error);
 
     if (error.response && error.response.data) {
-      return error.response.data;
+      return response.data;
     }
 
     return {
@@ -270,5 +272,32 @@ export const deactivateDriver = async (
       messageVN: "Không thể vô hiệu hóa tài xế",
       errors: null,
     };
+  }
+};
+
+export const getDriverUsageHistory = async (
+  driverId: string,
+  pageNumber = 1,
+  pageSize = 10
+): Promise<DriverUseHistoryPagedData> => {
+  try {
+    const url = `/api/Driver/history/${driverId}?pageNumber=${pageNumber}&pageSize=${pageSize}`;
+    const response = await axiosInstance.get<
+      ApiResponse<DriverUseHistoryResponse>
+    >(url);
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(
+        response.data.message || "Failed to load driver usage history"
+      );
+    }
+
+    return response.data.data.driverUseHistories;
+  } catch (error) {
+    console.error(
+      `Failed to fetch driver usage history for ${driverId}:`,
+      error
+    );
+    throw error;
   }
 };

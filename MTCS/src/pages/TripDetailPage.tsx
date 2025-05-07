@@ -401,7 +401,8 @@ const TripDetailPage: React.FC = () => {
   // Navigate to driver details
   const handleDriverClick = (driverId: string | null) => {
     if (driverId) {
-      navigate(`/staff-menu/drivers/${driverId}`);
+      const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+      navigate(`${prefix}/drivers/${driverId}`);
     }
   };
 
