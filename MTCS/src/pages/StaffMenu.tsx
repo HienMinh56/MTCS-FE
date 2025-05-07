@@ -29,6 +29,8 @@ import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import PersonIcon from "@mui/icons-material/Person";
 import StraightenIcon from "@mui/icons-material/Straighten";
 import RouteIcon from "@mui/icons-material/Route";
+import MenuIcon from "@mui/icons-material/Menu";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import OrderManagement from "../components/Order/OrderTable";
 import IncidentManagement from "../components/Incidents";
 import Drivers from "./Drivers";
@@ -36,13 +38,14 @@ import Tractors from "./Tractors";
 import Trailers from "./Trailers";
 import Customers from "../components/Customers";
 import TripTable from "../components/Trip/TripTable";
-import DeliveryStatusPage from "./DeliveryStatusPage"; // Import DeliveryStatusPage
+import DeliveryStatusPage from "./DeliveryStatusPage";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
 import logo1 from "../assets/logo1.png";
 
 const drawerWidth = 240;
+const drawerCollapsedWidth = 70;
 
 const StaffMenu: React.FC = () => {
   const navigate = useNavigate();
@@ -50,6 +53,7 @@ const StaffMenu: React.FC = () => {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeTab, setActiveTab] = useState<string>("orders");
+  const [drawerOpen, setDrawerOpen] = useState(true);
 
   const userId = localStorage.getItem("userId") || "staff-user";
 
@@ -84,6 +88,10 @@ const StaffMenu: React.FC = () => {
 
   const handleNavigateToTrackOrder = () => {
     window.open("/tracking-order", "_blank");
+  };
+
+  const toggleDrawer = () => {
+    setDrawerOpen(!drawerOpen);
   };
 
   const menuItems = [
@@ -159,16 +167,36 @@ const StaffMenu: React.FC = () => {
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
+          width: {
+            xs: "100%",
+            sm: drawerOpen
+              ? `calc(100% - ${drawerWidth}px)`
+              : `calc(100% - ${drawerCollapsedWidth}px)`,
+          },
+          ml: {
+            xs: 0,
+            sm: drawerOpen ? drawerWidth : drawerCollapsedWidth,
+          },
           background: "linear-gradient(90deg, #0146C7, #3369d1)",
           color: "white",
           boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
           zIndex: (theme) => theme.zIndex.drawer + 1,
+          transition: theme.transitions.create(["width", "margin"], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen,
+          }),
         }}
       >
         <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
-          <Box sx={{ width: "48px" }} />
+          <IconButton
+            color="inherit"
+            aria-label="toggle drawer"
+            onClick={toggleDrawer}
+            edge="start"
+            sx={{ mr: 2 }}
+          >
+            {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
+          </IconButton>
 
           <Box
             component="img"
@@ -196,8 +224,6 @@ const StaffMenu: React.FC = () => {
                   transition: "all 0.3s ease",
                   borderRadius: 1.5,
                   p: 1.5,
-                  display: "flex",
-                  alignItems: "center",
                 }}
               >
                 <StraightenIcon sx={{ fontSize: 28 }} />
@@ -216,8 +242,6 @@ const StaffMenu: React.FC = () => {
                   transition: "all 0.3s ease",
                   borderRadius: 1.5,
                   p: 1.5,
-                  display: "flex",
-                  alignItems: "center",
                 }}
               >
                 <LocalShippingIcon sx={{ fontSize: 28 }} />
@@ -302,12 +326,12 @@ const StaffMenu: React.FC = () => {
       </AppBar>
       <Drawer
         variant="permanent"
-        open={true}
+        open={drawerOpen}
         sx={{
-          width: drawerWidth,
+          width: drawerOpen ? drawerWidth : drawerCollapsedWidth,
           flexShrink: 0,
           [`& .MuiDrawer-paper`]: {
-            width: drawerWidth,
+            width: drawerOpen ? drawerWidth : drawerCollapsedWidth,
             boxSizing: "border-box",
             borderRight: "1px solid rgba(0, 0, 0, 0.08)",
             backgroundColor: "#f8f9fa",
@@ -334,11 +358,11 @@ const StaffMenu: React.FC = () => {
             alt="Staff User"
             src="/static/avatar.jpg"
             sx={{
-              mr: 2,
+              mr: drawerOpen ? 2 : 0,
               border: `2px solid ${theme.palette.mtcs.secondary}`,
               bgcolor: theme.palette.mtcs.primary,
               transition: theme.transitions.create(
-                ["transform", "box-shadow"],
+                ["transform", "box-shadow", "margin"],
                 {
                   duration: 200,
                 }
@@ -349,18 +373,22 @@ const StaffMenu: React.FC = () => {
               },
             }}
           />
-          <Typography
-            variant="subtitle1"
-            sx={{
-              fontWeight: 500,
-              color: theme.palette.mtcs.primary,
-              transition: theme.transitions.create(["opacity", "transform"], {
-                duration: theme.transitions.duration.standard,
-              }),
-            }}
-          >
-            Nhân viên
-          </Typography>
+          {drawerOpen && (
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 500,
+                color: theme.palette.mtcs.primary,
+                opacity: drawerOpen ? 1 : 0,
+                transition: theme.transitions.create(["opacity", "transform"], {
+                  duration: theme.transitions.duration.standard,
+                }),
+                transform: drawerOpen ? "translateX(0)" : "translateX(-20px)",
+              }}
+            >
+              Nhân viên
+            </Typography>
+          )}
         </Box>
         <Divider />
         <List sx={{ mt: 2, px: 1 }}>
@@ -377,6 +405,7 @@ const StaffMenu: React.FC = () => {
                   px: 2.5,
                   py: 1,
                   borderRadius: 1.5,
+                  justifyContent: drawerOpen ? "initial" : "center",
                   background: item.selected
                     ? "linear-gradient(135deg, rgba(1, 70, 199, 0.13), rgba(117, 237, 209, 0.23))"
                     : "transparent",
@@ -402,13 +431,13 @@ const StaffMenu: React.FC = () => {
                 <ListItemIcon
                   sx={{
                     minWidth: 0,
-                    mr: 2,
+                    mr: drawerOpen ? 2 : 0,
                     justifyContent: "center",
                     color: item.selected
                       ? theme.palette.mtcs.primary
                       : "inherit",
                     transition: theme.transitions.create(
-                      ["color", "transform"],
+                      ["color", "transform", "margin"],
                       {
                         duration: 200,
                       }
@@ -418,24 +447,27 @@ const StaffMenu: React.FC = () => {
                 >
                   {item.icon}
                 </ListItemIcon>
-                <ListItemText
-                  primary={item.text}
-                  primaryTypographyProps={{
-                    fontWeight: item.selected ? "medium" : "normal",
-                    fontSize: "0.94rem",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                  sx={{
-                    color: item.selected
-                      ? theme.palette.mtcs.primary
-                      : "inherit",
-                    transition: theme.transitions.create(["color"], {
-                      duration: 200,
-                    }),
-                  }}
-                />
+                {drawerOpen && (
+                  <ListItemText
+                    primary={item.text}
+                    primaryTypographyProps={{
+                      fontWeight: item.selected ? "medium" : "normal",
+                      fontSize: "0.94rem",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                    sx={{
+                      color: item.selected
+                        ? theme.palette.mtcs.primary
+                        : "inherit",
+                      opacity: drawerOpen ? 1 : 0,
+                      transition: theme.transitions.create(["opacity"], {
+                        duration: 200,
+                      }),
+                    }}
+                  />
+                )}
               </ListItemButton>
             </ListItem>
           ))}
@@ -489,6 +521,10 @@ const StaffMenu: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           backgroundColor: "#f8f9fa",
+          transition: theme.transitions.create("margin", {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen,
+          }),
         }}
       >
         <Routes>

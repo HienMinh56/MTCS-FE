@@ -387,7 +387,11 @@ const AdminFinanceDashboard: React.FC = () => {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.standard,
             }),
+            overflowY: "visible",
             overflowX: "hidden",
+            height: "auto", // Set height to auto instead of 100%
+            maxHeight: "none", // Remove any max-height constraint
+            position: "fixed", // Change from absolute to fixed
             "&:hover": {
               boxShadow: drawerOpen ? "none" : "4px 0px 10px rgba(0,0,0,0.05)",
             },
@@ -436,6 +440,8 @@ const AdminFinanceDashboard: React.FC = () => {
           sx={{
             mt: 2,
             px: 1,
+            overflowY: "visible",
+            maxHeight: "none",
           }}
         >
           {mainSidebarItems.map((item) => (
@@ -581,7 +587,7 @@ const AdminFinanceDashboard: React.FC = () => {
                       fontSize: "0.94rem",
                     }}
                   >
-                    Quản lý tài nguyên
+                    Giám sát tài nguyên
                   </Typography>
                   {resourcesOpen ? (
                     <ExpandLess
@@ -616,7 +622,9 @@ const AdminFinanceDashboard: React.FC = () => {
             in={resourcesOpen}
             timeout="auto"
             sx={{
-              transition: theme.transitions.create(["height"], {
+              maxHeight: "100%",
+              overflowY: "visible",
+              transition: theme.transitions.create(["height", "opacity"], {
                 duration: 400,
                 easing: theme.transitions.easing.easeInOut,
               }),
