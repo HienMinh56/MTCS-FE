@@ -446,7 +446,7 @@ const IncidentDetailDialog = ({
       </DialogContent>
       <DialogActions>
         {/* Show button only if incident is not completed OR if incident cannot be repaired OR requires assistance */}
-        {(incident.status === "Handling" && (incident.type === 2 || incident.type === 3)) && (
+        {(incident.status === "Handling" && (incident.type === 2)) && ( // type === 1 và type === 3 không được tạo chuyến thay thế
           <>
             {hasReplacementTrip ? (
               <Button 
