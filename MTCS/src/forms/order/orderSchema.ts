@@ -1,6 +1,6 @@
-import { z } from 'zod';
-import { ContainerType, ContainerSize, DeliveryType } from '../../types/order';
-import dayjs from 'dayjs';
+import { z } from "zod";
+import { ContainerType, ContainerSize, DeliveryType } from "../../types/order";
+import dayjs from "dayjs";
 
 // Container number validation pattern:
 // - First 3 characters: company code (letters)
@@ -13,12 +13,16 @@ const containerNumberPattern = /^[A-Z]{3}[UJZ]\d{6}\d{1}$/;
 const validateStringFormat = (errorMessage: string) => {
   return (val: string) => {
     if (/^\s/.test(val) || /\s$/.test(val)) {
-      return { message: `${errorMessage} không được bắt đầu hoặc kết thúc bằng dấu cách` };
+      return {
+        message: `${errorMessage} không được bắt đầu hoặc kết thúc bằng dấu cách`,
+      };
     }
     if (/\s{2,}/.test(val)) {
-      return { message: `${errorMessage} không được chứa nhiều hơn một dấu cách giữa các từ` };
+      return {
+        message: `${errorMessage} không được chứa nhiều hơn một dấu cách giữa các từ`,
+      };
     }
-    return { message: '' };
+    return { message: "" };
   };
 };
 
@@ -85,9 +89,8 @@ export const orderSchema = z.object({
       message: 'Tên người liên hệ không được chứa nhiều hơn một dấu cách giữa các từ',
     }),
   contactPhone: z.string()
-    .min(10, 'Số điện thoại phải có ít nhất 10 số')
-    .max(15, 'Số điện thoại không được vượt quá 15 số')
-    .regex(/^\d+$/, 'Số điện thoại chỉ được chứa các chữ số'),
+      .length(10, "Số điện thoại phải có đúng 10 số")
+      .regex(/^\d+$/, "Số điện thoại chỉ được chứa các chữ số"),
   distance: z.coerce.number({ invalid_type_error: 'Khoảng cách phải là một số' })
     .min(1, 'Khoảng cách tối thiểu 1 KM')
     .max(300, 'Khoảng tối đa 300 KM'),
@@ -143,11 +146,18 @@ export type OrderFormValues = z.infer<typeof orderSchema> & {
 export const formatOrderFormForApi = (data: OrderFormValues) => {
   return {
     companyName: data.companyName,
-    temperature: data.containerType === ContainerType["Container Lạnh"] ? data.temperature : null,
+    temperature:
+      data.containerType === ContainerType["Container Lạnh"]
+        ? data.temperature
+        : null,
     weight: data.weight,
-    pickUpDate: data.pickUpDate ? dayjs(data.pickUpDate).format('YYYY-MM-DD') : '',
-    deliveryDate: data.deliveryDate ? dayjs(data.deliveryDate).format('YYYY-MM-DD') : '',
-    note: data.note || '',
+    pickUpDate: data.pickUpDate
+      ? dayjs(data.pickUpDate).format("YYYY-MM-DD")
+      : "",
+    deliveryDate: data.deliveryDate
+      ? dayjs(data.deliveryDate).format("YYYY-MM-DD")
+      : "",
+    note: data.note || "",
     containerType: data.containerType,
     containerSize: data.containerSize,
     deliveryType: data.deliveryType,
@@ -165,23 +175,23 @@ export const formatOrderFormForApi = (data: OrderFormValues) => {
 };
 
 export const defaultValues: OrderFormValues = {
-  companyName: '',
+  companyName: "",
   temperature: null,
   weight: 0,
   pickUpDate: null,
   deliveryDate: null,
-  note: '',
+  note: "",
   containerType: ContainerType["Container Khô"],
   containerSize: ContainerSize["Container 20 FEET"],
   deliveryType: DeliveryType.Export,
-  pickUpLocation: '',
-  deliveryLocation: '',
-  conReturnLocation: '',
+  pickUpLocation: "",
+  deliveryLocation: "",
+  conReturnLocation: "",
   price: 0,
   contactPerson: '',  contactPhone: '',
   distance: null,
   containerNumber: '',
-  completeTime: '', // Empty string instead of null
+  completeTime: null, // Empty string instead of null
   orderPlacer: '',
   files: [],
   fileDescriptions: [],

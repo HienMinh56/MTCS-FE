@@ -380,7 +380,7 @@ const AdminTripPerformanceChart: React.FC<AdminTripPerformanceChartProps> = ({
                         >
                           <LocalGasStation color="warning" />
                           <Typography variant="body2" fontWeight="medium">
-                            Chi phí NL/km
+                            Chi phí nhiên liệu/km
                           </Typography>
                         </Stack>
                         <Typography variant="h6" fontWeight="bold">
@@ -432,7 +432,7 @@ const AdminTripPerformanceChart: React.FC<AdminTripPerformanceChartProps> = ({
                         >
                           <LocalGasStation color="warning" />
                           <Typography variant="body2" fontWeight="medium">
-                            Chi phí NL TB
+                            Chi phí nhiên liệu trung bình
                           </Typography>
                         </Stack>
                         <Typography variant="h6" fontWeight="bold">
@@ -573,7 +573,7 @@ const AdminTripPerformanceChart: React.FC<AdminTripPerformanceChartProps> = ({
                       <TableRow>
                         <TableCell align="center">Tài xế</TableCell>
                         <TableCell align="center">Số chuyến</TableCell>
-                        <TableCell align="center">Tổng khoảng cách</TableCell>
+                        <TableCell align="center">Tổng quãng đường</TableCell>
                         <TableCell align="center">Đúng giờ</TableCell>
                         <TableCell align="center">Tỉ lệ đúng giờ</TableCell>
                         <TableCell align="center">Số sự cố</TableCell>

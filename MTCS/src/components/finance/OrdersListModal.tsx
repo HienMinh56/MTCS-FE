@@ -107,11 +107,6 @@ const OrdersListModal: React.FC<OrdersListModalProps> = ({
     }
   };
 
-  const handleRowClick = (orderId: string) => {
-    navigate(`/orders/${orderId}`);
-    onClose();
-  };
-
   // Get status badge color
   const getStatusColor = (status: string) => {
     const statusLower = status?.toLowerCase() || "";
@@ -376,39 +371,20 @@ const OrdersListModal: React.FC<OrdersListModalProps> = ({
                   {filteredOrders.map((order) => (
                     <TableRow
                       key={order.orderId}
-                      hover
-                      onClick={() => handleRowClick(order.orderId)}
                       sx={{
-                        cursor: "pointer",
                         transition: "all 0.2s",
-                        "&:hover": {
-                          backgroundColor: alpha(
-                            theme.palette.primary.main,
-                            0.04
-                          ),
-                          transform: "translateY(-1px)",
-                          boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                        },
                       }}
                     >
                       <TableCell align="center">
-                        <Tooltip title="Xem chi tiết đơn hàng">
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: theme.palette.primary.main,
-                              fontWeight: 500,
-                              textDecoration: "underline",
-                              textUnderlineOffset: "2px",
-                              textDecorationColor: alpha(
-                                theme.palette.primary.main,
-                                0.4
-                              ),
-                            }}
-                          >
-                            {order.trackingCode || "N/A"}
-                          </Typography>
-                        </Tooltip>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "text.primary",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {order.trackingCode || "N/A"}
+                        </Typography>
                       </TableCell>
                       <TableCell align="center">
                         <Typography variant="body2">

@@ -401,9 +401,6 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
                   <MenuItem value={AdminRevenuePeriodType.Yearly}>
                     Hàng Năm
                   </MenuItem>
-                  <MenuItem value={AdminRevenuePeriodType.Custom}>
-                    Tùy Chỉnh
-                  </MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -539,7 +536,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
                     </Grid>
                     <Grid item xs={12} md={4}>
                       <AdminStatCard
-                        title="Đơn Hàng Hoàn Thành"
+                        title="Tổng Đơn Hàng"
                         value={revenueData.completedOrders.toString()}
                         icon={<LocalShipping />}
                         color="primary"
