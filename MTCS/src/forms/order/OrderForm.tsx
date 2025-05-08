@@ -66,9 +66,16 @@ const OrderForm: React.FC<OrderFormProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
   const [fileNotes, setFileNotes] = useState<string[]>([]);
+  const [fileErrors, setFileErrors] = useState<{
+    descriptions: { [key: number]: string };
+    notes: { [key: number]: string };
+  }>({
+    descriptions: {},
+    notes: {},
+  });
   const [customers, setCustomers] = useState<any[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
-  
+
   const {
     control,
     handleSubmit,
@@ -83,11 +90,14 @@ const OrderForm: React.FC<OrderFormProps> = ({
       temperature: initialValues?.temperature || 0,
       weight: initialValues?.weight || "", // Initialize as empty string instead of 0
       pickUpDate: initialValues?.pickUpDate || dayjs().add(1, "day").toDate(),
-      deliveryDate: initialValues?.deliveryDate || dayjs().add(2, "day").toDate(),
-      completionTime: initialValues?.completeTime || null, 
+      deliveryDate:
+        initialValues?.deliveryDate || dayjs().add(2, "day").toDate(),
+      completionTime: initialValues?.completeTime || null,
       note: initialValues?.note || "",
-      containerType: initialValues?.containerType || ContainerType["Container Khô"],
-      containerSize: initialValues?.containerSize || ContainerSize["Container 20 FEET"],
+      containerType:
+        initialValues?.containerType || ContainerType["Container Khô"],
+      containerSize:
+        initialValues?.containerSize || ContainerSize["Container 20 FEET"],
       deliveryType: initialValues?.deliveryType || DeliveryType.Import,
       pickUpLocation: initialValues?.pickUpLocation || "",
       deliveryLocation: initialValues?.deliveryLocation || "",
@@ -113,21 +123,25 @@ const OrderForm: React.FC<OrderFormProps> = ({
         // Trực tiếp lấy dữ liệu từ API
         const response = await getCustomers(1, 100);
         console.log("API response for customers:", response);
-        
+
         // Xử lý phản hồi API
         let processedCustomers = [];
-        
+
         if (Array.isArray(response)) {
           // Trường hợp API trả về array trực tiếp
           processedCustomers = response;
         } else if (response && Array.isArray(response.data)) {
           // Trường hợp API trả về dạng { status, message, data }
           processedCustomers = response.data;
-        } else if (response && response.orders && Array.isArray(response.orders.items)) {
+        } else if (
+          response &&
+          response.orders &&
+          Array.isArray(response.orders.items)
+        ) {
           // Trường hợp API trả về dạng cũ { orders: { items: [] } }
           processedCustomers = response.orders.items;
         }
-        
+
         console.log("Processed customers:", processedCustomers);
         setCustomers(processedCustomers);
       } catch (error) {
@@ -156,25 +170,25 @@ const OrderForm: React.FC<OrderFormProps> = ({
     if (event.target.files) {
       const newFilesArray = Array.from(event.target.files);
       const currentFiles = selectedFiles; // Store current files before updating
-      
+
       // Update files array
       setSelectedFiles((prevFiles) => [...prevFiles, ...newFilesArray]);
-      
+
       // Add empty descriptions and notes for each new file
-      setFileDescriptions(prev => {
+      setFileDescriptions((prev) => {
         const result = [...prev];
         // Ensure we have a description for each file
         while (result.length < currentFiles.length + newFilesArray.length) {
-          result.push('');
+          result.push("");
         }
         return result;
       });
-      
-      setFileNotes(prev => {
+
+      setFileNotes((prev) => {
         const result = [...prev];
         // Ensure we have a note for each file
         while (result.length < currentFiles.length + newFilesArray.length) {
-          result.push('');
+          result.push("");
         }
         return result;
       });
@@ -183,57 +197,121 @@ const OrderForm: React.FC<OrderFormProps> = ({
 
   const handleFileRemove = (index: number) => {
     setSelectedFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
-    setFileDescriptions(prev => prev.filter((_, i) => i !== index));
-    setFileNotes(prev => prev.filter((_, i) => i !== index));
+    setFileDescriptions((prev) => prev.filter((_, i) => i !== index));
+    setFileNotes((prev) => prev.filter((_, i) => i !== index));
   };
-  
+
   const handleFileDescriptionChange = (index: number, value: string) => {
     const newDescriptions = [...fileDescriptions];
     newDescriptions[index] = value;
     setFileDescriptions(newDescriptions);
+
+    // Clear error when user starts typing
+    if (value.trim() !== "") {
+      setFileErrors((prev) => ({
+        ...prev,
+        descriptions: {
+          ...prev.descriptions,
+          [index]: "",
+        },
+      }));
+    }
   };
-  
+
   const handleFileNoteChange = (index: number, value: string) => {
     const newNotes = [...fileNotes];
     newNotes[index] = value;
     setFileNotes(newNotes);
+
+    // Clear error when user starts typing
+    if (value.trim() !== "") {
+      setFileErrors((prev) => ({
+        ...prev,
+        notes: {
+          ...prev.notes,
+          [index]: "",
+        },
+      }));
+    }
+  };
+
+  const validateFileFields = (): boolean => {
+    if (selectedFiles.length === 0) return true;
+
+    let isValid = true;
+    const descriptionErrors: { [key: number]: string } = {};
+    const noteErrors: { [key: number]: string } = {};
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      if (!fileDescriptions[i] || fileDescriptions[i].trim() === "") {
+        descriptionErrors[
+          i
+        ] = `Vui lòng nhập mô tả cho tệp "${selectedFiles[i].name}"`;
+        isValid = false;
+      }
+
+      if (!fileNotes[i] || fileNotes[i].trim() === "") {
+        noteErrors[
+          i
+        ] = `Vui lòng nhập ghi chú cho tệp "${selectedFiles[i].name}"`;
+        isValid = false;
+      }
+    }
+
+    setFileErrors({
+      descriptions: descriptionErrors,
+      notes: noteErrors,
+    });
+
+    return isValid;
   };
 
   const onFormSubmit = (data: OrderFormValues) => {
+    // Validate file descriptions and notes
+    const filesValid = validateFileFields();
+
+    if (!filesValid) {
+      // If validation fails, don't submit the form
+      return;
+    }
+
     // Verify the arrays have the same length before submission
     const filesToSubmit = selectedFiles.length > 0 ? selectedFiles : null;
     let descriptionsToSubmit = [...fileDescriptions];
     let notesToSubmit = [...fileNotes];
-    
+
     // Make sure descriptions and notes arrays have exactly the same length as files
     if (filesToSubmit) {
       // Ensure arrays match file count
       while (descriptionsToSubmit.length < filesToSubmit.length) {
-        descriptionsToSubmit.push('');
+        descriptionsToSubmit.push("");
       }
-      
+
       while (notesToSubmit.length < filesToSubmit.length) {
-        notesToSubmit.push('');
+        notesToSubmit.push("");
       }
-      
+
       // Trim arrays to match file count
-      descriptionsToSubmit = descriptionsToSubmit.slice(0, filesToSubmit.length);
+      descriptionsToSubmit = descriptionsToSubmit.slice(
+        0,
+        filesToSubmit.length
+      );
       notesToSubmit = notesToSubmit.slice(0, filesToSubmit.length);
     }
-    
+
     // Log counts to verify they match
     console.log("Files to submit:", filesToSubmit?.length || 0);
     console.log("Descriptions to submit:", descriptionsToSubmit.length);
     console.log("Notes to submit:", notesToSubmit.length);
     console.log("orderPlacer value:", data.orderPlacer); // Log orderPlacer value
-    
+
     onSubmit({
       ...data,
       weight: data.weight !== "" ? Number(data.weight) : 0, // Convert to number if not empty
       price: data.price !== "" ? Number(data.price) : 0, // Convert to number if not empty
       files: filesToSubmit,
       fileDescriptions: descriptionsToSubmit,
-      fileNotes: notesToSubmit
+      fileNotes: notesToSubmit,
     });
   };
 
@@ -280,7 +358,9 @@ const OrderForm: React.FC<OrderFormProps> = ({
                           ...params.InputProps,
                           endAdornment: (
                             <>
-                              {loadingCustomers ? <CircularProgress color="inherit" size={20} /> : null}
+                              {loadingCustomers ? (
+                                <CircularProgress color="inherit" size={20} />
+                              ) : null}
                               {params.InputProps.endAdornment}
                             </>
                           ),
@@ -343,7 +423,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                   />
                 )}
               />
-            </Grid>            
+            </Grid>
           </Grid>
         </Grid>
 
@@ -369,30 +449,49 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     required
                     inputProps={{
                       maxLength: 11,
-                      style: { textTransform: 'uppercase' }
+                      style: { textTransform: "uppercase" },
                     }}
                     onChange={(e) => {
                       // Convert input to uppercase and format
                       const value = e.target.value.toUpperCase();
                       // Remove non-alphanumeric characters
-                      const formatted = value.replace(/[^A-Z0-9]/g, '');
+                      const formatted = value.replace(/[^A-Z0-9]/g, "");
                       field.onChange(formatted);
                     }}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
-                          <Tooltip 
+                          <Tooltip
                             title={
                               <React.Fragment>
-                                <Typography variant="subtitle2">Định dạng số container:</Typography>
-                                <Typography variant="body2">- 3 kí tự đầu: Viết tắt tên công ty</Typography>
-                                <Typography variant="body2">- Kí tự thứ 4:</Typography>
-                                <Typography variant="body2">&nbsp;&nbsp;U: Container chở hàng</Typography>
-                                <Typography variant="body2">&nbsp;&nbsp;J: Thiết bị có thể tháo rời của container</Typography>
-                                <Typography variant="body2">&nbsp;&nbsp;Z: Đầu kéo hoặc rơ mooc</Typography>
-                                <Typography variant="body2">- 6 kí tự tiếp theo: Số seri của container</Typography>
-                                <Typography variant="body2">- Kí tự cuối: Số kiểm tra</Typography>
-                                <Typography variant="body2">Ví dụ: SEGU5593802</Typography>
+                                <Typography variant="subtitle2">
+                                  Định dạng số container:
+                                </Typography>
+                                <Typography variant="body2">
+                                  - 3 kí tự đầu: Viết tắt tên công ty
+                                </Typography>
+                                <Typography variant="body2">
+                                  - Kí tự thứ 4:
+                                </Typography>
+                                <Typography variant="body2">
+                                  &nbsp;&nbsp;U: Container chở hàng
+                                </Typography>
+                                <Typography variant="body2">
+                                  &nbsp;&nbsp;J: Thiết bị có thể tháo rời của
+                                  container
+                                </Typography>
+                                <Typography variant="body2">
+                                  &nbsp;&nbsp;Z: Đầu kéo hoặc rơ mooc
+                                </Typography>
+                                <Typography variant="body2">
+                                  - 6 kí tự tiếp theo: Số seri của container
+                                </Typography>
+                                <Typography variant="body2">
+                                  - Kí tự cuối: Số kiểm tra
+                                </Typography>
+                                <Typography variant="body2">
+                                  Ví dụ: SEGU5593802
+                                </Typography>
                               </React.Fragment>
                             }
                             placement="top-start"
@@ -414,7 +513,11 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 name="containerType"
                 control={control}
                 render={({ field }) => (
-                  <FormControl fullWidth error={!!errors.containerType} required>
+                  <FormControl
+                    fullWidth
+                    error={!!errors.containerType}
+                    required
+                  >
                     <InputLabel>Loại container</InputLabel>
                     <Select
                       {...field}
@@ -442,7 +545,11 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 name="containerSize"
                 control={control}
                 render={({ field }) => (
-                  <FormControl fullWidth error={!!errors.containerSize} required>
+                  <FormControl
+                    fullWidth
+                    error={!!errors.containerSize}
+                    required
+                  >
                     <InputLabel>Kích thước container</InputLabel>
                     <Select
                       {...field}
@@ -481,7 +588,9 @@ const OrderForm: React.FC<OrderFormProps> = ({
                       <MenuItem value={DeliveryType.Export}>Xuất</MenuItem>
                     </Select>
                     {errors.deliveryType && (
-                      <FormHelperText>{errors.deliveryType.message}</FormHelperText>
+                      <FormHelperText>
+                        {errors.deliveryType.message}
+                      </FormHelperText>
                     )}
                   </FormControl>
                 )}
@@ -501,7 +610,9 @@ const OrderForm: React.FC<OrderFormProps> = ({
                         <InputAdornment position="end">tấn</InputAdornment>
                       ),
                     }}
-                    value={field.value === 0 || field.value === "" ? "" : field.value}
+                    value={
+                      field.value === 0 || field.value === "" ? "" : field.value
+                    }
                     onChange={(e) => {
                       const value = e.target.value;
                       field.onChange(value === "" ? "" : Number(value));
@@ -515,7 +626,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 )}
               />
             </Grid>
-            
+
             {/* Temperature field - only show for Container Lạnh */}
             {containerType === ContainerType["Container Lạnh"] && (
               <Grid item xs={12} md={6}>
@@ -532,7 +643,11 @@ const OrderForm: React.FC<OrderFormProps> = ({
                           <InputAdornment position="end">°C</InputAdornment>
                         ),
                       }}
-                      value={field.value === 0 || field.value === "" ? "" : field.value}
+                      value={
+                        field.value === 0 || field.value === ""
+                          ? ""
+                          : field.value
+                      }
                       onChange={(e) => {
                         const value = e.target.value;
                         field.onChange(value === "" ? "" : Number(value));
@@ -547,7 +662,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 />
               </Grid>
             )}
-            
+
             <Grid item xs={12} md={6}>
               <Controller
                 name="price"
@@ -562,7 +677,9 @@ const OrderForm: React.FC<OrderFormProps> = ({
                         <InputAdornment position="end">VNĐ</InputAdornment>
                       ),
                     }}
-                    value={field.value === 0 || field.value === "" ? "" : field.value}
+                    value={
+                      field.value === 0 || field.value === "" ? "" : field.value
+                    }
                     onChange={(e) => {
                       const value = e.target.value;
                       field.onChange(value === "" ? "" : Number(value));
@@ -590,7 +707,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                         <InputAdornment position="end">km</InputAdornment>
                       ),
                     }}
-                    onChange={(e) => 
+                    onChange={(e) =>
                       onChange(e.target.value ? Number(e.target.value) : null)
                     }
                     fullWidth
@@ -731,7 +848,9 @@ const OrderForm: React.FC<OrderFormProps> = ({
                     label="Thời Gian Ước tính hoàn thành vận chuyển"
                     value={field.value ? dayjs(field.value, "HH:mm") : null}
                     onChange={(newValue) => {
-                      field.onChange(newValue ? dayjs(newValue).format("HH:mm") : null);
+                      field.onChange(
+                        newValue ? dayjs(newValue).format("HH:mm") : null
+                      );
                     }}
                     slotProps={{
                       textField: {
@@ -744,7 +863,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                       },
                     }}
                     ampm={false} // Use 24-hour format
-                    views={['hours', 'minutes']} // Show only hours and minutes
+                    views={["hours", "minutes"]} // Show only hours and minutes
                   />
                 )}
               />
@@ -806,21 +925,23 @@ const OrderForm: React.FC<OrderFormProps> = ({
                       Tệp đã chọn:
                     </Typography>
                     {selectedFiles.map((file, index) => (
-                      <Box 
-                        key={index} 
-                        sx={{ 
-                          mb: 3, 
-                          p: 2, 
-                          border: '1px solid rgba(0, 0, 0, 0.12)',
-                          borderRadius: 1
+                      <Box
+                        key={index}
+                        sx={{
+                          mb: 3,
+                          p: 2,
+                          border: "1px solid rgba(0, 0, 0, 0.12)",
+                          borderRadius: 1,
                         }}
                       >
-                        <Box sx={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between',
-                          alignItems: 'center', 
-                          mb: 2 
-                        }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            mb: 2,
+                          }}
+                        >
                           <Typography variant="body2">{file.name}</Typography>
                           <IconButton
                             size="small"
@@ -831,27 +952,35 @@ const OrderForm: React.FC<OrderFormProps> = ({
                             <DeleteIcon fontSize="small" />
                           </IconButton>
                         </Box>
-                        
+
                         <TextField
                           label="Mô tả file"
-                          value={fileDescriptions[index] || ''}
-                          onChange={(e) => handleFileDescriptionChange(index, e.target.value)}
+                          value={fileDescriptions[index] || ""}
+                          onChange={(e) =>
+                            handleFileDescriptionChange(index, e.target.value)
+                          }
                           fullWidth
                           margin="normal"
                           size="small"
                           disabled={isSubmitting || isDisabled}
                           required
+                          error={!!fileErrors.descriptions[index]}
+                          helperText={fileErrors.descriptions[index]}
                         />
-                        
+
                         <TextField
                           label="Ghi chú file"
-                          value={fileNotes[index] || ''}
-                          onChange={(e) => handleFileNoteChange(index, e.target.value)}
+                          value={fileNotes[index] || ""}
+                          onChange={(e) =>
+                            handleFileNoteChange(index, e.target.value)
+                          }
                           fullWidth
                           margin="normal"
                           size="small"
                           disabled={isSubmitting || isDisabled}
                           required
+                          error={!!fileErrors.notes[index]}
+                          helperText={fileErrors.notes[index]}
                         />
                       </Box>
                     ))}

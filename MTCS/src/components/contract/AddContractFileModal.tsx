@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
-  Button, 
+import React, { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
   TextField,
   Box,
   Grid,
@@ -15,15 +15,15 @@ import {
   Typography,
   Alert,
   Snackbar,
-  CircularProgress
-} from '@mui/material';
-import { createContract } from '../../services/contractApi';
-import { getCustomerById } from '../../services/customerApi';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import { format } from 'date-fns';
-import axios from 'axios';
-import { formatApiError } from '../../utils/errorFormatting';
-import { ContractStatus, OrderStatus } from '../../types/contract';
+  CircularProgress,
+} from "@mui/material";
+import { createContract } from "../../services/contractApi";
+import { getCustomerById } from "../../services/customerApi";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import { format } from "date-fns";
+import axios from "axios";
+import { formatApiError } from "../../utils/errorFormatting";
+import { ContractStatus, OrderStatus } from "../../types/contract";
 
 interface AddContractFileModalProps {
   open: boolean;
@@ -38,21 +38,32 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
   onClose,
   onSuccess,
   customerId,
-  orderId
+  orderId,
 }) => {
-  const [summary, setSummary] = useState('');
-  const [signedBy, setSignedBy] = useState('');
-  const [signedDate, setSignedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
-  const [signedTime, setSignedTime] = useState<string>(format(new Date(), 'HH:mm'));
-  const [startDate, setStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState<string>(format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'));
+  const [summary, setSummary] = useState("");
+  const [signedBy, setSignedBy] = useState("");
+  const [signedDate, setSignedDate] = useState<string>(
+    format(new Date(), "yyyy-MM-dd")
+  );
+  const [signedTime, setSignedTime] = useState<string>(
+    format(new Date(), "HH:mm")
+  );
+  const [startDate, setStartDate] = useState<string>(
+    format(new Date(), "yyyy-MM-dd")
+  );
+  const [endDate, setEndDate] = useState<string>(
+    format(
+      new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+      "yyyy-MM-dd"
+    )
+  );
   const [status, setStatus] = useState<ContractStatus>(ContractStatus.Active);
   const [files, setFiles] = useState<File[]>([]);
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([]);
   const [fileNotes, setFileNotes] = useState<string[]>([]);
   const [fileStatuses, setFileStatuses] = useState<OrderStatus[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -62,12 +73,12 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
   const [customerDetails, setCustomerDetails] = useState<any>(null);
   const [formData, setFormData] = useState({
     customerId: customerId,
-    startDate: '',
-    endDate: '',
-    signedBy: '',
+    startDate: "",
+    endDate: "",
+    signedBy: "",
     status: 1,
-    summary: '',
-    contractFiles: [] as File[]
+    summary: "",
+    contractFiles: [] as File[],
   });
 
   useEffect(() => {
@@ -85,39 +96,52 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
   }, [open, customerId]);
 
   useEffect(() => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      customerId: customerId
+      customerId: customerId,
     }));
   }, [customerId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
-      setFiles(prevFiles => [...prevFiles, ...newFiles]);
-      setFileDescriptions(prev => [...prev, ...newFiles.map(() => '')]);
-      setFileNotes(prev => [...prev, ...newFiles.map(() => '')]);
-      setFileStatuses(prev => [...prev, ...newFiles.map(() => OrderStatus.Valid)]);
+      setFiles((prevFiles) => [...prevFiles, ...newFiles]);
+      setFileDescriptions((prev) => [...prev, ...newFiles.map(() => "")]);
+      setFileNotes((prev) => [...prev, ...newFiles.map(() => "")]);
+      setFileStatuses((prev) => [
+        ...prev,
+        ...newFiles.map(() => OrderStatus.Valid),
+      ]);
     }
   };
 
   const handleRemoveFile = (index: number) => {
-    setFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
-    setFileDescriptions(prev => prev.filter((_, i) => i !== index));
-    setFileNotes(prev => prev.filter((_, i) => i !== index));
-    setFileStatuses(prev => prev.filter((_, i) => i !== index));
+    setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
+    setFileDescriptions((prev) => prev.filter((_, i) => i !== index));
+    setFileNotes((prev) => prev.filter((_, i) => i !== index));
+    setFileStatuses((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleFileDescriptionChange = (index: number, value: string) => {
     const newDescriptions = [...fileDescriptions];
     newDescriptions[index] = value;
     setFileDescriptions(newDescriptions);
+
+    // Clear error when user starts typing
+    if (value.trim() !== "") {
+      setError("");
+    }
   };
 
   const handleFileNoteChange = (index: number, value: string) => {
     const newNotes = [...fileNotes];
     newNotes[index] = value;
     setFileNotes(newNotes);
+
+    // Clear error when user starts typing
+    if (value.trim() !== "") {
+      setError("");
+    }
   };
 
   const handleFileStatusChange = (index: number, value: OrderStatus) => {
@@ -128,87 +152,87 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
 
   const validateForm = () => {
     if (!summary.trim()) {
-      setError('Vui lòng nhập Tóm tắt hợp đồng ');
+      setError("Vui lòng nhập Tóm tắt hợp đồng");
       return false;
     }
 
     if (!signedBy) {
-      setError('Vui lòng chọn người ký hợp đồng');
+      setError("Vui lòng chọn người ký hợp đồng");
       return false;
     }
 
     if (!signedDate.trim()) {
-      setError('Vui lòng chọn ngày ký');
+      setError("Vui lòng chọn ngày ký");
       return false;
     }
 
     if (!signedTime.trim()) {
-      setError('Vui lòng chọn giờ ký');
+      setError("Vui lòng chọn giờ ký");
       return false;
     }
 
     if (!startDate.trim()) {
-      setError('Vui lòng chọn ngày bắt đầu');
+      setError("Vui lòng chọn ngày bắt đầu");
       return false;
     }
 
     if (!endDate.trim()) {
-      setError('Vui lòng chọn ngày kết thúc');
+      setError("Vui lòng chọn ngày kết thúc");
       return false;
     }
 
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(signedDate)) {
-      setError('Định dạng ngày ký không hợp lệ');
+      setError("Định dạng ngày ký không hợp lệ");
       return false;
     }
 
     const timeRegex = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(signedTime)) {
-      setError('Định dạng giờ ký không hợp lệ');
+      setError("Định dạng giờ ký không hợp lệ");
       return false;
     }
 
     const datetimeRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
     if (!datetimeRegex.test(startDate)) {
-      setError('Định dạng ngày và giờ bắt đầu không hợp lệ');
+      setError("Định dạng ngày và giờ bắt đầu không hợp lệ");
       return false;
     }
 
     if (!datetimeRegex.test(endDate)) {
-      setError('Định dạng ngày và giờ kết thúc không hợp lệ');
+      setError("Định dạng ngày và giờ kết thúc không hợp lệ");
       return false;
     }
 
     const signedDateObj = new Date(signedDate);
     const startDateObj = new Date(startDate);
     if (startDateObj < signedDateObj) {
-      setError('Ngày bắt đầu không được trước ngày ký');
+      setError("Ngày bắt đầu không được trước ngày ký");
       return false;
     }
 
     const endDateObj = new Date(endDate);
     if (endDateObj <= startDateObj) {
-      setError('Ngày kết thúc phải sau ngày bắt đầu');
+      setError("Ngày kết thúc phải sau ngày bắt đầu");
       return false;
     }
 
     if (files.length === 0) {
-      setError('Vui lòng thêm ít nhất một tệp đính kèm');
+      setError("Vui lòng thêm ít nhất một tệp đính kèm");
       return false;
     }
 
-    const missingDescriptions = fileDescriptions.some(desc => !desc.trim());
-    const missingNotes = fileNotes.some(note => !note.trim());
+    // Check each file for missing descriptions or notes
+    for (let i = 0; i < files.length; i++) {
+      if (!fileDescriptions[i] || fileDescriptions[i].trim() === "") {
+        setError(`Vui lòng nhập mô tả cho tệp "${files[i].name}"`);
+        return false;
+      }
 
-    if (missingDescriptions) {
-      setError('Vui lòng nhập mô tả cho tất cả các tệp đính kèm');
-      return false;
-    }
-
-    if (missingNotes) {
-      setError('Vui lòng nhập ghi chú cho tất cả các tệp đính kèm');
-      return false;
+      if (!fileNotes[i] || fileNotes[i].trim() === "") {
+        setError(`Vui lòng nhập ghi chú cho tệp "${files[i].name}"`);
+        return false;
+      }
     }
 
     return true;
@@ -217,7 +241,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      setError('');
+      setError("");
       setFormSubmitted(true);
 
       if (!validateForm()) {
@@ -233,25 +257,25 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
       };
 
       const formDataToSend = new FormData();
-      formDataToSend.append('summary', summary);
-      formDataToSend.append('signedBy', signedBy);
-      formDataToSend.append('signedDate', signedDate);
-      formDataToSend.append('signedTime', combinedDateTime);
-      formDataToSend.append('startDate', startDate);
-      formDataToSend.append('endDate', endDate);
-      formDataToSend.append('status', status.toString());
-      formDataToSend.append('customerId', customerId);
-      formDataToSend.append('orderId', orderId);
+      formDataToSend.append("summary", summary);
+      formDataToSend.append("signedBy", signedBy);
+      formDataToSend.append("signedDate", signedDate);
+      formDataToSend.append("signedTime", combinedDateTime);
+      formDataToSend.append("startDate", startDate);
+      formDataToSend.append("endDate", endDate);
+      formDataToSend.append("status", status.toString());
+      formDataToSend.append("customerId", customerId);
+      formDataToSend.append("orderId", orderId);
 
       files.forEach((file, index) => {
-        formDataToSend.append('files', file);
-        formDataToSend.append('descriptions', fileDescriptions[index]);
-        formDataToSend.append('notes', fileNotes[index]);
-        formDataToSend.append('fileStatuses', fileStatuses[index].toString());
+        formDataToSend.append("files", file);
+        formDataToSend.append("descriptions", fileDescriptions[index]);
+        formDataToSend.append("notes", fileNotes[index]);
+        formDataToSend.append("fileStatuses", fileStatuses[index].toString());
       });
 
       const response = await createContract(formDataToSend);
-      console.log('Response:', response);
+      console.log("Response:", response);
 
       setSnackbar({
         open: true,
@@ -264,9 +288,8 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
         onSuccess();
         handleClose();
       }, 1500);
-
     } catch (err: any) {
-      console.error('Error details:', err);
+      console.error("Error details:", err);
 
       let errorMessage = "Không thể tạo hợp đồng. Vui lòng thử lại.";
 
@@ -293,18 +316,23 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
   };
 
   const handleClose = () => {
-    setSummary('');
-    setSignedBy('');
-    setSignedDate(format(new Date(), 'yyyy-MM-dd'));
-    setSignedTime(format(new Date(), 'HH:mm'));
-    setStartDate(format(new Date(), 'yyyy-MM-dd'));
-    setEndDate(format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'));
+    setSummary("");
+    setSignedBy("");
+    setSignedDate(format(new Date(), "yyyy-MM-dd"));
+    setSignedTime(format(new Date(), "HH:mm"));
+    setStartDate(format(new Date(), "yyyy-MM-dd"));
+    setEndDate(
+      format(
+        new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        "yyyy-MM-dd"
+      )
+    );
     setStatus(ContractStatus.Active);
     setFiles([]);
     setFileDescriptions([]);
     setFileNotes([]);
     setFileStatuses([]);
-    setError('');
+    setError("");
     setFormSubmitted(false);
 
     onClose();
@@ -409,7 +437,9 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
                   label="Trạng thái"
                 >
                   <MenuItem value={ContractStatus.Active}>Hoạt động</MenuItem>
-                  <MenuItem value={ContractStatus.Inactive}>Không hoạt động</MenuItem>
+                  <MenuItem value={ContractStatus.Inactive}>
+                    Không hoạt động
+                  </MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -436,13 +466,13 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
                   Tài liệu đã chọn ({files.length})
                 </Typography>
                 {files.map((file, index) => (
-                  <Box 
-                    key={index} 
-                    sx={{ 
-                      mb: 3, 
-                      p: 2, 
-                      border: '1px solid rgba(0, 0, 0, 0.12)',
-                      borderRadius: 1
+                  <Box
+                    key={index}
+                    sx={{
+                      mb: 3,
+                      p: 2,
+                      border: "1px solid rgba(0, 0, 0, 0.12)",
+                      borderRadius: 1,
                     }}
                   >
                     <Box display="flex" alignItems="center" mb={1}>
@@ -457,7 +487,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
                         Xóa
                       </Button>
                     </Box>
-                    
+
                     <Grid container spacing={2}>
                       {/* <Grid item xs={12}>
                         <FormControl fullWidth margin="normal" required>
@@ -472,30 +502,44 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
                           </Select>
                         </FormControl>
                       </Grid> */}
-                      
+
                       <Grid item xs={12}>
                         <TextField
                           label="Mô tả tệp đính kèm"
                           fullWidth
                           required
                           margin="normal"
-                          value={fileDescriptions[index] || ''}
-                          onChange={(e) => handleFileDescriptionChange(index, e.target.value)}
-                          error={formSubmitted && !fileDescriptions[index]?.trim()}
-                          helperText={formSubmitted && !fileDescriptions[index]?.trim() ? "Vui lòng nhập mô tả tệp đính kèm" : ""}
+                          value={fileDescriptions[index] || ""}
+                          onChange={(e) =>
+                            handleFileDescriptionChange(index, e.target.value)
+                          }
+                          error={
+                            formSubmitted && !fileDescriptions[index]?.trim()
+                          }
+                          helperText={
+                            formSubmitted && !fileDescriptions[index]?.trim()
+                              ? "Vui lòng nhập mô tả tệp đính kèm"
+                              : ""
+                          }
                         />
                       </Grid>
-                      
+
                       <Grid item xs={12}>
                         <TextField
                           label="Ghi chú tệp đính kèm"
                           fullWidth
                           required
                           margin="normal"
-                          value={fileNotes[index] || ''}
-                          onChange={(e) => handleFileNoteChange(index, e.target.value)}
+                          value={fileNotes[index] || ""}
+                          onChange={(e) =>
+                            handleFileNoteChange(index, e.target.value)
+                          }
                           error={formSubmitted && !fileNotes[index]?.trim()}
-                          helperText={formSubmitted && !fileNotes[index]?.trim() ? "Vui lòng nhập ghi chú tệp đính kèm" : ""}
+                          helperText={
+                            formSubmitted && !fileNotes[index]?.trim()
+                              ? "Vui lòng nhập ghi chú tệp đính kèm"
+                              : ""
+                          }
                         />
                       </Grid>
                     </Grid>
@@ -510,7 +554,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
             Hủy
           </Button>
           <Button onClick={handleSubmit} variant="contained" disabled={loading}>
-            {loading ? 'Đang xử lý...' : 'Lưu'}
+            {loading ? "Đang xử lý..." : "Lưu"}
           </Button>
         </DialogActions>
       </Dialog>

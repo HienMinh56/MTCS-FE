@@ -210,7 +210,8 @@ const OrderDetailPage: React.FC = () => {
 
   const [cancelOrderDialogOpen, setCancelOrderDialogOpen] = useState(false);
   const [cancelOrderLoading, setCancelOrderLoading] = useState(false);
-  const [cancelFinalConfirmDialogOpen, setCancelFinalConfirmDialogOpen] = useState(false);
+  const [cancelFinalConfirmDialogOpen, setCancelFinalConfirmDialogOpen] =
+    useState(false);
 
   // Close loading snackbar
   const handleCloseLoadingSnackbar = () => {
@@ -450,8 +451,7 @@ const OrderDetailPage: React.FC = () => {
       ),
     contactPhone: zod
       .string()
-      .min(10, "Số điện thoại phải có ít nhất 10 số")
-      .max(15, "Số điện thoại không được vượt quá 15 số")
+      .length(10, "Số điện thoại phải có đúng 10 số")
       .regex(/^\d+$/, "Số điện thoại chỉ được chứa các chữ số"),
     orderPlacer: zod
       .string()
@@ -1098,7 +1098,7 @@ const OrderDetailPage: React.FC = () => {
 
       setTimeout(() => {
         fetchData(); // Refresh trip data
-      }, 4000);      
+      }, 4000);
     } catch (err: any) {
       console.error("Error creating trip:", err);
 
@@ -1108,10 +1108,11 @@ const OrderDetailPage: React.FC = () => {
 
       setLoadingSnackbar({
         open: true,
-        message: "Đã có lỗi xảy ra khi tạo chuyến cho đơn hàng. Vui lòng thử lại!",
+        message:
+          "Đã có lỗi xảy ra khi tạo chuyến cho đơn hàng. Vui lòng thử lại!",
         severity: "error",
         autoHideDuration: 3000,
-      });      
+      });
 
       setTimeout(() => {
         setCreateTripError(null);
@@ -1122,7 +1123,6 @@ const OrderDetailPage: React.FC = () => {
   };
 
   const handleAutoScheduleTrip = async () => {
-
     // Hiển thị thông báo đang xử lý và không tự động đóng
     setLoadingSnackbar({
       open: true,
@@ -1162,7 +1162,9 @@ const OrderDetailPage: React.FC = () => {
         }, 5000);
       } else if (result.status == -1) {
         // Use the message from API response for error message
-        setAutoScheduleError("Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!");
+        setAutoScheduleError(
+          "Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!"
+        );
 
         // Cập nhật snackbar hiện tại thành thông báo lỗi
         setLoadingSnackbar({
@@ -1177,12 +1179,16 @@ const OrderDetailPage: React.FC = () => {
         }, 5000);
       }
     } catch (error: any) {
-      setAutoScheduleError(error?.message || "Có lỗi xảy ra khi xếp chuyến tự động");
+      setAutoScheduleError(
+        error?.message || "Có lỗi xảy ra khi xếp chuyến tự động"
+      );
 
       // Cập nhật snackbar hiện tại thành thông báo lỗi
       setLoadingSnackbar({
         open: true,
-        message: `${error?.message || error || "Có lỗi xảy ra"} Vui lòng tạo chuyến thủ công.`,
+        message: `${
+          error?.message || error || "Có lỗi xảy ra"
+        } Vui lòng tạo chuyến thủ công.`,
         severity: "error",
         autoHideDuration: 5000,
       });
@@ -1323,13 +1329,13 @@ const OrderDetailPage: React.FC = () => {
 
   const handleCancelOrder = async () => {
     if (!orderId) return;
-    
+
     setCancelOrderLoading(true);
     setError(null);
-    
+
     try {
       await cancelOrder(orderId);
-      
+
       // Hiển thị thông báo thành công bằng snackbar
       setLoadingSnackbar({
         open: true,
@@ -1337,21 +1343,22 @@ const OrderDetailPage: React.FC = () => {
         severity: "success",
         autoHideDuration: 3000,
       });
-      
+
       handleCancelFinalConfirmClose();
-      
+
       // Force reload the page after a short delay
       setTimeout(() => {
         fetchData();
       }, 4000);
     } catch (err: any) {
       console.error("Error cancelling order:", err);
-      
+
       // Handle specific error for invalid order status
       if (err.message === "ORDER_STATUS_INVALID_FOR_CANCEL") {
         setLoadingSnackbar({
           open: true,
-          message: "Chỉ có thể hủy đơn hàng khi trạng thái là Đang xử lý hoặc Đã lên lịch.",
+          message:
+            "Chỉ có thể hủy đơn hàng khi trạng thái là Đang xử lý hoặc Đã lên lịch.",
           severity: "error",
           autoHideDuration: 5000,
         });
@@ -1945,12 +1952,14 @@ const OrderDetailPage: React.FC = () => {
                 Tài liệu đơn hàng
               </Typography>
               {orderDetails.orderFiles && orderDetails.orderFiles.length > 0 ? (
-                <Box sx={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(2, 1fr)', 
-                  gap: 2, 
-                  gridAutoFlow: 'dense' 
-                }}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, 1fr)",
+                    gap: 2,
+                    gridAutoFlow: "dense",
+                  }}
+                >
                   {orderDetails.orderFiles.map((fileObj, index) => {
                     const fileUrl =
                       typeof fileObj === "string" ? fileObj : fileObj.fileUrl;
@@ -1972,21 +1981,18 @@ const OrderDetailPage: React.FC = () => {
 
                     const isPdf =
                       fileType === "PDF Document" ||
-                      (fileType &&
-                        fileType.toLowerCase().includes("pdf")) ||
+                      (fileType && fileType.toLowerCase().includes("pdf")) ||
                       fileUrl.toLowerCase().endsWith(".pdf");
 
                     const isXlsx =
                       fileType === "Excel Spreadsheet" ||
-                      (fileType &&
-                        fileType.toLowerCase().includes("excel")) ||
+                      (fileType && fileType.toLowerCase().includes("excel")) ||
                       fileUrl.toLowerCase().endsWith(".xls") ||
                       fileUrl.toLowerCase().endsWith(".xlsx");
 
                     const isDocx =
                       fileType === "Word Document" ||
-                      (fileType &&
-                        fileType.toLowerCase().includes("word")) ||
+                      (fileType && fileType.toLowerCase().includes("word")) ||
                       fileUrl.toLowerCase().endsWith(".doc") ||
                       fileUrl.toLowerCase().endsWith(".docx");
 
@@ -1998,25 +2004,27 @@ const OrderDetailPage: React.FC = () => {
                       fileUrl.toLowerCase().endsWith(".pptx");
 
                     return (
-                      <Card 
+                      <Card
                         key={`order-file-${index}`}
-                        sx={{ 
-                          gridColumn: 'span 1',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          overflow: 'hidden',
+                        sx={{
+                          gridColumn: "span 1",
+                          display: "flex",
+                          flexDirection: "column",
+                          overflow: "hidden",
                           height: 180, // Tăng chiều cao để hiển thị đủ mô tả và ghi chú
-                          width: '100%'
+                          width: "100%",
                         }}
                       >
-                        <CardContent sx={{ 
-                          p: 1, 
-                          "&:last-child": { pb: 1 }, 
-                          display: 'flex', 
-                          flexDirection: 'column',
-                          height: '100%',
-                          overflow: 'hidden' 
-                        }}>
+                        <CardContent
+                          sx={{
+                            p: 1,
+                            "&:last-child": { pb: 1 },
+                            display: "flex",
+                            flexDirection: "column",
+                            height: "100%",
+                            overflow: "hidden",
+                          }}
+                        >
                           {isImage ? (
                             <>
                               <Box
@@ -2034,16 +2042,16 @@ const OrderDetailPage: React.FC = () => {
                                   openImagePreview(fileUrl, fileName)
                                 }
                               />
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
                                   title={fileName || `Hình ảnh ${index + 1}`}
                                 >
@@ -2094,18 +2102,20 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
-                                  title={fileName || `PDF Document ${index + 1}`}
+                                  title={
+                                    fileName || `PDF Document ${index + 1}`
+                                  }
                                 >
                                   {fileName || `PDF Document ${index + 1}`}
                                 </Typography>
@@ -2154,16 +2164,16 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
                                   title={fileName || `Excel File ${index + 1}`}
                                 >
@@ -2214,18 +2224,20 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
-                                  title={fileName || `Word Document ${index + 1}`}
+                                  title={
+                                    fileName || `Word Document ${index + 1}`
+                                  }
                                 >
                                   {fileName || `Word Document ${index + 1}`}
                                 </Typography>
@@ -2274,25 +2286,29 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
-                                  title={fileName || `PowerPoint File ${index + 1}`}
+                                  title={
+                                    fileName || `PowerPoint File ${index + 1}`
+                                  }
                                 >
                                   {fileName || `PowerPoint File ${index + 1}`}
                                 </Typography>
                               </Box>
                             </>
                           ) : (
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Box
+                              sx={{ display: "flex", flexDirection: "column" }}
+                            >
                               <Box
                                 sx={{
                                   width: "100%",
@@ -2334,16 +2350,16 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
                                   title={fileName || `File ${index + 1}`}
                                 >
@@ -2361,11 +2377,16 @@ const OrderDetailPage: React.FC = () => {
                                 pt: 0.5,
                                 overflow: "hidden",
                                 flex: 1,
-                                maxHeight: 60 // Tăng maxHeight để hiển thị đủ nội dung
+                                maxHeight: 60, // Tăng maxHeight để hiển thị đủ nội dung
                               }}
                             >
                               {description && (
-                                <Box sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                                <Box
+                                  sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
@@ -2387,7 +2408,12 @@ const OrderDetailPage: React.FC = () => {
                               )}
 
                               {notes && (
-                                <Box sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                                <Box
+                                  sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
@@ -2426,12 +2452,14 @@ const OrderDetailPage: React.FC = () => {
                 Tài liệu hợp đồng
               </Typography>
               {contractFiles && contractFiles.length > 0 ? (
-                <Box sx={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(2, 1fr)', 
-                  gap: 2, 
-                  gridAutoFlow: 'dense' 
-                }}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, 1fr)",
+                    gap: 2,
+                    gridAutoFlow: "dense",
+                  }}
+                >
                   {contractFiles.map((file, index) => {
                     const isPdf =
                       file.fileType === "PDF Document" ||
@@ -2473,32 +2501,33 @@ const OrderDetailPage: React.FC = () => {
                     const notes = typeof file === "string" ? null : file.note;
 
                     return (
-                      <Card 
+                      <Card
                         key={file.fileId || `contract-file-${index}`}
-                        sx={{ 
-                          gridColumn: 'span 1',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          overflow: 'hidden',
+                        sx={{
+                          gridColumn: "span 1",
+                          display: "flex",
+                          flexDirection: "column",
+                          overflow: "hidden",
                           height: 180, // Tăng chiều cao để hiển thị đủ mô tả và ghi chú
                         }}
                       >
-                        <CardContent sx={{ 
-                          p: 1, 
-                          "&:last-child": { pb: 1 }, 
-                          display: 'flex', 
-                          flexDirection: 'column',
-                          height: '100%',
-                          overflow: 'hidden' 
-                        }}>
+                        <CardContent
+                          sx={{
+                            p: 1,
+                            "&:last-child": { pb: 1 },
+                            display: "flex",
+                            flexDirection: "column",
+                            height: "100%",
+                            overflow: "hidden",
+                          }}
+                        >
                           {isImage ? (
                             <>
                               <Box
                                 component="img"
                                 src={file.fileUrl}
                                 alt={
-                                  file.fileName ||
-                                  `Contract image ${index + 1}`
+                                  file.fileName || `Contract image ${index + 1}`
                                 }
                                 sx={{
                                   width: "100%",
@@ -2515,18 +2544,20 @@ const OrderDetailPage: React.FC = () => {
                                   )
                                 }
                               />
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
-                                  title={file.fileName || `Hình ảnh ${index + 1}`}
+                                  title={
+                                    file.fileName || `Hình ảnh ${index + 1}`
+                                  }
                                 >
                                   {file.fileName || `Hình ảnh ${index + 1}`}
                                 </Typography>
@@ -2576,18 +2607,20 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
-                                  title={file.fileName || `PDF Document ${index + 1}`}
+                                  title={
+                                    file.fileName || `PDF Document ${index + 1}`
+                                  }
                                 >
                                   {file.fileName || `PDF Document ${index + 1}`}
                                 </Typography>
@@ -2637,18 +2670,20 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
-                                  title={file.fileName || `Excel File ${index + 1}`}
+                                  title={
+                                    file.fileName || `Excel File ${index + 1}`
+                                  }
                                 >
                                   {file.fileName || `Excel File ${index + 1}`}
                                 </Typography>
@@ -2698,20 +2733,24 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
-                                  title={file.fileName || `Word Document ${index + 1}`}
+                                  title={
+                                    file.fileName ||
+                                    `Word Document ${index + 1}`
+                                  }
                                 >
-                                  {file.fileName || `Word Document ${index + 1}`}
+                                  {file.fileName ||
+                                    `Word Document ${index + 1}`}
                                 </Typography>
                               </Box>
                             </>
@@ -2759,25 +2798,31 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
-                                  title={file.fileName || `PowerPoint File ${index + 1}`}
+                                  title={
+                                    file.fileName ||
+                                    `PowerPoint File ${index + 1}`
+                                  }
                                 >
-                                  {file.fileName || `PowerPoint File ${index + 1}`}
+                                  {file.fileName ||
+                                    `PowerPoint File ${index + 1}`}
                                 </Typography>
                               </Box>
                             </>
                           ) : (
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Box
+                              sx={{ display: "flex", flexDirection: "column" }}
+                            >
                               <Box
                                 sx={{
                                   width: "100%",
@@ -2820,18 +2865,21 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                              <Box sx={{ width: "100%", overflow: "hidden" }}>
                                 <Typography
                                   variant="caption"
                                   display="block"
                                   mt={0.5}
                                   noWrap
                                   sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "100%",
                                   }}
-                                  title={file.fileName || `Tài liệu hợp đồng ${index + 1}`}
+                                  title={
+                                    file.fileName ||
+                                    `Tài liệu hợp đồng ${index + 1}`
+                                  }
                                 >
                                   {file.fileName ||
                                     `Tài liệu hợp đồng ${index + 1}`}
@@ -2848,11 +2896,16 @@ const OrderDetailPage: React.FC = () => {
                                 pt: 0.5,
                                 overflow: "hidden",
                                 flex: 1,
-                                maxHeight: 60 // Tăng maxHeight để hiển thị đủ nội dung
+                                maxHeight: 60, // Tăng maxHeight để hiển thị đủ nội dung
                               }}
                             >
                               {description && (
-                                <Box sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                                <Box
+                                  sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
@@ -2874,7 +2927,12 @@ const OrderDetailPage: React.FC = () => {
                               )}
 
                               {notes && (
-                                <Box sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                                <Box
+                                  sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
@@ -3023,38 +3081,43 @@ const OrderDetailPage: React.FC = () => {
                 {tripData && tripData.length > 0 && (
                   <>
                     {/* Check if all trips are canceled to show create buttons */}
-                    {tripData.every(trip => trip.status === "canceled") && 
-                    orderDetails.orderFiles &&
-                    orderDetails.orderFiles.length > 0 &&
-                    contractFiles &&
-                    contractFiles.length > 0 && user?.role === "Staff" && (
-                      <Box display="flex" justifyContent="space-between" mb={2}>
-                        <Box display="flex" justifyContent="center" mt={2}>
-                          <Button
-                            variant="outlined"
-                            color="primary"
-                            startIcon={<AddIcon />}
-                            onClick={handleAutoScheduleTrip}
-                            disabled={autoScheduleLoading}
-                          >
-                            {autoScheduleLoading
-                              ? "Đang xếp chuyến..."
-                              : "Hệ thống xếp chuyến"}
-                          </Button>
-                        </Box>
+                    {tripData.every((trip) => trip.status === "canceled") &&
+                      orderDetails.orderFiles &&
+                      orderDetails.orderFiles.length > 0 &&
+                      contractFiles &&
+                      contractFiles.length > 0 &&
+                      user?.role === "Staff" && (
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          mb={2}
+                        >
+                          <Box display="flex" justifyContent="center" mt={2}>
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              startIcon={<AddIcon />}
+                              onClick={handleAutoScheduleTrip}
+                              disabled={autoScheduleLoading}
+                            >
+                              {autoScheduleLoading
+                                ? "Đang xếp chuyến..."
+                                : "Hệ thống xếp chuyến"}
+                            </Button>
+                          </Box>
 
-                        <Box display="flex" justifyContent="center" mt={2}>
-                          <Button
-                            variant="outlined"
-                            color="primary"
-                            startIcon={<AddIcon />}
-                            onClick={handleOpenCreateTripDialog}
-                          >
-                            Tạo chuyến thủ công
-                          </Button>
+                          <Box display="flex" justifyContent="center" mt={2}>
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              startIcon={<AddIcon />}
+                              onClick={handleOpenCreateTripDialog}
+                            >
+                              Tạo chuyến thủ công
+                            </Button>
+                          </Box>
                         </Box>
-                      </Box>
-                    )}
+                      )}
 
                     {/* Display trips */}
                     {tripData.map((trip, index) => (
@@ -3087,19 +3150,27 @@ const OrderDetailPage: React.FC = () => {
                               alignItems="center"
                               mb={1}
                             >
-                              <Typography variant="subtitle2" color="text.secondary">
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
                                 Trạng thái chuyến đi
                               </Typography>
                               <Chip
                                 size="small"
                                 label={getTripStatusDisplay(trip.status).label}
-                                color={getTripStatusDisplay(trip.status).color as any}
+                                color={
+                                  getTripStatusDisplay(trip.status).color as any
+                                }
                               />
                             </Box>
                           </Grid>
 
                           <Grid item xs={12} sm={6}>
-                            <Typography variant="subtitle2" color="text.secondary">
+                            <Typography
+                              variant="subtitle2"
+                              color="text.secondary"
+                            >
                               Mã chuyến đi
                             </Typography>
                             <Typography variant="body1" gutterBottom>
@@ -3109,7 +3180,10 @@ const OrderDetailPage: React.FC = () => {
 
                           {trip.driverId && (
                             <Grid item xs={12} sm={6}>
-                              <Typography variant="subtitle2" color="text.secondary">
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
                                 Mã tài xế
                               </Typography>
                               <Typography
@@ -3140,7 +3214,11 @@ const OrderDetailPage: React.FC = () => {
                                     },
                                   },
                                 }}
-                                onClick={() => navigate(`/staff-menu/drivers/${trip.driverId}`)}
+                                onClick={() =>
+                                  navigate(
+                                    `/staff-menu/drivers/${trip.driverId}`
+                                  )
+                                }
                               >
                                 <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} />{" "}
                                 {trip.driverName}
@@ -3149,7 +3227,10 @@ const OrderDetailPage: React.FC = () => {
                           )}
 
                           <Grid item xs={12} sm={6}>
-                            <Typography variant="subtitle2" color="text.secondary">
+                            <Typography
+                              variant="subtitle2"
+                              color="text.secondary"
+                            >
                               Thời gian bắt đầu
                             </Typography>
                             <Typography variant="body1" gutterBottom>
@@ -3158,7 +3239,10 @@ const OrderDetailPage: React.FC = () => {
                           </Grid>
 
                           <Grid item xs={12} sm={6}>
-                            <Typography variant="subtitle2" color="text.secondary">
+                            <Typography
+                              variant="subtitle2"
+                              color="text.secondary"
+                            >
                               Thời gian kết thúc
                             </Typography>
                             <Typography variant="body1" gutterBottom>
@@ -3189,7 +3273,6 @@ const OrderDetailPage: React.FC = () => {
                 )}
               </>
             )}
-
           </Paper>
         </Grid>
       </Grid>
@@ -3942,7 +4025,8 @@ const OrderDetailPage: React.FC = () => {
         <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
         <DialogContent sx={{ pt: 1, width: 400 }}>
           <Typography variant="body2" gutterBottom>
-            Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn
+            tác.
           </Typography>
           <Alert severity="warning" sx={{ mt: 2 }}>
             Chỉ có thể hủy đơn hàng khi trạng thái là Pending hoặc Scheduled.
@@ -3971,7 +4055,8 @@ const OrderDetailPage: React.FC = () => {
         <DialogTitle>Xác nhận lần cuối</DialogTitle>
         <DialogContent sx={{ pt: 1, width: 400 }}>
           <Typography variant="body2" gutterBottom>
-            Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn
+            tác.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
