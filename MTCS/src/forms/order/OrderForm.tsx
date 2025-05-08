@@ -295,12 +295,29 @@ const OrderForm: React.FC<OrderFormProps> = ({
             </Grid>
             <Grid item xs={12} md={6}>
               <Controller
+                name="orderPlacer"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Người đặt hàng"
+                    fullWidth
+                    error={!!errors.orderPlacer}
+                    helperText={errors.orderPlacer?.message}
+                    disabled={isSubmitting || isDisabled}
+                    required
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
                 name="contactPerson"
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="Người liên hệ"
+                    label="Người liên hệ nhận hàng"
                     fullWidth
                     error={!!errors.contactPerson}
                     helperText={errors.contactPerson?.message}
@@ -317,7 +334,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="Số điện thoại liên hệ"
+                    label="Số điện thoại liên hệ người nhận"
                     fullWidth
                     error={!!errors.contactPhone}
                     helperText={errors.contactPhone?.message}
@@ -326,24 +343,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                   />
                 )}
               />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Controller
-                name="orderPlacer"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Người đặt hàng"
-                    fullWidth
-                    error={!!errors.orderPlacer}
-                    helperText={errors.orderPlacer?.message}
-                    disabled={isSubmitting || isDisabled}
-                    required
-                  />
-                )}
-              />
-            </Grid>
+            </Grid>            
           </Grid>
         </Grid>
 
@@ -840,6 +840,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                           margin="normal"
                           size="small"
                           disabled={isSubmitting || isDisabled}
+                          required
                         />
                         
                         <TextField
@@ -850,6 +851,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
                           margin="normal"
                           size="small"
                           disabled={isSubmitting || isDisabled}
+                          required
                         />
                       </Box>
                     ))}

@@ -242,11 +242,11 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
                       <Typography variant="body1" fontWeight="medium">{orderData.companyName}</Typography>
                     </Grid>
                     <Grid item xs={12} md={6}>
-                      <Typography variant="body2" color="text.secondary">Người liên hệ</Typography>
+                      <Typography variant="body2" color="text.secondary">Người liên hệ nhận hàng</Typography>
                       <Typography variant="body1">{orderData.contactPerson}</Typography>
                     </Grid>
                     <Grid item xs={12} md={6}>
-                      <Typography variant="body2" color="text.secondary">Số điện thoại</Typography>
+                      <Typography variant="body2" color="text.secondary">Số điện thoại liên hệ người nhận</Typography>
                       <Typography variant="body1">{orderData.contactPhone}</Typography>
                     </Grid>
                     <Grid item xs={12} md={6}>

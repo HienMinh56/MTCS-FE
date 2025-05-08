@@ -53,6 +53,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
   const [fileStatuses, setFileStatuses] = useState<OrderStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [formSubmitted, setFormSubmitted] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -217,6 +218,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
     try {
       setLoading(true);
       setError('');
+      setFormSubmitted(true);
 
       if (!validateForm()) {
         setLoading(false);
@@ -303,6 +305,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
     setFileNotes([]);
     setFileStatuses([]);
     setError('');
+    setFormSubmitted(false);
 
     onClose();
   };
@@ -478,8 +481,8 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
                           margin="normal"
                           value={fileDescriptions[index] || ''}
                           onChange={(e) => handleFileDescriptionChange(index, e.target.value)}
-                          error={!fileDescriptions[index]?.trim()}
-                          helperText={!fileDescriptions[index]?.trim() ? "Vui lòng nhập mô tả tệp đính kèm" : ""}
+                          error={formSubmitted && !fileDescriptions[index]?.trim()}
+                          helperText={formSubmitted && !fileDescriptions[index]?.trim() ? "Vui lòng nhập mô tả tệp đính kèm" : ""}
                         />
                       </Grid>
                       
@@ -491,8 +494,8 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
                           margin="normal"
                           value={fileNotes[index] || ''}
                           onChange={(e) => handleFileNoteChange(index, e.target.value)}
-                          error={!fileNotes[index]?.trim()}
-                          helperText={!fileNotes[index]?.trim() ? "Vui lòng nhập ghi chú tệp đính kèm" : ""}
+                          error={formSubmitted && !fileNotes[index]?.trim()}
+                          helperText={formSubmitted && !fileNotes[index]?.trim() ? "Vui lòng nhập ghi chú tệp đính kèm" : ""}
                         />
                       </Grid>
                     </Grid>
