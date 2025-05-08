@@ -30,8 +30,7 @@ export const orderSchema = z.object({
   companyName: z.string().min(1, 'Tên công ty là bắt buộc'),
   temperature: z.number()
     .min(-30, 'Nhiệt độ không được thấp hơn -30°C')
-    .max(40, 'Nhiệt độ không được cao hơn 40°C')
-    .nullable(),
+    .max(10, 'Nhiệt độ không được cao hơn 40°C'),
   weight: z.coerce.number({ invalid_type_error: 'Trọng lượng phải là một số' })
     .min(0.1, 'Trọng lượng phải lớn hơn 0 tấn')
     .max(100, 'Trọng lượng không được vượt quá 100 tấn'),
@@ -128,7 +127,7 @@ export const orderSchema = z.object({
 }).refine(data => {
   // Make temperature required when containerType is Container Lạnh
   if (data.containerType === ContainerType["Container Lạnh"]) {
-    return data.temperature !== null && data.temperature !== undefined;
+    return data.temperature !== undefined;
   }
   return true; // Skip validation for other container types
 }, {
@@ -148,7 +147,7 @@ export const formatOrderFormForApi = (data: OrderFormValues) => {
     companyName: data.companyName,
     temperature:
       data.containerType === ContainerType["Container Lạnh"]
-        ? data.temperature
+        ? data.temperature ?? 0
         : null,
     weight: data.weight,
     pickUpDate: data.pickUpDate
@@ -176,7 +175,7 @@ export const formatOrderFormForApi = (data: OrderFormValues) => {
 
 export const defaultValues: OrderFormValues = {
   companyName: "",
-  temperature: null,
+  temperature: 0,
   weight: 0,
   pickUpDate: null,
   deliveryDate: null,

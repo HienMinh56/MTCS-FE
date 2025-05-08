@@ -87,7 +87,7 @@ const OrderForm: React.FC<OrderFormProps> = ({
     resolver: zodResolver(orderSchema),
     defaultValues: {
       companyName: initialValues?.companyName || "",
-      temperature: initialValues?.temperature || 0,
+      temperature: initialValues?.temperature ?? 0,
       weight: initialValues?.weight || "", // Initialize as empty string instead of 0
       pickUpDate: initialValues?.pickUpDate || dayjs().add(1, "day").toDate(),
       deliveryDate:
@@ -114,6 +114,12 @@ const OrderForm: React.FC<OrderFormProps> = ({
   });
 
   const containerType = watch("containerType");
+
+  useEffect(() => {
+    if (containerType === ContainerType["Container Lạnh"]) {
+      setValue("temperature", 0);
+    }
+  }, [containerType, setValue]);
 
   // Fetch customers for dropdown
   useEffect(() => {
@@ -643,14 +649,10 @@ const OrderForm: React.FC<OrderFormProps> = ({
                           <InputAdornment position="end">°C</InputAdornment>
                         ),
                       }}
-                      value={
-                        field.value === 0 || field.value === ""
-                          ? ""
-                          : field.value
-                      }
+                      value={field.value}
                       onChange={(e) => {
-                        const value = e.target.value;
-                        field.onChange(value === "" ? "" : Number(value));
+                        const num = Number(e.target.value);
+                        field.onChange(isNaN(num) ? 0 : num);
                       }}
                       fullWidth
                       error={!!errors.temperature}
