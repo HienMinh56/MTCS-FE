@@ -27,6 +27,7 @@ import {
 } from "@mui/icons-material";
 import { PagedCustomerRevenue } from "../../types/admin-finance";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface AdminCustomerRevenueTableProps {
   data: PagedCustomerRevenue;
@@ -43,9 +44,11 @@ const AdminCustomerRevenueTable: React.FC<AdminCustomerRevenueTableProps> = ({
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleCustomerClick = (customerId: string) => {
-    navigate(`/staff-menu/customers/${customerId}`, {
+    const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
+    navigate(`${prefix}/customers/${customerId}`, {
       state: { activeTab: 1 },
     });
   };

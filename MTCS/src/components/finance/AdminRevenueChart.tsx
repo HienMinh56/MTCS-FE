@@ -221,6 +221,34 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
     return new Intl.NumberFormat("vi-VN").format(value) + " ₫";
   };
 
+  const translateMonthToVietnamese = (period: string): string => {
+    if (!period) return "";
+
+    const monthMap: Record<string, string> = {
+      January: "Tháng 1",
+      February: "Tháng 2",
+      March: "Tháng 3",
+      April: "Tháng 4",
+      May: "Tháng 5",
+      June: "Tháng 6",
+      July: "Tháng 7",
+      August: "Tháng 8",
+      September: "Tháng 9",
+      October: "Tháng 10",
+      November: "Tháng 11",
+      December: "Tháng 12",
+    };
+
+    // Check if period contains a month name (e.g., "May 2025")
+    for (const [englishMonth, vietnameseMonth] of Object.entries(monthMap)) {
+      if (period.includes(englishMonth)) {
+        return period.replace(englishMonth, vietnameseMonth);
+      }
+    }
+
+    return period;
+  };
+
   const handlePaidOrdersClick = () => {
     setActiveStat("paid");
     setTimeout(() => setActiveStat(null), 300);
@@ -407,7 +435,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                 fontSize="small"
                 sx={{ mr: 0.5, fontSize: "0.9rem" }}
               />
-              {data.period}
+              {translateMonthToVietnamese(data.period)}
             </Box>
           </Typography>
 
@@ -673,7 +701,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
           }}
         >
           <Tab label="Doanh thu theo thời gian" />
-          <Tab label="So sánh thanh toán" />
+          <Tab label="So sánh loại đơn" />
         </Tabs>
       </Box>
 
@@ -735,8 +763,8 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                     <RechartsTooltip
                       formatter={(value: number, name: string) => {
                         if (
-                          name === "Doanh thu đã thanh toán" ||
-                          name === "Doanh thu chưa thanh toán" ||
+                          name === "Doanh thu đã thu" ||
+                          name === "Doanh thu chưa thu" ||
                           name === "Tổng doanh thu"
                         ) {
                           return [formatCurrency(value), name];
@@ -770,7 +798,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                     />
                     <Bar
                       dataKey="paidRevenue"
-                      name="Doanh thu đã thanh toán"
+                      name="Doanh thu đã thu"
                       fill={theme.palette.success.main}
                       barSize={
                         shouldUsePeriodicData && chartDataToUse.length > 12
@@ -781,7 +809,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                     />
                     <Bar
                       dataKey="unpaidRevenue"
-                      name="Doanh thu chưa thanh toán"
+                      name="Doanh thu chưa thu"
                       fill={theme.palette.warning.main}
                       barSize={
                         shouldUsePeriodicData && chartDataToUse.length > 12
@@ -831,18 +859,6 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                       tickLine={false}
                     />
                     <YAxis
-                      tickFormatter={formatYAxisTick}
-                      tick={{
-                        fill: theme.palette.text.secondary,
-                        fontSize: 12,
-                      }}
-                      axisLine={{ stroke: theme.palette.divider }}
-                      tickLine={false}
-                      yAxisId="left"
-                    />
-                    <YAxis
-                      orientation="right"
-                      yAxisId="right"
                       tick={{
                         fill: theme.palette.text.secondary,
                         fontSize: 12,
@@ -851,15 +867,6 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                       tickLine={false}
                     />
                     <RechartsTooltip
-                      formatter={(value: number, name: string) => {
-                        if (
-                          name === "Doanh thu đã thanh toán" ||
-                          name === "Doanh thu chưa thanh toán"
-                        ) {
-                          return [formatCurrency(value), name];
-                        }
-                        return [value, name];
-                      }}
                       labelFormatter={(label) => {
                         const item = chartDataToUse.find(
                           (item) =>
@@ -894,7 +901,6 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                           ? 10
                           : 20
                       }
-                      yAxisId="right"
                       radius={[4, 4, 0, 0]}
                     />
                     <Bar
@@ -906,15 +912,13 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                           ? 10
                           : 20
                       }
-                      yAxisId="right"
                       radius={[4, 4, 0, 0]}
                     />
                     <Line
                       type="monotone"
-                      dataKey="paidRevenue"
-                      name="Doanh thu đã thanh toán"
-                      stroke={theme.palette.success.main}
-                      yAxisId="left"
+                      dataKey="completedOrders"
+                      name="Số đơn đã hoàn thành"
+                      stroke={theme.palette.info.main}
                       strokeWidth={3}
                       dot={{
                         r:
@@ -923,22 +927,13 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                             : 5,
                         strokeWidth: 2,
                         fill: "#fff",
+                        stroke: theme.palette.info.main,
                       }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="unpaidRevenue"
-                      name="Doanh thu chưa thanh toán"
-                      stroke={theme.palette.warning.main}
-                      yAxisId="left"
-                      strokeWidth={3}
-                      dot={{
+                      activeDot={{
                         r:
                           shouldUsePeriodicData && chartDataToUse.length > 12
-                            ? 3
-                            : 5,
-                        strokeWidth: 2,
-                        fill: "#fff",
+                            ? 5
+                            : 7,
                       }}
                     />
                   </ComposedChart>
