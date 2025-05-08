@@ -31,6 +31,23 @@ export const getPriceChangesInVersion = async (
     const response = await axiosInstance.get(
       `/api/price-tables/price-changes/${version}`
     );
+
+    // Make sure we always return a successful response for empty price changes
+    if (
+      response.data &&
+      !response.data.success &&
+      (response.data.messageVN?.includes("Không tìm thấy thay đổi giá") ||
+        response.data.message?.includes("No price changes found"))
+    ) {
+      return {
+        success: true,
+        data: [],
+        message: "No price changes found",
+        messageVN: "Không có thay đổi giá trong phiên bản này",
+        errors: null,
+      };
+    }
+
     return response.data;
   } catch (error) {
     throw formatApiError(error);
