@@ -1861,7 +1861,12 @@ const OrderDetailPage: React.FC = () => {
                 Tài liệu đơn hàng
               </Typography>
               {orderDetails.orderFiles && orderDetails.orderFiles.length > 0 ? (
-                <Grid container spacing={2}>
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(2, 1fr)', 
+                  gap: 2, 
+                  gridAutoFlow: 'dense' 
+                }}>
                   {orderDetails.orderFiles.map((fileObj, index) => {
                     const fileUrl =
                       typeof fileObj === "string" ? fileObj : fileObj.fileUrl;
@@ -1881,228 +1886,386 @@ const OrderDetailPage: React.FC = () => {
                         fileType.toLowerCase().includes("image/")
                       : /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(fileUrl);
 
-                    const isDocument = fileType
-                      ? fileType === "PDF Document" ||
-                        fileType === "Word Document" ||
-                        fileType === "Excel Spreadsheet" ||
-                        fileType === "PowerPoint Presentation" ||
-                        fileType === "Text Document" ||
-                        fileType === "Archive"
-                      : /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|zip|rar|7z)$/i.test(
-                          fileUrl
-                        );
+                    const isPdf =
+                      fileType === "PDF Document" ||
+                      (fileType &&
+                        fileType.toLowerCase().includes("pdf")) ||
+                      fileUrl.toLowerCase().endsWith(".pdf");
+
+                    const isXlsx =
+                      fileType === "Excel Spreadsheet" ||
+                      (fileType &&
+                        fileType.toLowerCase().includes("excel")) ||
+                      fileUrl.toLowerCase().endsWith(".xls") ||
+                      fileUrl.toLowerCase().endsWith(".xlsx");
+
+                    const isDocx =
+                      fileType === "Word Document" ||
+                      (fileType &&
+                        fileType.toLowerCase().includes("word")) ||
+                      fileUrl.toLowerCase().endsWith(".doc") ||
+                      fileUrl.toLowerCase().endsWith(".docx");
+
+                    const isPptx =
+                      fileType === "PowerPoint Presentation" ||
+                      (fileType &&
+                        fileType.toLowerCase().includes("powerpoint")) ||
+                      fileUrl.toLowerCase().endsWith(".ppt") ||
+                      fileUrl.toLowerCase().endsWith(".pptx");
 
                     return (
-                      <Grid item xs={12} sm={6} key={`order-file-${index}`}>
-                        <Card>
-                          <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
-                            {isImage ? (
-                              <>
-                                <Box
-                                  component="img"
-                                  src={fileUrl}
-                                  alt={fileName || `Order file ${index + 1}`}
-                                  sx={{
-                                    width: "100%",
-                                    height: 100,
-                                    objectFit: "cover",
-                                    cursor: "pointer",
-                                    borderRadius: 1,
-                                  }}
-                                  onClick={() =>
-                                    openImagePreview(fileUrl, fileName)
-                                  }
-                                />
-                                <Typography
-                                  variant="caption"
-                                  display="block"
-                                  mt={0.5}
-                                  noWrap
-                                >
-                                  {fileName || `Hình ảnh ${index + 1}`}
-                                </Typography>
-                              </>
-                            ) : fileType === "PDF Document" ||
-                              (fileType &&
-                                fileType.toLowerCase().includes("pdf")) ||
-                              fileUrl.toLowerCase().endsWith(".pdf") ? (
-                              <>
-                                <Box
-                                  sx={{
-                                    width: "100%",
-                                    height: 100,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    justifyContent: "center",
-                                    alignItems: "center",
-                                    background: "#f5f5f5",
-                                    cursor: "pointer",
-                                    borderRadius: 1,
-                                    border: "1px solid #e0e0e0",
-                                    position: "relative",
-                                    overflow: "hidden",
-                                  }}
-                                  onClick={() =>
-                                    handleFileClick(
-                                      fileUrl,
-                                      fileName || `file-${index + 1}`,
-                                      fileType
-                                    )
-                                  }
-                                >
-                                  <PictureAsPdfIcon
-                                    sx={{ fontSize: 40, color: "#f44336" }}
-                                  />
-                                  <Typography variant="caption" sx={{ mt: 1 }}>
-                                    Xem PDF
-                                  </Typography>
-                                  <Box
-                                    sx={{
-                                      position: "absolute",
-                                      bottom: 0,
-                                      left: 0,
-                                      width: "100%",
-                                      height: "4px",
-                                      background:
-                                        "linear-gradient(90deg, #f44336 0%, #ff9800 100%)",
-                                    }}
-                                  />
-                                </Box>
-                                <Typography
-                                  variant="caption"
-                                  display="block"
-                                  mt={0.5}
-                                  noWrap
-                                >
-                                  {fileName || `PDF Document ${index + 1}`}
-                                </Typography>
-                              </>
-                            ) : (
-                              <Typography
-                                variant="body2"
-                                noWrap
-                                sx={{ display: "flex", alignItems: "center" }}
-                              >
-                                <Box component="span" mr={0.5}>
-                                  {/* Icon based on file type */}
-                                  {fileType === "Word Document" ||
-                                  (fileType &&
-                                    fileType.toLowerCase().includes("word")) ||
-                                  fileUrl.toLowerCase().endsWith(".doc") ||
-                                  fileUrl.toLowerCase().endsWith(".docx") ? (
-                                    <DescriptionIcon
-                                      fontSize="small"
-                                      color="primary"
-                                    />
-                                  ) : fileType === "Excel Spreadsheet" ||
-                                    (fileType &&
-                                      fileType
-                                        .toLowerCase()
-                                        .includes("excel")) ||
-                                    fileUrl.toLowerCase().endsWith(".xls") ||
-                                    fileUrl.toLowerCase().endsWith(".xlsx") ? (
-                                    <ArticleIcon
-                                      fontSize="small"
-                                      color="success"
-                                    />
-                                  ) : fileType === "PowerPoint Presentation" ||
-                                    (fileType &&
-                                      fileType
-                                        .toLowerCase()
-                                        .includes("powerpoint")) ||
-                                    fileUrl.toLowerCase().endsWith(".ppt") ||
-                                    fileUrl.toLowerCase().endsWith(".pptx") ? (
-                                    <ArticleIcon
-                                      fontSize="small"
-                                      color="warning"
-                                    />
-                                  ) : (
-                                    <AttachFileIcon
-                                      fontSize="small"
-                                      color="action"
-                                    />
-                                  )}
-                                </Box>
-                                <Box
-                                  component="span"
-                                  sx={{
-                                    cursor: "pointer",
-                                    color: "primary.main",
-                                    "&:hover": {
-                                      textDecoration: "underline",
-                                      color: "primary.dark",
-                                    },
-                                  }}
-                                  onClick={() =>
-                                    handleFileClick(
-                                      fileUrl,
-                                      fileName || `file-${index + 1}`,
-                                      fileType
-                                    )
-                                  }
-                                >
-                                  {fileName || `File ${index + 1}`}
-                                </Box>
-                              </Typography>
-                            )}
-
-                            {(description || notes) && (
+                      <Card 
+                        key={`order-file-${index}`}
+                        sx={{ 
+                          gridColumn: 'span 1',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          overflow: 'visible'
+                        }}
+                      >
+                        <CardContent sx={{ p: 1, "&:last-child": { pb: 1 }, display: 'flex', flexDirection: 'column' }}>
+                          {isImage ? (
+                            <>
                               <Box
-                                mt={1}
-                                pt={1}
+                                component="img"
+                                src={fileUrl}
+                                alt={fileName || `Order file ${index + 1}`}
                                 sx={{
-                                  borderTop: "1px dashed rgba(0, 0, 0, 0.12)",
-                                  maxHeight: "80px",
-                                  overflow: "auto",
+                                  width: "100%",
+                                  height: 80,
+                                  objectFit: "cover",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
                                 }}
+                                onClick={() =>
+                                  openImagePreview(fileUrl, fileName)
+                                }
+                              />
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
                               >
-                                {description && (
-                                  <Box>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      component="span"
-                                      sx={{ fontWeight: "medium" }}
-                                    >
-                                      Mô tả:
-                                    </Typography>
-                                    <Typography
-                                      variant="caption"
-                                      component="span"
-                                      sx={{ ml: 0.5 }}
-                                    >
-                                      {description}
-                                    </Typography>
-                                  </Box>
-                                )}
-
-                                {notes && (
-                                  <Box mt={0.5}>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      component="span"
-                                      sx={{ fontWeight: "medium" }}
-                                    >
-                                      Ghi chú:
-                                    </Typography>
-                                    <Typography
-                                      variant="caption"
-                                      component="span"
-                                      sx={{ ml: 0.5 }}
-                                    >
-                                      {notes}
-                                    </Typography>
-                                  </Box>
-                                )}
+                                {fileName || `Hình ảnh ${index + 1}`}
+                              </Typography>
+                            </>
+                          ) : isPdf ? (
+                            <>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  height: 80,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f5f5f5",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
+                                  border: "1px solid #e0e0e0",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                }}
+                                onClick={() =>
+                                  handleFileClick(
+                                    fileUrl,
+                                    fileName || `file-${index + 1}`,
+                                    fileType
+                                  )
+                                }
+                              >
+                                <PictureAsPdfIcon
+                                  sx={{ fontSize: 40, color: "#f44336" }}
+                                />
+                                <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                  Xem PDF
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "4px",
+                                    background:
+                                      "linear-gradient(90deg, #f44336 0%, #ff9800 100%)",
+                                  }}
+                                />
                               </Box>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </Grid>
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
+                              >
+                                {fileName || `PDF Document ${index + 1}`}
+                              </Typography>
+                            </>
+                          ) : isXlsx ? (
+                            <>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  height: 80,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f5f5f5",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
+                                  border: "1px solid #e0e0e0",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                }}
+                                onClick={() =>
+                                  handleFileClick(
+                                    fileUrl,
+                                    fileName || `file-${index + 1}`,
+                                    fileType
+                                  )
+                                }
+                              >
+                                <ArticleIcon
+                                  sx={{ fontSize: 40, color: "#4caf50" }}
+                                />
+                                <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                  Xem Excel
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "4px",
+                                    background:
+                                      "linear-gradient(90deg, #4caf50 0%, #8bc34a 100%)",
+                                  }}
+                                />
+                              </Box>
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
+                              >
+                                {fileName || `Excel File ${index + 1}`}
+                              </Typography>
+                            </>
+                          ) : isDocx ? (
+                            <>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  height: 80,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f5f5f5",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
+                                  border: "1px solid #e0e0e0",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                }}
+                                onClick={() =>
+                                  handleFileClick(
+                                    fileUrl,
+                                    fileName || `file-${index + 1}`,
+                                    fileType
+                                  )
+                                }
+                              >
+                                <DescriptionIcon
+                                  sx={{ fontSize: 40, color: "#1976d2" }}
+                                />
+                                <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                  Xem Word
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "4px",
+                                    background:
+                                      "linear-gradient(90deg, #1976d2 0%, #64b5f6 100%)",
+                                  }}
+                                />
+                              </Box>
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
+                              >
+                                {fileName || `Word Document ${index + 1}`}
+                              </Typography>
+                            </>
+                          ) : isPptx ? (
+                            <>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  height: 80,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f5f5f5",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
+                                  border: "1px solid #e0e0e0",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                }}
+                                onClick={() =>
+                                  handleFileClick(
+                                    fileUrl,
+                                    fileName || `file-${index + 1}`,
+                                    fileType
+                                  )
+                                }
+                              >
+                                <ArticleIcon
+                                  sx={{ fontSize: 40, color: "#ff9800" }}
+                                />
+                                <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                  Xem PowerPoint
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "4px",
+                                    background:
+                                      "linear-gradient(90deg, #ff9800 0%, #ffc107 100%)",
+                                  }}
+                                />
+                              </Box>
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
+                              >
+                                {fileName || `PowerPoint File ${index + 1}`}
+                              </Typography>
+                            </>
+                          ) : (
+                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  height: 80,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f5f5f5",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
+                                  border: "1px solid #e0e0e0",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                }}
+                                onClick={() =>
+                                  handleFileClick(
+                                    fileUrl,
+                                    fileName || `file-${index + 1}`,
+                                    fileType
+                                  )
+                                }
+                              >
+                                <AttachFileIcon
+                                  sx={{ fontSize: 40, color: "#757575" }}
+                                />
+                                <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                  Xem tài liệu
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "4px",
+                                    background:
+                                      "linear-gradient(90deg, #757575 0%, #bdbdbd 100%)",
+                                  }}
+                                />
+                              </Box>
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
+                              >
+                                {fileName || `File ${index + 1}`}
+                              </Typography>
+                            </Box>
+                          )}
+
+                          {(description || notes) && (
+                            <Box
+                              sx={{
+                                borderTop: "1px dashed rgba(0, 0, 0, 0.12)",
+                                mt: 1,
+                                pt: 0.5,
+                              }}
+                            >
+                              {description && (
+                                <Box>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    component="span"
+                                    sx={{ fontWeight: "medium" }}
+                                  >
+                                    Mô tả:
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    component="span"
+                                    sx={{ ml: 0.5 }}
+                                  >
+                                    {description}
+                                  </Typography>
+                                </Box>
+                              )}
+
+                              {notes && (
+                                <Box mt={0.5}>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    component="span"
+                                    sx={{ fontWeight: "medium" }}
+                                  >
+                                    Ghi chú:
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    component="span"
+                                    sx={{ ml: 0.5 }}
+                                  >
+                                    {notes}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                          )}
+                        </CardContent>
+                      </Card>
                     );
                   })}
-                </Grid>
+                </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">
                   Không có giấy tờ đặt hàng
@@ -2115,7 +2278,12 @@ const OrderDetailPage: React.FC = () => {
                 Tài liệu hợp đồng
               </Typography>
               {contractFiles && contractFiles.length > 0 ? (
-                <Grid container spacing={2}>
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(2, 1fr)', 
+                  gap: 2, 
+                  gridAutoFlow: 'dense' 
+                }}>
                   {contractFiles.map((file, index) => {
                     const isPdf =
                       file.fileType === "PDF Document" ||
@@ -2157,211 +2325,371 @@ const OrderDetailPage: React.FC = () => {
                     const notes = typeof file === "string" ? null : file.note;
 
                     return (
-                      <Grid
-                        item
-                        xs={12}
-                        sm={6}
+                      <Card 
                         key={file.fileId || `contract-file-${index}`}
+                        sx={{ 
+                          gridColumn: 'span 1',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          overflow: 'visible'
+                        }}
                       >
-                        <Card>
-                          <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
-                            {isImage ? (
-                              <>
-                                <Box
-                                  component="img"
-                                  src={file.fileUrl}
-                                  alt={
-                                    file.fileName ||
-                                    `Contract image ${index + 1}`
-                                  }
-                                  sx={{
-                                    width: "100%",
-                                    height: 100,
-                                    objectFit: "cover",
-                                    cursor: "pointer",
-                                    borderRadius: 1,
-                                  }}
-                                  onClick={() =>
-                                    openImagePreview(
-                                      file.fileUrl,
-                                      file.fileName ||
-                                        `Contract image ${index + 1}`
-                                    )
-                                  }
-                                />
-                                <Typography
-                                  variant="caption"
-                                  display="block"
-                                  mt={0.5}
-                                  noWrap
-                                >
-                                  {file.fileName || `Hình ảnh ${index + 1}`}
-                                </Typography>
-                              </>
-                            ) : isPdf ? (
-                              <>
-                                <Box
-                                  sx={{
-                                    width: "100%",
-                                    height: 100,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    justifyContent: "center",
-                                    alignItems: "center",
-                                    background: "#f5f5f5",
-                                    cursor: "pointer",
-                                    borderRadius: 1,
-                                    border: "1px solid #e0e0e0",
-                                    position: "relative",
-                                    overflow: "hidden",
-                                  }}
-                                  onClick={() =>
-                                    handleFileClick(
-                                      file.fileUrl,
-                                      file.fileName ||
-                                        `contract-file-${index + 1}`,
-                                      file.fileType
-                                    )
-                                  }
-                                >
-                                  <PictureAsPdfIcon
-                                    sx={{ fontSize: 40, color: "#f44336" }}
-                                  />
-                                  <Typography variant="caption" sx={{ mt: 1 }}>
-                                    Xem PDF
-                                  </Typography>
-                                  <Box
-                                    sx={{
-                                      position: "absolute",
-                                      bottom: 0,
-                                      left: 0,
-                                      width: "100%",
-                                      height: "4px",
-                                      background:
-                                        "linear-gradient(90deg, #f44336 0%, #ff9800 100%)",
-                                    }}
-                                  />
-                                </Box>
-                                <Typography
-                                  variant="caption"
-                                  display="block"
-                                  mt={0.5}
-                                  noWrap
-                                >
-                                  {file.fileName || `PDF Document ${index + 1}`}
-                                </Typography>
-                              </>
-                            ) : (
-                              <Typography
-                                variant="body2"
-                                noWrap
-                                sx={{ display: "flex", alignItems: "center" }}
-                              >
-                                <Box component="span" mr={0.5}>
-                                  {isDocx ? (
-                                    <DescriptionIcon
-                                      fontSize="small"
-                                      color="primary"
-                                    />
-                                  ) : isXlsx ? (
-                                    <ArticleIcon
-                                      fontSize="small"
-                                      color="success"
-                                    />
-                                  ) : isPptx ? (
-                                    <ArticleIcon
-                                      fontSize="small"
-                                      color="warning"
-                                    />
-                                  ) : (
-                                    <AttachFileIcon
-                                      fontSize="small"
-                                      color="action"
-                                    />
-                                  )}
-                                </Box>
-                                <Box
-                                  component="span"
-                                  sx={{
-                                    cursor: "pointer",
-                                    color: "primary.main",
-                                    "&:hover": {
-                                      textDecoration: "underline",
-                                      color: "primary.dark",
-                                    },
-                                  }}
-                                  onClick={() =>
-                                    handleFileClick(
-                                      file.fileUrl,
-                                      file.fileName ||
-                                        `contract-file-${index + 1}`,
-                                      file.fileType
-                                    )
-                                  }
-                                >
-                                  {file.fileName ||
-                                    `Tài liệu hợp đồng ${index + 1}`}
-                                </Box>
-                              </Typography>
-                            )}
-
-                            {(description || notes) && (
+                        <CardContent sx={{ p: 1, "&:last-child": { pb: 1 }, display: 'flex', flexDirection: 'column' }}>
+                          {isImage ? (
+                            <>
                               <Box
-                                mt={1}
-                                pt={1}
+                                component="img"
+                                src={file.fileUrl}
+                                alt={
+                                  file.fileName ||
+                                  `Contract image ${index + 1}`
+                                }
                                 sx={{
-                                  borderTop: "1px dashed rgba(0, 0, 0, 0.12)",
-                                  maxHeight: "80px",
-                                  overflow: "auto",
+                                  width: "100%",
+                                  height: 80,
+                                  objectFit: "cover",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
                                 }}
+                                onClick={() =>
+                                  openImagePreview(
+                                    file.fileUrl,
+                                    file.fileName ||
+                                      `Contract image ${index + 1}`
+                                  )
+                                }
+                              />
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
                               >
-                                {description && (
-                                  <Box>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      component="span"
-                                      sx={{ fontWeight: "medium" }}
-                                    >
-                                      Mô tả:
-                                    </Typography>
-                                    <Typography
-                                      variant="caption"
-                                      component="span"
-                                      sx={{ ml: 0.5 }}
-                                    >
-                                      {description}
-                                    </Typography>
-                                  </Box>
-                                )}
-
-                                {notes && (
-                                  <Box mt={0.5}>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      component="span"
-                                      sx={{ fontWeight: "medium" }}
-                                    >
-                                      Ghi chú:
-                                    </Typography>
-                                    <Typography
-                                      variant="caption"
-                                      component="span"
-                                      sx={{ ml: 0.5 }}
-                                    >
-                                      {notes}
-                                    </Typography>
-                                  </Box>
-                                )}
+                                {file.fileName || `Hình ảnh ${index + 1}`}
+                              </Typography>
+                            </>
+                          ) : isPdf ? (
+                            <>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  height: 80,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f5f5f5",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
+                                  border: "1px solid #e0e0e0",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                }}
+                                onClick={() =>
+                                  handleFileClick(
+                                    file.fileUrl,
+                                    file.fileName ||
+                                      `contract-file-${index + 1}`,
+                                    file.fileType
+                                  )
+                                }
+                              >
+                                <PictureAsPdfIcon
+                                  sx={{ fontSize: 40, color: "#f44336" }}
+                                />
+                                <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                  Xem PDF
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "4px",
+                                    background:
+                                      "linear-gradient(90deg, #f44336 0%, #ff9800 100%)",
+                                  }}
+                                />
                               </Box>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </Grid>
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
+                              >
+                                {file.fileName || `PDF Document ${index + 1}`}
+                              </Typography>
+                            </>
+                          ) : isXlsx ? (
+                            <>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  height: 80,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f5f5f5",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
+                                  border: "1px solid #e0e0e0",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                }}
+                                onClick={() =>
+                                  handleFileClick(
+                                    file.fileUrl,
+                                    file.fileName ||
+                                      `contract-file-${index + 1}`,
+                                    file.fileType
+                                  )
+                                }
+                              >
+                                <ArticleIcon
+                                  sx={{ fontSize: 40, color: "#4caf50" }}
+                                />
+                                <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                  Xem Excel
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "4px",
+                                    background:
+                                      "linear-gradient(90deg, #4caf50 0%, #8bc34a 100%)",
+                                  }}
+                                />
+                              </Box>
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
+                              >
+                                {file.fileName || `Excel File ${index + 1}`}
+                              </Typography>
+                            </>
+                          ) : isDocx ? (
+                            <>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  height: 80,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f5f5f5",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
+                                  border: "1px solid #e0e0e0",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                }}
+                                onClick={() =>
+                                  handleFileClick(
+                                    file.fileUrl,
+                                    file.fileName ||
+                                      `contract-file-${index + 1}`,
+                                    file.fileType
+                                  )
+                                }
+                              >
+                                <DescriptionIcon
+                                  sx={{ fontSize: 40, color: "#1976d2" }}
+                                />
+                                <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                  Xem Word
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "4px",
+                                    background:
+                                      "linear-gradient(90deg, #1976d2 0%, #64b5f6 100%)",
+                                  }}
+                                />
+                              </Box>
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
+                              >
+                                {file.fileName || `Word Document ${index + 1}`}
+                              </Typography>
+                            </>
+                          ) : isPptx ? (
+                            <>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  height: 80,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f5f5f5",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
+                                  border: "1px solid #e0e0e0",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                }}
+                                onClick={() =>
+                                  handleFileClick(
+                                    file.fileUrl,
+                                    file.fileName ||
+                                      `contract-file-${index + 1}`,
+                                    file.fileType
+                                  )
+                                }
+                              >
+                                <ArticleIcon
+                                  sx={{ fontSize: 40, color: "#ff9800" }}
+                                />
+                                <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                  Xem PowerPoint
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "4px",
+                                    background:
+                                      "linear-gradient(90deg, #ff9800 0%, #ffc107 100%)",
+                                  }}
+                                />
+                              </Box>
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
+                              >
+                                {file.fileName || `PowerPoint File ${index + 1}`}
+                              </Typography>
+                            </>
+                          ) : (
+                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  height: 80,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f5f5f5",
+                                  cursor: "pointer",
+                                  borderRadius: 1,
+                                  border: "1px solid #e0e0e0",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                }}
+                                onClick={() =>
+                                  handleFileClick(
+                                    file.fileUrl,
+                                    file.fileName ||
+                                      `contract-file-${index + 1}`,
+                                    file.fileType
+                                  )
+                                }
+                              >
+                                <AttachFileIcon
+                                  sx={{ fontSize: 40, color: "#757575" }}
+                                />
+                                <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                  Xem tài liệu
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "4px",
+                                    background:
+                                      "linear-gradient(90deg, #757575 0%, #bdbdbd 100%)",
+                                  }}
+                                />
+                              </Box>
+                              <Typography
+                                variant="caption"
+                                display="block"
+                                mt={0.5}
+                                noWrap
+                              >
+                                {file.fileName ||
+                                  `Tài liệu hợp đồng ${index + 1}`}
+                              </Typography>
+                            </Box>
+                          )}
+
+                          {(description || notes) && (
+                            <Box
+                              sx={{
+                                borderTop: "1px dashed rgba(0, 0, 0, 0.12)",
+                                mt: 1,
+                                pt: 0.5,
+                              }}
+                            >
+                              {description && (
+                                <Box>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    component="span"
+                                    sx={{ fontWeight: "medium" }}
+                                  >
+                                    Mô tả:
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    component="span"
+                                    sx={{ ml: 0.5 }}
+                                  >
+                                    {description}
+                                  </Typography>
+                                </Box>
+                              )}
+
+                              {notes && (
+                                <Box mt={0.5}>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    component="span"
+                                    sx={{ fontWeight: "medium" }}
+                                  >
+                                    Ghi chú:
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    component="span"
+                                    sx={{ ml: 0.5 }}
+                                  >
+                                    {notes}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                          )}
+                        </CardContent>
+                      </Card>
                     );
                   })}
-                </Grid>
+                </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">
                   Không có tài liệu hợp đồng
