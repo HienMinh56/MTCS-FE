@@ -1405,6 +1405,28 @@ const TripDetailPage: React.FC = () => {
             </Box>
             {/* <Divider sx={{ mb: 2 }} /> */}
 
+            {/* Cancellation reason box */}
+            {tripData.note && (
+              <Box mb={2}>
+                <Typography variant="subtitle1" fontWeight="500" color="error" gutterBottom>
+                  Lý do hủy chuyến:
+                </Typography>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 2, 
+                    borderColor: 'error.light',
+                    backgroundColor: 'error.lighter',
+                    borderRadius: 1
+                  }}
+                >
+                  <Typography variant="body2">
+                    {tripData.note}
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
+
             <Box display="flex" flexDirection="column" gap={2}>
               {tripData.orderId && (
                 <Button
