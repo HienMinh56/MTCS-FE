@@ -198,6 +198,8 @@ const CustomerDetailPage = () => {
 
   const getStatusDisplay = (status: OrderStatus) => {
     switch (status) {
+      case OrderStatus.Canceled:
+        return { label: "Đã hủy", color: "error" };
       case OrderStatus.Pending:
         return { label: "Chờ xử lý", color: "warning" };
       case OrderStatus.Scheduled:
@@ -776,16 +778,20 @@ const CustomerDetailPage = () => {
         }}
       >
         <Typography variant="h6">Danh sách hợp đồng</Typography>
-        {user?.role === "Staff" && (
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            size="small"
-            onClick={handleOpenAddContractModal}
-          >
-            Thêm hợp đồng
-          </Button>
+        {user?.role === "Staff" &&
+          (!customer.contracts ||
+           !customer.contracts.some(
+              (contract: any) => contract && contract.status === 1
+            )) && (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                size="small"
+                onClick={handleOpenAddContractModal}
+              >
+                Thêm hợp đồng
+              </Button>
         )}
       </Box>
 
@@ -987,9 +993,13 @@ const CustomerDetailPage = () => {
                               color:
                                 order.status === OrderStatus.Completed
                                   ? "success.main"
-                                  : order.status === OrderStatus.Scheduled
+                                  : order.status === OrderStatus.Scheduled ||
+                                  order.status === OrderStatus.Delivering ||
+                                  order.status === OrderStatus.Shipped
                                   ? "info.main"
-                                  : "warning.main",
+                                  : order.status === OrderStatus.Pending
+                                  ? "warning.main"
+                                  : "error.main"
                             }}
                           >
                             {getStatusDisplay(order.status).label}

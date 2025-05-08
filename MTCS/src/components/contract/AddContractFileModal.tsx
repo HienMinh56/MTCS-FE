@@ -459,7 +459,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
                     </Box>
                     
                     <Grid container spacing={2}>
-                      <Grid item xs={12}>
+                      {/* <Grid item xs={12}>
                         <FormControl fullWidth margin="normal" required>
                           <InputLabel>Trạng thái tệp</InputLabel>
                           <Select
@@ -471,7 +471,7 @@ const AddContractFileModal: React.FC<AddContractFileModalProps> = ({
                             <MenuItem value={OrderStatus.Invalid}>Không hợp lệ</MenuItem>
                           </Select>
                         </FormControl>
-                      </Grid>
+                      </Grid> */}
                       
                       <Grid item xs={12}>
                         <TextField

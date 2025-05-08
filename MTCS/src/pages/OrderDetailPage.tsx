@@ -2004,10 +2004,19 @@ const OrderDetailPage: React.FC = () => {
                           gridColumn: 'span 1',
                           display: 'flex',
                           flexDirection: 'column',
-                          overflow: 'visible'
+                          overflow: 'hidden',
+                          height: 180, // Tăng chiều cao để hiển thị đủ mô tả và ghi chú
+                          width: '100%'
                         }}
                       >
-                        <CardContent sx={{ p: 1, "&:last-child": { pb: 1 }, display: 'flex', flexDirection: 'column' }}>
+                        <CardContent sx={{ 
+                          p: 1, 
+                          "&:last-child": { pb: 1 }, 
+                          display: 'flex', 
+                          flexDirection: 'column',
+                          height: '100%',
+                          overflow: 'hidden' 
+                        }}>
                           {isImage ? (
                             <>
                               <Box
@@ -2025,14 +2034,22 @@ const OrderDetailPage: React.FC = () => {
                                   openImagePreview(fileUrl, fileName)
                                 }
                               />
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {fileName || `Hình ảnh ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={fileName || `Hình ảnh ${index + 1}`}
+                                >
+                                  {fileName || `Hình ảnh ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </>
                           ) : isPdf ? (
                             <>
@@ -2077,14 +2094,22 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {fileName || `PDF Document ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={fileName || `PDF Document ${index + 1}`}
+                                >
+                                  {fileName || `PDF Document ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </>
                           ) : isXlsx ? (
                             <>
@@ -2129,14 +2154,22 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {fileName || `Excel File ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={fileName || `Excel File ${index + 1}`}
+                                >
+                                  {fileName || `Excel File ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </>
                           ) : isDocx ? (
                             <>
@@ -2181,14 +2214,22 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {fileName || `Word Document ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={fileName || `Word Document ${index + 1}`}
+                                >
+                                  {fileName || `Word Document ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </>
                           ) : isPptx ? (
                             <>
@@ -2233,14 +2274,22 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {fileName || `PowerPoint File ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={fileName || `PowerPoint File ${index + 1}`}
+                                >
+                                  {fileName || `PowerPoint File ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </>
                           ) : (
                             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -2285,14 +2334,22 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {fileName || `File ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={fileName || `File ${index + 1}`}
+                                >
+                                  {fileName || `File ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </Box>
                           )}
 
@@ -2302,10 +2359,13 @@ const OrderDetailPage: React.FC = () => {
                                 borderTop: "1px dashed rgba(0, 0, 0, 0.12)",
                                 mt: 1,
                                 pt: 0.5,
+                                overflow: "hidden",
+                                flex: 1,
+                                maxHeight: 60 // Tăng maxHeight để hiển thị đủ nội dung
                               }}
                             >
                               {description && (
-                                <Box>
+                                <Box sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
@@ -2318,6 +2378,8 @@ const OrderDetailPage: React.FC = () => {
                                     variant="caption"
                                     component="span"
                                     sx={{ ml: 0.5 }}
+                                    noWrap={false}
+                                    title={description}
                                   >
                                     {description}
                                   </Typography>
@@ -2325,7 +2387,7 @@ const OrderDetailPage: React.FC = () => {
                               )}
 
                               {notes && (
-                                <Box mt={0.5}>
+                                <Box sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
@@ -2338,6 +2400,8 @@ const OrderDetailPage: React.FC = () => {
                                     variant="caption"
                                     component="span"
                                     sx={{ ml: 0.5 }}
+                                    noWrap={false}
+                                    title={notes}
                                   >
                                     {notes}
                                   </Typography>
@@ -2415,10 +2479,18 @@ const OrderDetailPage: React.FC = () => {
                           gridColumn: 'span 1',
                           display: 'flex',
                           flexDirection: 'column',
-                          overflow: 'visible'
+                          overflow: 'hidden',
+                          height: 180, // Tăng chiều cao để hiển thị đủ mô tả và ghi chú
                         }}
                       >
-                        <CardContent sx={{ p: 1, "&:last-child": { pb: 1 }, display: 'flex', flexDirection: 'column' }}>
+                        <CardContent sx={{ 
+                          p: 1, 
+                          "&:last-child": { pb: 1 }, 
+                          display: 'flex', 
+                          flexDirection: 'column',
+                          height: '100%',
+                          overflow: 'hidden' 
+                        }}>
                           {isImage ? (
                             <>
                               <Box
@@ -2443,14 +2515,22 @@ const OrderDetailPage: React.FC = () => {
                                   )
                                 }
                               />
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {file.fileName || `Hình ảnh ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={file.fileName || `Hình ảnh ${index + 1}`}
+                                >
+                                  {file.fileName || `Hình ảnh ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </>
                           ) : isPdf ? (
                             <>
@@ -2496,14 +2576,22 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {file.fileName || `PDF Document ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={file.fileName || `PDF Document ${index + 1}`}
+                                >
+                                  {file.fileName || `PDF Document ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </>
                           ) : isXlsx ? (
                             <>
@@ -2549,14 +2637,22 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {file.fileName || `Excel File ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={file.fileName || `Excel File ${index + 1}`}
+                                >
+                                  {file.fileName || `Excel File ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </>
                           ) : isDocx ? (
                             <>
@@ -2602,14 +2698,22 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {file.fileName || `Word Document ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={file.fileName || `Word Document ${index + 1}`}
+                                >
+                                  {file.fileName || `Word Document ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </>
                           ) : isPptx ? (
                             <>
@@ -2655,14 +2759,22 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {file.fileName || `PowerPoint File ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={file.fileName || `PowerPoint File ${index + 1}`}
+                                >
+                                  {file.fileName || `PowerPoint File ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </>
                           ) : (
                             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -2708,15 +2820,23 @@ const OrderDetailPage: React.FC = () => {
                                   }}
                                 />
                               </Box>
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                mt={0.5}
-                                noWrap
-                              >
-                                {file.fileName ||
-                                  `Tài liệu hợp đồng ${index + 1}`}
-                              </Typography>
+                              <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                                <Typography
+                                  variant="caption"
+                                  display="block"
+                                  mt={0.5}
+                                  noWrap
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%',
+                                  }}
+                                  title={file.fileName || `Tài liệu hợp đồng ${index + 1}`}
+                                >
+                                  {file.fileName ||
+                                    `Tài liệu hợp đồng ${index + 1}`}
+                                </Typography>
+                              </Box>
                             </Box>
                           )}
 
@@ -2726,10 +2846,13 @@ const OrderDetailPage: React.FC = () => {
                                 borderTop: "1px dashed rgba(0, 0, 0, 0.12)",
                                 mt: 1,
                                 pt: 0.5,
+                                overflow: "hidden",
+                                flex: 1,
+                                maxHeight: 60 // Tăng maxHeight để hiển thị đủ nội dung
                               }}
                             >
                               {description && (
-                                <Box>
+                                <Box sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
@@ -2742,6 +2865,8 @@ const OrderDetailPage: React.FC = () => {
                                     variant="caption"
                                     component="span"
                                     sx={{ ml: 0.5 }}
+                                    noWrap={false}
+                                    title={description}
                                   >
                                     {description}
                                   </Typography>
@@ -2749,7 +2874,7 @@ const OrderDetailPage: React.FC = () => {
                               )}
 
                               {notes && (
-                                <Box mt={0.5}>
+                                <Box sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
@@ -2762,6 +2887,8 @@ const OrderDetailPage: React.FC = () => {
                                     variant="caption"
                                     component="span"
                                     sx={{ ml: 0.5 }}
+                                    noWrap={false}
+                                    title={notes}
                                   >
                                     {notes}
                                   </Typography>

@@ -1455,13 +1455,11 @@ const TripDetailPage: React.FC = () => {
               {/* Cancel Trip Button */}
               {!isAdmin &&
                 !isTripcanceled() &&
-                tripData.status !== "completed" &&
-                tripData.status !== "going_to_port" && 
+                tripData.status !== "completed" && 
                 tripData.status !== "pick_up_container" &&
                 tripData.status !== "is_delivering" &&
                 tripData.status !== "at_delivery_point" &&
-                tripData.status !== "going_to_port/depot" &&
-                tripData.status !== "delaying" && (
+                tripData.status !== "going_to_port/depot" && (
                   <Button
                     variant="outlined"
                     color="error"
