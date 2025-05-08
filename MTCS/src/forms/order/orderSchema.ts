@@ -73,8 +73,8 @@ export const orderSchema = z.object({
       message: 'Địa điểm trả container không được chứa nhiều hơn một dấu cách giữa các từ',
     }),
   price: z.number()
-    .min(0, 'Giá không được âm')
-    .max(1000000000, 'Giá không được vượt quá 1 tỷ VND'),
+    .min(1000, 'Giá tối thiểu phải là 1,000 VNĐ')
+    .max(1000000000, 'Giá không được vượt quá 1 tỷ VNĐ'),
   contactPerson: z.string()
     .min(1, 'Tên người liên hệ là bắt buộc')
     .max(50, 'Tên người liên hệ không được vượt quá 50 ký tự')

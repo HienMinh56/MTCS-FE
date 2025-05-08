@@ -1058,7 +1058,6 @@ const OrderDetailPage: React.FC = () => {
 
   const handleCreateTrip = async () => {
     setCreateTripLoading(true);
-    setCreateTripError(null);
 
     try {
       if (
@@ -1070,10 +1069,12 @@ const OrderDetailPage: React.FC = () => {
         throw new Error("Vui lòng điền đầy đủ thông tin");
       }
 
+      const successMessage = "Tạo chuyến đi thành công";
+
       console.log("Creating trip with data:", createTripData);
       await manualCreateTrip(createTripData);
 
-      setCreateTripSuccess("Tạo chuyến đi thành công");
+      setCreateTripSuccess(successMessage);
 
       setLoadingSnackbar({
         open: true,
@@ -1094,31 +1095,26 @@ const OrderDetailPage: React.FC = () => {
     } catch (err: any) {
       console.error("Error creating trip:", err);
 
-      let errorMessage = "Không thể tạo chuyến đi. Vui lòng thử lại sau.";
-      if (err.response && err.response.data) {
-        errorMessage = err.response.data;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
+      const errorMessage = "Không thể tạo chuyến đi. Vui lòng thử lại sau.";
+
+      setCreateTripError(errorMessage);
 
       setLoadingSnackbar({
         open: true,
         message: "Đã có lỗi xảy ra khi tạo chuyến cho đơn hàng. Vui lòng thử lại!",
         severity: "error",
         autoHideDuration: 3000,
-      });
+      });      
 
-      setCreateTripError(errorMessage);
+      setTimeout(() => {
+        setCreateTripError(null);
+      }, 5000);
     } finally {
       setCreateTripLoading(false);
-      setCreateTripError(null);
     }
   };
 
   const handleAutoScheduleTrip = async () => {
-    setAutoScheduleLoading(true);
-    setAutoScheduleError(null);
-    setAutoScheduleSuccess(null);
 
     // Hiển thị thông báo đang xử lý và không tự động đóng
     setLoadingSnackbar({
@@ -1157,11 +1153,9 @@ const OrderDetailPage: React.FC = () => {
         setTimeout(() => {
           setAutoScheduleSuccess(null);
         }, 5000);
-      } else {
+      } else if (result.status == -1) {
         // Use the message from API response for error message
-        setAutoScheduleError(
-          "Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!"
-        );
+        setAutoScheduleError("Không tìm thấy tài xế, đầu kéo hoặc rơ-moóc phù hợp!");
 
         // Cập nhật snackbar hiện tại thành thông báo lỗi
         setLoadingSnackbar({
@@ -1189,8 +1183,6 @@ const OrderDetailPage: React.FC = () => {
       setTimeout(() => {
         setAutoScheduleError(null);
       }, 5000);
-    } finally {
-      setAutoScheduleLoading(false);
     }
   };
 
