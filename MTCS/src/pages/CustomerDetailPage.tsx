@@ -953,6 +953,10 @@ const CustomerDetailPage = () => {
                         typeof order === "object" && order !== null
                           ? order.trackingCode
                           : order;
+                      const orderDetail =
+                        typeof order === "object" && order !== null
+                          ? order.orderId
+                          : order;
                       const createdDate =
                         typeof order === "object" &&
                         order !== null &&
@@ -993,7 +997,7 @@ const CustomerDetailPage = () => {
                           <TableCell align="center">
                             <IconButton
                               size="small"
-                              onClick={(e) => handleViewOrderDetail(e, orderId)}
+                              onClick={(e) => handleViewOrderDetail(e, orderDetail)}
                               title="Xem chi tiết đơn hàng"
                             >
                               <VisibilityIcon fontSize="small" />

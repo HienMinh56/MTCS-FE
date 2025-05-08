@@ -59,7 +59,7 @@ import ArticleIcon from "@mui/icons-material/Article";
 import DescriptionIcon from "@mui/icons-material/Description";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import * as zod from "zod";
 import {
   OrderDetails,
   ContainerType,
@@ -73,6 +73,7 @@ import {
   getOrderDetails,
   updateOrder,
   updatePaymentStatus,
+  cancelOrder,
 } from "../services/orderApi";
 import { getContracts, createContract } from "../services/contractApi";
 import {
@@ -206,6 +207,10 @@ const OrderDetailPage: React.FC = () => {
     title: "",
     fileType: "",
   });
+
+  const [cancelOrderDialogOpen, setCancelOrderDialogOpen] = useState(false);
+  const [cancelOrderLoading, setCancelOrderLoading] = useState(false);
+  const [cancelFinalConfirmDialogOpen, setCancelFinalConfirmDialogOpen] = useState(false);
 
   // Close loading snackbar
   const handleCloseLoadingSnackbar = () => {
@@ -369,6 +374,8 @@ const OrderDetailPage: React.FC = () => {
 
   const getStatusDisplay = (status: OrderStatus) => {
     switch (status) {
+      case OrderStatus.Canceled:
+        return { label: "Đã hủy", color: "error" };
       case OrderStatus.Pending:
         return { label: "Chờ xử lý", color: "warning" };
       case OrderStatus.Scheduled:
@@ -410,8 +417,8 @@ const OrderDetailPage: React.FC = () => {
   };
 
   // Define a more specific validation schema for the edit form
-  const editOrderSchema = z.object({
-    note: z
+  const editOrderSchema = zod.object({
+    note: zod
       .string()
       .min(1, "Ghi chú là bắt buộc")
       .max(500, "Ghi chú không được vượt quá 500 ký tự")
@@ -421,11 +428,11 @@ const OrderDetailPage: React.FC = () => {
       .refine((val) => !/\s{2,}/.test(val), {
         message: "Ghi chú không được chứa nhiều hơn một dấu cách giữa các từ",
       }),
-    price: z
+    price: zod
       .number()
       .min(0, "Giá không được âm")
       .max(1000000000, "Giá không được vượt quá 1 tỷ VND"),
-    contactPerson: z
+    contactPerson: zod
       .string()
       .min(1, "Tên người liên hệ là bắt buộc")
       .max(50, "Tên người liên hệ không được vượt quá 50 ký tự")
@@ -433,7 +440,7 @@ const OrderDetailPage: React.FC = () => {
         message:
           "Tên người liên hệ không được bắt đầu hoặc kết thúc bằng dấu cách",
       }),
-    containerNumber: z
+    containerNumber: zod
       .string()
       .min(1, "Số container là bắt buộc")
       .max(20, "Số container không được vượt quá 20 ký tự")
@@ -441,12 +448,12 @@ const OrderDetailPage: React.FC = () => {
         /^[A-Z]{3}[UJZ]\d{7}$/,
         "Số container phải có định dạng hợp lệ (ví dụ: SEGU5593802)"
       ),
-    contactPhone: z
+    contactPhone: zod
       .string()
       .min(10, "Số điện thoại phải có ít nhất 10 số")
       .max(15, "Số điện thoại không được vượt quá 15 số")
       .regex(/^\d+$/, "Số điện thoại chỉ được chứa các chữ số"),
-    orderPlacer: z
+    orderPlacer: zod
       .string()
       .min(1, "Người đặt hàng là bắt buộc")
       .max(50, "Người đặt hàng không được vượt quá 50 ký tự")
@@ -454,7 +461,7 @@ const OrderDetailPage: React.FC = () => {
         message:
           "Người đặt hàng không được bắt đầu hoặc kết thúc bằng dấu cách",
       }),
-    temperature: z
+    temperature: zod
       .number()
       .min(-30, "Nhiệt độ không được thấp hơn -30°C")
       .max(40, "Nhiệt độ không được cao hơn 40°C")
@@ -462,7 +469,7 @@ const OrderDetailPage: React.FC = () => {
   });
 
   // Define the type for our form
-  type EditOrderFormValues = z.infer<typeof editOrderSchema>;
+  type EditOrderFormValues = zod.infer<typeof editOrderSchema>;
 
   // Setup form with react-hook-form
   const {
@@ -1297,6 +1304,70 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+  const handleCancelOrderDialogOpen = () => {
+    setCancelOrderDialogOpen(true);
+  };
+
+  const handleCancelOrderDialogClose = () => {
+    setCancelOrderDialogOpen(false);
+  };
+
+  const handleCancelFinalConfirmOpen = () => {
+    handleCancelOrderDialogClose();
+    setCancelFinalConfirmDialogOpen(true);
+  };
+
+  const handleCancelFinalConfirmClose = () => {
+    setCancelFinalConfirmDialogOpen(false);
+  };
+
+  const handleCancelOrder = async () => {
+    if (!orderId) return;
+    
+    setCancelOrderLoading(true);
+    setError(null);
+    
+    try {
+      await cancelOrder(orderId);
+      
+      // Hiển thị thông báo thành công bằng snackbar
+      setLoadingSnackbar({
+        open: true,
+        message: "Đơn hàng đã được hủy thành công!",
+        severity: "success",
+        autoHideDuration: 3000,
+      });
+      
+      handleCancelFinalConfirmClose();
+      
+      // Force reload the page after a short delay
+      setTimeout(() => {
+        fetchData();
+      }, 4000);
+    } catch (err: any) {
+      console.error("Error cancelling order:", err);
+      
+      // Handle specific error for invalid order status
+      if (err.message === "ORDER_STATUS_INVALID_FOR_CANCEL") {
+        setLoadingSnackbar({
+          open: true,
+          message: "Chỉ có thể hủy đơn hàng khi trạng thái là Đang xử lý hoặc Đã lên lịch.",
+          severity: "error",
+          autoHideDuration: 5000,
+        });
+      } else {
+        setLoadingSnackbar({
+          open: true,
+          message: "Không thể hủy đơn hàng. Vui lòng thử lại sau.",
+          severity: "error",
+          autoHideDuration: 5000,
+        });
+      }
+    } finally {
+      setCancelOrderLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box
@@ -1431,6 +1502,19 @@ const OrderDetailPage: React.FC = () => {
               Cập nhật Thanh Toán
             </Button>
           )}
+          {/* Add cancel button for Staff users when order is in Pending or Scheduled state */}
+          {(orderDetails.status === OrderStatus.Pending ||
+            orderDetails.status === OrderStatus.Scheduled) &&
+            user?.role === "Staff" && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={handleCancelOrderDialogOpen}
+              >
+                Hủy đơn hàng
+              </Button>
+            )}
         </Box>
       </Box>
 
@@ -3717,6 +3801,61 @@ const OrderDetailPage: React.FC = () => {
             variant="contained"
           >
             Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={cancelOrderDialogOpen}
+        onClose={handleCancelOrderDialogClose}
+        PaperProps={{
+          sx: { borderRadius: 2 },
+        }}
+      >
+        <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
+        <DialogContent sx={{ pt: 1, width: 400 }}>
+          <Typography variant="body2" gutterBottom>
+            Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.
+          </Typography>
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            Chỉ có thể hủy đơn hàng khi trạng thái là Pending hoặc Scheduled.
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCancelOrderDialogClose}>Đóng</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleCancelFinalConfirmOpen}
+            disabled={cancelOrderLoading}
+          >
+            {cancelOrderLoading ? "Đang xử lý..." : "Xác nhận hủy"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={cancelFinalConfirmDialogOpen}
+        onClose={handleCancelFinalConfirmClose}
+        PaperProps={{
+          sx: { borderRadius: 2 },
+        }}
+      >
+        <DialogTitle>Xác nhận lần cuối</DialogTitle>
+        <DialogContent sx={{ pt: 1, width: 400 }}>
+          <Typography variant="body2" gutterBottom>
+            Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCancelFinalConfirmClose}>Đóng</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleCancelOrder}
+            disabled={cancelOrderLoading}
+          >
+            {cancelOrderLoading ? "Đang xử lý..." : "Xác nhận hủy"}
           </Button>
         </DialogActions>
       </Dialog>

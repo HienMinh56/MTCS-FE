@@ -300,6 +300,28 @@ export const updateOrder = async (orderData: {
   }
 };
 
+export const cancelOrder = async (orderId: string) => {
+  try {
+    const response = await axiosInstance.post(`/api/order/cancel/${orderId}`);
+    return response;
+  } catch (error: any) {
+    console.error("Cancel order error:", error);
+    
+    // Check if we have the specific error from the API about order status
+    if (error.response && error.response.status === 400) {
+      if (error.response.data && error.response.data.message) {
+        // If it's the Vietnamese message about Pending or Scheduled status
+        if (error.response.data.message.includes("Pending hoặc Scheduled")) {
+          throw new Error("ORDER_STATUS_INVALID_FOR_CANCEL");
+        }
+      }
+    }
+    
+    // For other errors, rethrow
+    throw error;
+  }
+};
+
 export const exportExcel = async (
   fromDateStr: string | null,
   toDateStr: string | null

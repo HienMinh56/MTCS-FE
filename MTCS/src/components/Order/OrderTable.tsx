@@ -165,6 +165,9 @@ const OrderManagement: React.FC = () => {
           case 4: // Complete - fixed index from 5 to 4 since Shipped is commented out
             statusFilter = OrderStatus.Completed;
             break;
+          case 5: // Canceled
+            statusFilter = OrderStatus.Canceled;
+            break;
           default:
             statusFilter = undefined;
         }
@@ -245,9 +248,7 @@ const OrderManagement: React.FC = () => {
       (order) => order.status === OrderStatus.Completed
     ).length,
     cancelled: allOrders.filter(
-      (order) =>
-        order.status === ("Cancelled" as any) ||
-        order.status === ("Canceled" as any)
+      (order) => order.status === OrderStatus.Canceled
     ).length,
     scheduled: allOrders.filter(
       (order) => order.status === OrderStatus.Scheduled
@@ -341,6 +342,9 @@ const OrderManagement: React.FC = () => {
           case 4:
             statusFilter = OrderStatus.Completed;
             break;
+          case 5:
+            statusFilter = OrderStatus.Canceled;
+            break;
           default:
             statusFilter = undefined;
         }
@@ -431,17 +435,23 @@ const OrderManagement: React.FC = () => {
       label: "Đang giao hàng",
       color: "info",
     },
-    // Removed Shipped status as requested
     {
       value: OrderStatus.Completed,
       label: "Hoàn thành",
       color: "success",
+    },
+    {
+      value: OrderStatus.Canceled,
+      label: "Đã hủy",
+      color: "error",
     },
   ];
 
   // Status display mapping for UI
   const getStatusDisplay = (status: OrderStatus) => {
     switch (status) {
+      case OrderStatus.Canceled:
+        return { label: "Đã hủy", color: "error" };
       case OrderStatus.Pending:
         return { label: "Chờ xử lý", color: "warning" };
       case OrderStatus.Scheduled:
@@ -585,7 +595,7 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2.5}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card
             elevation={1}
             sx={{
@@ -638,7 +648,7 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2.5}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card
             elevation={1}
             sx={{
@@ -691,7 +701,7 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2.5}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card
             elevation={1}
             sx={{
@@ -744,7 +754,7 @@ const OrderManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2.5}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card
             elevation={1}
             sx={{
@@ -792,6 +802,59 @@ const OrderManagement: React.FC = () => {
                   }}
                 >
                   <CheckCircleIcon color="success" />
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
+              height: "100%",
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom: tabValue === 5 ? "3px solid #f44336" : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
+                boxShadow: 3,
+              },
+            }}
+            onClick={() => handleCardClick(5)} // Canceled - index 5
+          >
+            <CardContent sx={{ py: 1.5, px: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Box>
+                  <Typography
+                    color="text.secondary"
+                    variant="body2"
+                    gutterBottom
+                  >
+                    Đã hủy
+                  </Typography>
+                  <Typography variant="h5" component="div">
+                    {loadingAllOrders ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      orderCounts.cancelled
+                    )}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    backgroundColor: "rgba(244, 67, 54, 0.08)",
+                    p: 1,
+                    borderRadius: "50%",
+                  }}
+                >
+                  <CancelIcon color="error" />
                 </Box>
               </Box>
             </CardContent>
@@ -1067,6 +1130,128 @@ const OrderManagement: React.FC = () => {
           />
         </Box>
       </Paper>
+
+      {/* Tab Panels */}
+      <TabPanel value={tabValue} index={0}>
+        <Box>
+          <TableContainer>
+            <Table>
+              <TableBody>
+                {getCurrentOrders().map((order, index) => (
+                  <TableRow
+                    key={order.trackingCode || `order-${index}`}
+                    hover
+                    onClick={() => handleViewOrderDetail(order.orderId)}
+                    sx={{ cursor: "pointer" }}
+                  >
+                    {/* ... row content ... */}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      </TabPanel>
+      <TabPanel value={tabValue} index={1}>
+        <Box>
+          <TableContainer>
+            <Table>
+              <TableBody>
+                {getCurrentOrders().map((order, index) => (
+                  <TableRow
+                    key={order.trackingCode || `order-${index}`}
+                    hover
+                    onClick={() => handleViewOrderDetail(order.orderId)}
+                    sx={{ cursor: "pointer" }}
+                  >
+                    {/* ... row content ... */}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      </TabPanel>
+      <TabPanel value={tabValue} index={2}>
+        <Box>
+          <TableContainer>
+            <Table>
+              <TableBody>
+                {getCurrentOrders().map((order, index) => (
+                  <TableRow
+                    key={order.trackingCode || `order-${index}`}
+                    hover
+                    onClick={() => handleViewOrderDetail(order.orderId)}
+                    sx={{ cursor: "pointer" }}
+                  >
+                    {/* ... row content ... */}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      </TabPanel>
+      <TabPanel value={tabValue} index={3}>
+        <Box>
+          <TableContainer>
+            <Table>
+              <TableBody>
+                {getCurrentOrders().map((order, index) => (
+                  <TableRow
+                    key={order.trackingCode || `order-${index}`}
+                    hover
+                    onClick={() => handleViewOrderDetail(order.orderId)}
+                    sx={{ cursor: "pointer" }}
+                  >
+                    {/* ... row content ... */}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      </TabPanel>
+      <TabPanel value={tabValue} index={4}>
+        <Box>
+          <TableContainer>
+            <Table>
+              <TableBody>
+                {getCurrentOrders().map((order, index) => (
+                  <TableRow
+                    key={order.trackingCode || `order-${index}`}
+                    hover
+                    onClick={() => handleViewOrderDetail(order.orderId)}
+                    sx={{ cursor: "pointer" }}
+                  >
+                    {/* ... row content ... */}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      </TabPanel>
+      <TabPanel value={tabValue} index={5}>
+        <Box>
+          <TableContainer>
+            <Table>
+              <TableBody>
+                {getCurrentOrders().map((order, index) => (
+                  <TableRow
+                    key={order.trackingCode || `order-${index}`}
+                    hover
+                    onClick={() => handleViewOrderDetail(order.orderId)}
+                    sx={{ cursor: "pointer" }}
+                  >
+                    {/* ... row content ... */}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      </TabPanel>
 
       {/* Order Create Dialog */}
       <Dialog

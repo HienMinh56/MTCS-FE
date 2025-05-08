@@ -4,6 +4,7 @@ export enum OrderStatus {
   Delivering = "Delivering",
   Shipped = "Shipped",
   Completed = "Completed",
+  Canceled = "canceled"
 }
 
 export enum DeliveryType {
