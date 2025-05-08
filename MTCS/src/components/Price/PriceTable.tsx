@@ -34,6 +34,9 @@ import {
   CircularProgress,
   ButtonGroup,
   Stack,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from "@mui/material";
 import {
   ArrowUpward as ArrowUpwardIcon,
@@ -45,6 +48,7 @@ import {
   CloudUpload as CloudUploadIcon,
   CloudDownload as CloudDownloadIcon,
   FileUpload as FileUploadIcon,
+  ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
 import {
   getPriceTables,
@@ -153,6 +157,8 @@ const PriceTableComponent: React.FC = () => {
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [createConfirmOpen, setCreateConfirmOpen] = useState<boolean>(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState<boolean>(false);
 
   const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
   const [editingPrice, setEditingPrice] = useState<IPriceTable | null>(null);
@@ -288,10 +294,28 @@ const PriceTableComponent: React.FC = () => {
 
   const groupedPriceTables = useMemo(() => {
     const sorted = [...priceTables].sort(getComparator(order, orderBy));
-    const size20 = sorted.filter((price) => price.containerSize === 1);
-    const size40 = sorted.filter((price) => price.containerSize === 2);
-
-    return { size20, size40 };
+    return {
+      size20: {
+        // Type 1 = Khô (Dry)
+        type1: sorted.filter(
+          (price) => price.containerSize === 1 && price.containerType === 1
+        ),
+        // Type 2 = Lạnh (Refrigerated)
+        type2: sorted.filter(
+          (price) => price.containerSize === 1 && price.containerType === 2
+        ),
+      },
+      size40: {
+        // Type 1 = Khô (Dry)
+        type1: sorted.filter(
+          (price) => price.containerSize === 2 && price.containerType === 1
+        ),
+        // Type 2 = Lạnh (Refrigerated)
+        type2: sorted.filter(
+          (price) => price.containerSize === 2 && price.containerType === 2
+        ),
+      },
+    };
   }, [priceTables, order, orderBy]);
 
   const handleEditClick = (price: IPriceTable) => {
@@ -343,6 +367,10 @@ const PriceTableComponent: React.FC = () => {
 
   const handleImportClick = () => {
     setImportDialogOpen(true);
+    setFileError(null);
+    setSelectedFile(null);
+    setImportError(null);
+    setImportSuccess(null);
   };
 
   const handleImportDialogClose = () => {
@@ -350,11 +378,69 @@ const PriceTableComponent: React.FC = () => {
     setSelectedFile(null);
     setImportSuccess(null);
     setImportError(null);
+    setFileError(null);
+    setDragActive(false);
+  };
+
+  const validateExcelFile = (file: File): boolean => {
+    const validExcelTypes = [
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel.sheet.macroEnabled.12",
+    ];
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+    if (
+      !validExcelTypes.includes(file.type) &&
+      !["xls", "xlsx"].includes(fileExtension || "")
+    ) {
+      setFileError("Chỉ chấp nhận file Excel (.xls, .xlsx)");
+      return false;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setFileError("File không được vượt quá 10MB");
+      return false;
+    }
+
+    setFileError(null);
+    return true;
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
-      setSelectedFile(event.target.files[0]);
+      const file = event.target.files[0];
+      if (validateExcelFile(file)) {
+        setSelectedFile(file);
+      } else {
+        event.target.value = "";
+        setSelectedFile(null);
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      if (validateExcelFile(file)) {
+        setSelectedFile(file);
+      }
     }
   };
 
@@ -379,11 +465,24 @@ const PriceTableComponent: React.FC = () => {
         }, 1500);
       } else {
         setImportError(response.messageVN || response.message);
+        // Reset the file input after import failure
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        setSelectedFile(null);
+        // Close the confirmation dialog when there's an error
+        setCreateConfirmOpen(false);
       }
     } catch (err) {
       setImportError(
         err instanceof Error ? err.message : "Lỗi khi nhập dữ liệu"
       );
+      // Reset the file input after import failure
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      setSelectedFile(null);
+      setCreateConfirmOpen(false);
     } finally {
       setImportLoading(false);
     }
@@ -592,453 +691,1027 @@ const PriceTableComponent: React.FC = () => {
 
       {/* Container Size 20' */}
       <Fade in={true} style={{ transitionDelay: "150ms" }}>
-        <Paper
+        <Accordion
+          defaultExpanded
           elevation={0}
           sx={{
-            p: 0,
             mb: 3,
-            borderRadius: 2,
+            borderRadius: "8px !important",
             border: "1px solid #e0e0e0",
             overflow: "hidden",
             transition: "all 0.3s ease",
             "&:hover": {
               boxShadow: "0 6px 16px rgba(0,0,0,0.05)",
             },
+            "&:before": { display: "none" }, // Remove the default divider
           }}
         >
-          <Box
-            sx={{ p: 2, bgcolor: "#f5f5f5", borderBottom: "1px solid #e0e0e0" }}
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            sx={{
+              bgcolor: "#f5f5f5",
+              borderBottom: "1px solid #e0e0e0",
+              py: 0.5,
+              "&.Mui-expanded": {
+                borderBottom: "1px solid #e0e0e0",
+                minHeight: "48px",
+              },
+            }}
           >
             <Typography variant="h6" fontWeight={600}>
-              Container 20'
+              Container 20 Feet
             </Typography>
-          </Box>
+          </AccordionSummary>
+          <AccordionDetails sx={{ p: 0 }}>
+            {error ? (
+              <Alert
+                severity="error"
+                sx={{
+                  m: 2,
+                  borderRadius: 1,
+                  "& .MuiAlert-icon": { alignItems: "center" },
+                }}
+              >
+                {error}
+              </Alert>
+            ) : (
+              <>
+                {/* Container Type 1 (Khô) */}
+                <Box sx={{ p: 2, borderBottom: "1px solid #f0f0f0" }}>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      mb: 1,
+                      fontWeight: 600,
+                      color: "text.primary",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Box
+                      component="span"
+                      sx={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        bgcolor: "primary.main",
+                        display: "inline-block",
+                        mr: 1,
+                      }}
+                    />
+                    Container Khô
+                  </Typography>
 
-          {error ? (
-            <Alert
-              severity="error"
-              sx={{
-                m: 2,
-                borderRadius: 1,
-                "& .MuiAlert-icon": { alignItems: "center" },
-              }}
-            >
-              {error}
-            </Alert>
-          ) : (
-            <>
-              <TableContainer>
-                <Table sx={{ minWidth: 700 }}>
-                  <TableHead>
-                    <TableRow>
-                      {headCells.map((headCell) => (
-                        <TableCell
-                          key={headCell.id}
-                          align="center"
-                          sortDirection={
-                            orderBy === headCell.id ? order : false
-                          }
-                          sx={{
-                            fontWeight: 600,
-                            whiteSpace: "nowrap",
-                            backgroundColor: "#f5f5f5",
-                            borderBottom: "2px solid #e0e0e0",
-                          }}
-                        >
-                          {headCell.sortable ? (
-                            <TableSortLabel
-                              active={orderBy === headCell.id}
-                              direction={
-                                orderBy === headCell.id ? order : "asc"
-                              }
-                              onClick={() =>
-                                handleRequestSort(String(headCell.id))
+                  <TableContainer>
+                    <Table sx={{ minWidth: 700 }}>
+                      <TableHead>
+                        <TableRow>
+                          {headCells.map((headCell) => (
+                            <TableCell
+                              key={headCell.id}
+                              align="center"
+                              sortDirection={
+                                orderBy === headCell.id ? order : false
                               }
                               sx={{
-                                "& .MuiTableSortLabel-icon": {
-                                  opacity: orderBy === headCell.id ? 1 : 0.4,
-                                },
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                                backgroundColor: "#f5f5f5",
+                                borderBottom: "2px solid #e0e0e0",
                               }}
                             >
-                              {headCell.label}
-                            </TableSortLabel>
-                          ) : (
-                            headCell.label
-                          )}
-                          {headCell.tooltip && (
-                            <Tooltip title={headCell.tooltip} arrow>
-                              <InfoIcon
-                                fontSize="small"
-                                sx={{
-                                  ml: 0.5,
-                                  fontSize: 16,
-                                  opacity: 0.6,
-                                  verticalAlign: "middle",
-                                }}
-                              />
-                            </Tooltip>
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {loading ? (
-                      renderSkeletons()
-                    ) : groupedPriceTables.size20.length > 0 ? (
-                      groupedPriceTables.size20.map((price, index) => {
-                        // Calculate price change indicators
-                        const previousPrice =
-                          index > 0
-                            ? groupedPriceTables.size20[index - 1]
-                            : null;
-                        const isPriceIncreased =
-                          previousPrice &&
-                          price.containerType === previousPrice.containerType &&
-                          price.minKm === previousPrice.minKm &&
-                          price.minPricePerKm > previousPrice.minPricePerKm;
-                        const isPriceDecreased =
-                          previousPrice &&
-                          price.containerType === previousPrice.containerType &&
-                          price.minKm === previousPrice.minKm &&
-                          price.minPricePerKm < previousPrice.minPricePerKm;
+                              {headCell.sortable ? (
+                                <TableSortLabel
+                                  active={orderBy === headCell.id}
+                                  direction={
+                                    orderBy === headCell.id ? order : "asc"
+                                  }
+                                  onClick={() =>
+                                    handleRequestSort(String(headCell.id))
+                                  }
+                                  sx={{
+                                    "& .MuiTableSortLabel-icon": {
+                                      opacity:
+                                        orderBy === headCell.id ? 1 : 0.4,
+                                    },
+                                  }}
+                                >
+                                  {headCell.label}
+                                </TableSortLabel>
+                              ) : (
+                                headCell.label
+                              )}
+                              {headCell.tooltip && (
+                                <Tooltip title={headCell.tooltip} arrow>
+                                  <InfoIcon
+                                    fontSize="small"
+                                    sx={{
+                                      ml: 0.5,
+                                      fontSize: 16,
+                                      opacity: 0.6,
+                                      verticalAlign: "middle",
+                                    }}
+                                  />
+                                </Tooltip>
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {loading ? (
+                          renderSkeletons()
+                        ) : groupedPriceTables.size20.type1.length > 0 ? (
+                          groupedPriceTables.size20.type1.map(
+                            (price, index) => {
+                              // Calculate price change indicators
+                              const previousPrice =
+                                index > 0
+                                  ? groupedPriceTables.size20.type1[index - 1]
+                                  : null;
+                              const isPriceIncreased =
+                                previousPrice &&
+                                price.containerType ===
+                                  previousPrice.containerType &&
+                                price.minKm === previousPrice.minKm &&
+                                price.minPricePerKm >
+                                  previousPrice.minPricePerKm;
+                              const isPriceDecreased =
+                                previousPrice &&
+                                price.containerType ===
+                                  previousPrice.containerType &&
+                                price.minKm === previousPrice.minKm &&
+                                price.minPricePerKm <
+                                  previousPrice.minPricePerKm;
 
-                        return (
-                          <TableRow
-                            key={price.priceId}
-                            onClick={() =>
-                              isAdmin &&
-                              price.status === 1 &&
-                              handleEditClick(price)
+                              return (
+                                <TableRow
+                                  key={price.priceId}
+                                  onClick={() =>
+                                    isAdmin &&
+                                    price.status === 1 &&
+                                    handleEditClick(price)
+                                  }
+                                  sx={{
+                                    backgroundColor:
+                                      index % 2 === 0
+                                        ? "rgba(0, 0, 0, 0.02)"
+                                        : "transparent",
+                                    "&:hover": {
+                                      backgroundColor: "rgba(1, 70, 199, 0.05)",
+                                      transition: "background-color 0.2s ease",
+                                      cursor:
+                                        isAdmin && price.status === 1
+                                          ? "pointer"
+                                          : "default",
+                                    },
+                                    transition: "background-color 0.2s ease",
+                                  }}
+                                >
+                                  <TableCell align="center">{`${price.minKm} - ${price.maxKm}`}</TableCell>
+                                  <TableCell align="center">
+                                    {ContainerTypeMap[price.containerType] ||
+                                      "Không xác định"}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                      }}
+                                    >
+                                      {formatCurrency(price.minPricePerKm)}
+                                      {isPriceIncreased && (
+                                        <ArrowUpwardIcon
+                                          fontSize="small"
+                                          color="error"
+                                          sx={{ ml: 0.5, fontSize: 16 }}
+                                        />
+                                      )}
+                                      {isPriceDecreased && (
+                                        <ArrowDownwardIcon
+                                          fontSize="small"
+                                          color="success"
+                                          sx={{ ml: 0.5, fontSize: 16 }}
+                                        />
+                                      )}
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    {formatCurrency(price.maxPricePerKm)}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Chip
+                                      label={
+                                        StatusMap[price.status] ||
+                                        "Không xác định"
+                                      }
+                                      color={
+                                        price.status === 1
+                                          ? "success"
+                                          : "default"
+                                      }
+                                      size="small"
+                                      sx={{
+                                        fontWeight: 500,
+                                        minWidth: 100,
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Tooltip
+                                      title={new Date(
+                                        price.createdDate
+                                      ).toLocaleString("vi-VN")}
+                                      arrow
+                                    >
+                                      <span>
+                                        {new Date(
+                                          price.createdDate
+                                        ).toLocaleDateString("vi-VN")}
+                                      </span>
+                                    </Tooltip>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    {price.createdBy}
+                                  </TableCell>
+                                </TableRow>
+                              );
                             }
-                            sx={{
-                              backgroundColor:
-                                index % 2 === 0
-                                  ? "rgba(0, 0, 0, 0.02)"
-                                  : "transparent",
-                              "&:hover": {
-                                backgroundColor: "rgba(1, 70, 199, 0.05)",
-                                transition: "background-color 0.2s ease",
-                                cursor:
-                                  isAdmin && price.status === 1
-                                    ? "pointer"
-                                    : "default",
-                              },
-                              transition: "background-color 0.2s ease",
-                            }}
-                          >
-                            <TableCell align="center">{`${price.minKm} - ${price.maxKm}`}</TableCell>
-                            <TableCell align="center">
-                              {ContainerTypeMap[price.containerType] ||
-                                "Không xác định"}
-                            </TableCell>
-                            <TableCell align="center">
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
+                          )
+                        ) : (
+                          <TableRow>
+                            <TableCell
+                              colSpan={headCells.length}
+                              align="center"
+                              sx={{ py: 3 }}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
                               >
-                                {formatCurrency(price.minPricePerKm)}
-                                {isPriceIncreased && (
-                                  <ArrowUpwardIcon
-                                    fontSize="small"
-                                    color="error"
-                                    sx={{ ml: 0.5, fontSize: 16 }}
-                                  />
-                                )}
-                                {isPriceDecreased && (
-                                  <ArrowDownwardIcon
-                                    fontSize="small"
-                                    color="success"
-                                    sx={{ ml: 0.5, fontSize: 16 }}
-                                  />
-                                )}
-                              </Box>
-                            </TableCell>
-                            <TableCell align="center">
-                              {formatCurrency(price.maxPricePerKm)}
-                            </TableCell>
-                            <TableCell align="center">
-                              <Chip
-                                label={
-                                  StatusMap[price.status] || "Không xác định"
-                                }
-                                color={
-                                  price.status === 1 ? "success" : "default"
-                                }
-                                size="small"
-                                sx={{
-                                  fontWeight: 500,
-                                  minWidth: 100,
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell align="center">
-                              <Tooltip
-                                title={new Date(
-                                  price.createdDate
-                                ).toLocaleString("vi-VN")}
-                                arrow
-                              >
-                                <span>
-                                  {new Date(
-                                    price.createdDate
-                                  ).toLocaleDateString("vi-VN")}
-                                </span>
-                              </Tooltip>
-                            </TableCell>
-                            <TableCell align="center">
-                              {price.createdBy}
+                                Không có dữ liệu bảng giá cho container 20' Khô
+                              </Typography>
                             </TableCell>
                           </TableRow>
-                        );
-                      })
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={headCells.length}
-                          align="center"
-                          sx={{ py: 4 }}
-                        >
-                          <Typography variant="body1" color="text.secondary">
-                            Không có dữ liệu bảng giá cho container 20'
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </>
-          )}
-        </Paper>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+
+                {/* Container Type 2 (Lạnh) */}
+                <Box sx={{ p: 2 }}>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      mb: 1,
+                      fontWeight: 600,
+                      color: "text.primary",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Box
+                      component="span"
+                      sx={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        bgcolor: "warning.main",
+                        display: "inline-block",
+                        mr: 1,
+                      }}
+                    />
+                    Container Lạnh
+                  </Typography>
+
+                  <TableContainer>
+                    <Table sx={{ minWidth: 700 }}>
+                      <TableHead>
+                        <TableRow>
+                          {headCells.map((headCell) => (
+                            <TableCell
+                              key={headCell.id}
+                              align="center"
+                              sortDirection={
+                                orderBy === headCell.id ? order : false
+                              }
+                              sx={{
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                                backgroundColor: "#f5f5f5",
+                                borderBottom: "2px solid #e0e0e0",
+                              }}
+                            >
+                              {headCell.sortable ? (
+                                <TableSortLabel
+                                  active={orderBy === headCell.id}
+                                  direction={
+                                    orderBy === headCell.id ? order : "asc"
+                                  }
+                                  onClick={() =>
+                                    handleRequestSort(String(headCell.id))
+                                  }
+                                  sx={{
+                                    "& .MuiTableSortLabel-icon": {
+                                      opacity:
+                                        orderBy === headCell.id ? 1 : 0.4,
+                                    },
+                                  }}
+                                >
+                                  {headCell.label}
+                                </TableSortLabel>
+                              ) : (
+                                headCell.label
+                              )}
+                              {headCell.tooltip && (
+                                <Tooltip title={headCell.tooltip} arrow>
+                                  <InfoIcon
+                                    fontSize="small"
+                                    sx={{
+                                      ml: 0.5,
+                                      fontSize: 16,
+                                      opacity: 0.6,
+                                      verticalAlign: "middle",
+                                    }}
+                                  />
+                                </Tooltip>
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {loading ? (
+                          renderSkeletons()
+                        ) : groupedPriceTables.size20.type2.length > 0 ? (
+                          groupedPriceTables.size20.type2.map(
+                            (price, index) => {
+                              // Calculate price change indicators
+                              const previousPrice =
+                                index > 0
+                                  ? groupedPriceTables.size20.type2[index - 1]
+                                  : null;
+                              const isPriceIncreased =
+                                previousPrice &&
+                                price.containerType ===
+                                  previousPrice.containerType &&
+                                price.minKm === previousPrice.minKm &&
+                                price.minPricePerKm >
+                                  previousPrice.minPricePerKm;
+                              const isPriceDecreased =
+                                previousPrice &&
+                                price.containerType ===
+                                  previousPrice.containerType &&
+                                price.minKm === previousPrice.minKm &&
+                                price.minPricePerKm <
+                                  previousPrice.minPricePerKm;
+
+                              return (
+                                <TableRow
+                                  key={price.priceId}
+                                  onClick={() =>
+                                    isAdmin &&
+                                    price.status === 1 &&
+                                    handleEditClick(price)
+                                  }
+                                  sx={{
+                                    backgroundColor:
+                                      index % 2 === 0
+                                        ? "rgba(0, 0, 0, 0.02)"
+                                        : "transparent",
+                                    "&:hover": {
+                                      backgroundColor: "rgba(1, 70, 199, 0.05)",
+                                      transition: "background-color 0.2s ease",
+                                      cursor:
+                                        isAdmin && price.status === 1
+                                          ? "pointer"
+                                          : "default",
+                                    },
+                                    transition: "background-color 0.2s ease",
+                                  }}
+                                >
+                                  <TableCell align="center">{`${price.minKm} - ${price.maxKm}`}</TableCell>
+                                  <TableCell align="center">
+                                    {ContainerTypeMap[price.containerType] ||
+                                      "Không xác định"}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                      }}
+                                    >
+                                      {formatCurrency(price.minPricePerKm)}
+                                      {isPriceIncreased && (
+                                        <ArrowUpwardIcon
+                                          fontSize="small"
+                                          color="error"
+                                          sx={{ ml: 0.5, fontSize: 16 }}
+                                        />
+                                      )}
+                                      {isPriceDecreased && (
+                                        <ArrowDownwardIcon
+                                          fontSize="small"
+                                          color="success"
+                                          sx={{ ml: 0.5, fontSize: 16 }}
+                                        />
+                                      )}
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    {formatCurrency(price.maxPricePerKm)}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Chip
+                                      label={
+                                        StatusMap[price.status] ||
+                                        "Không xác định"
+                                      }
+                                      color={
+                                        price.status === 1
+                                          ? "success"
+                                          : "default"
+                                      }
+                                      size="small"
+                                      sx={{
+                                        fontWeight: 500,
+                                        minWidth: 100,
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Tooltip
+                                      title={new Date(
+                                        price.createdDate
+                                      ).toLocaleString("vi-VN")}
+                                      arrow
+                                    >
+                                      <span>
+                                        {new Date(
+                                          price.createdDate
+                                        ).toLocaleDateString("vi-VN")}
+                                      </span>
+                                    </Tooltip>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    {price.createdBy}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            }
+                          )
+                        ) : (
+                          <TableRow>
+                            <TableCell
+                              colSpan={headCells.length}
+                              align="center"
+                              sx={{ py: 3 }}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Không có dữ liệu bảng giá cho container 20' Lạnh
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+
+                {/* Show message when both container types have no data */}
+                {groupedPriceTables.size20.type1.length === 0 &&
+                  groupedPriceTables.size20.type2.length === 0 &&
+                  !loading && (
+                    <Box sx={{ p: 3, textAlign: "center" }}>
+                      <Typography variant="body1" color="text.secondary">
+                        Không có dữ liệu bảng giá cho container 20'
+                      </Typography>
+                    </Box>
+                  )}
+              </>
+            )}
+          </AccordionDetails>
+        </Accordion>
       </Fade>
 
       {/* Container Size 40' */}
       <Fade in={true} style={{ transitionDelay: "250ms" }}>
-        <Paper
+        <Accordion
+          defaultExpanded
           elevation={0}
           sx={{
-            p: 0,
-            borderRadius: 2,
+            borderRadius: "8px !important",
             border: "1px solid #e0e0e0",
             overflow: "hidden",
             transition: "all 0.3s ease",
             "&:hover": {
               boxShadow: "0 6px 16px rgba(0,0,0,0.05)",
             },
+            "&:before": { display: "none" }, // Remove the default divider
           }}
         >
-          <Box
-            sx={{ p: 2, bgcolor: "#f5f5f5", borderBottom: "1px solid #e0e0e0" }}
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            sx={{
+              bgcolor: "#f5f5f5",
+              borderBottom: "1px solid #e0e0e0",
+              py: 0.5,
+              "&.Mui-expanded": {
+                borderBottom: "1px solid #e0e0e0",
+                minHeight: "48px",
+              },
+            }}
           >
             <Typography variant="h6" fontWeight={600}>
-              Container 40'
+              Container 40 Feet
             </Typography>
-          </Box>
+          </AccordionSummary>
+          <AccordionDetails sx={{ p: 0 }}>
+            {error ? (
+              <Alert
+                severity="error"
+                sx={{
+                  m: 2,
+                  borderRadius: 1,
+                  "& .MuiAlert-icon": { alignItems: "center" },
+                }}
+              >
+                {error}
+              </Alert>
+            ) : (
+              <>
+                {/* Container Type 1 (Khô) */}
+                <Box sx={{ p: 2, borderBottom: "1px solid #f0f0f0" }}>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      mb: 1,
+                      fontWeight: 600,
+                      color: "text.primary",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Box
+                      component="span"
+                      sx={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        bgcolor: "primary.main",
+                        display: "inline-block",
+                        mr: 1,
+                      }}
+                    />
+                    Container Khô
+                  </Typography>
 
-          {error ? (
-            <Alert
-              severity="error"
-              sx={{
-                m: 2,
-                borderRadius: 1,
-                "& .MuiAlert-icon": { alignItems: "center" },
-              }}
-            >
-              {error}
-            </Alert>
-          ) : (
-            <>
-              <TableContainer>
-                <Table sx={{ minWidth: 700 }}>
-                  <TableHead>
-                    <TableRow>
-                      {headCells.map((headCell) => (
-                        <TableCell
-                          key={headCell.id}
-                          align="center"
-                          sortDirection={
-                            orderBy === headCell.id ? order : false
-                          }
-                          sx={{
-                            fontWeight: 600,
-                            whiteSpace: "nowrap",
-                            backgroundColor: "#f5f5f5",
-                            borderBottom: "2px solid #e0e0e0",
-                          }}
-                        >
-                          {headCell.sortable ? (
-                            <TableSortLabel
-                              active={orderBy === headCell.id}
-                              direction={
-                                orderBy === headCell.id ? order : "asc"
-                              }
-                              onClick={() =>
-                                handleRequestSort(String(headCell.id))
+                  <TableContainer>
+                    <Table sx={{ minWidth: 700 }}>
+                      <TableHead>
+                        <TableRow>
+                          {headCells.map((headCell) => (
+                            <TableCell
+                              key={headCell.id}
+                              align="center"
+                              sortDirection={
+                                orderBy === headCell.id ? order : false
                               }
                               sx={{
-                                "& .MuiTableSortLabel-icon": {
-                                  opacity: orderBy === headCell.id ? 1 : 0.4,
-                                },
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                                backgroundColor: "#f5f5f5",
+                                borderBottom: "2px solid #e0e0e0",
                               }}
                             >
-                              {headCell.label}
-                            </TableSortLabel>
-                          ) : (
-                            headCell.label
-                          )}
-                          {headCell.tooltip && (
-                            <Tooltip title={headCell.tooltip} arrow>
-                              <InfoIcon
-                                fontSize="small"
-                                sx={{
-                                  ml: 0.5,
-                                  fontSize: 16,
-                                  opacity: 0.6,
-                                  verticalAlign: "middle",
-                                }}
-                              />
-                            </Tooltip>
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {loading ? (
-                      renderSkeletons()
-                    ) : groupedPriceTables.size40.length > 0 ? (
-                      groupedPriceTables.size40.map((price, index) => {
-                        // Calculate price change indicators
-                        const previousPrice =
-                          index > 0
-                            ? groupedPriceTables.size40[index - 1]
-                            : null;
-                        const isPriceIncreased =
-                          previousPrice &&
-                          price.containerType === previousPrice.containerType &&
-                          price.minKm === previousPrice.minKm &&
-                          price.minPricePerKm > previousPrice.minPricePerKm;
-                        const isPriceDecreased =
-                          previousPrice &&
-                          price.containerType === previousPrice.containerType &&
-                          price.minKm === previousPrice.minKm &&
-                          price.minPricePerKm < previousPrice.minPricePerKm;
+                              {headCell.sortable ? (
+                                <TableSortLabel
+                                  active={orderBy === headCell.id}
+                                  direction={
+                                    orderBy === headCell.id ? order : "asc"
+                                  }
+                                  onClick={() =>
+                                    handleRequestSort(String(headCell.id))
+                                  }
+                                  sx={{
+                                    "& .MuiTableSortLabel-icon": {
+                                      opacity:
+                                        orderBy === headCell.id ? 1 : 0.4,
+                                    },
+                                  }}
+                                >
+                                  {headCell.label}
+                                </TableSortLabel>
+                              ) : (
+                                headCell.label
+                              )}
+                              {headCell.tooltip && (
+                                <Tooltip title={headCell.tooltip} arrow>
+                                  <InfoIcon
+                                    fontSize="small"
+                                    sx={{
+                                      ml: 0.5,
+                                      fontSize: 16,
+                                      opacity: 0.6,
+                                      verticalAlign: "middle",
+                                    }}
+                                  />
+                                </Tooltip>
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {loading ? (
+                          renderSkeletons()
+                        ) : groupedPriceTables.size40.type1.length > 0 ? (
+                          groupedPriceTables.size40.type1.map(
+                            (price, index) => {
+                              // Calculate price change indicators
+                              const previousPrice =
+                                index > 0
+                                  ? groupedPriceTables.size40.type1[index - 1]
+                                  : null;
+                              const isPriceIncreased =
+                                previousPrice &&
+                                price.containerType ===
+                                  previousPrice.containerType &&
+                                price.minKm === previousPrice.minKm &&
+                                price.minPricePerKm >
+                                  previousPrice.minPricePerKm;
+                              const isPriceDecreased =
+                                previousPrice &&
+                                price.containerType ===
+                                  previousPrice.containerType &&
+                                price.minKm === previousPrice.minKm &&
+                                price.minPricePerKm <
+                                  previousPrice.minPricePerKm;
 
-                        return (
-                          <TableRow
-                            key={price.priceId}
-                            onClick={() =>
-                              isAdmin &&
-                              price.status === 1 &&
-                              handleEditClick(price)
+                              return (
+                                <TableRow
+                                  key={price.priceId}
+                                  onClick={() =>
+                                    isAdmin &&
+                                    price.status === 1 &&
+                                    handleEditClick(price)
+                                  }
+                                  sx={{
+                                    backgroundColor:
+                                      index % 2 === 0
+                                        ? "rgba(0, 0, 0, 0.02)"
+                                        : "transparent",
+                                    "&:hover": {
+                                      backgroundColor: "rgba(1, 70, 199, 0.05)",
+                                      transition: "background-color 0.2s ease",
+                                      cursor:
+                                        isAdmin && price.status === 1
+                                          ? "pointer"
+                                          : "default",
+                                    },
+                                    transition: "background-color 0.2s ease",
+                                  }}
+                                >
+                                  <TableCell align="center">{`${price.minKm} - ${price.maxKm}`}</TableCell>
+                                  <TableCell align="center">
+                                    {ContainerTypeMap[price.containerType] ||
+                                      "Không xác định"}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                      }}
+                                    >
+                                      {formatCurrency(price.minPricePerKm)}
+                                      {isPriceIncreased && (
+                                        <ArrowUpwardIcon
+                                          fontSize="small"
+                                          color="error"
+                                          sx={{ ml: 0.5, fontSize: 16 }}
+                                        />
+                                      )}
+                                      {isPriceDecreased && (
+                                        <ArrowDownwardIcon
+                                          fontSize="small"
+                                          color="success"
+                                          sx={{ ml: 0.5, fontSize: 16 }}
+                                        />
+                                      )}
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    {formatCurrency(price.maxPricePerKm)}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Chip
+                                      label={
+                                        StatusMap[price.status] ||
+                                        "Không xác định"
+                                      }
+                                      color={
+                                        price.status === 1
+                                          ? "success"
+                                          : "default"
+                                      }
+                                      size="small"
+                                      sx={{
+                                        fontWeight: 500,
+                                        minWidth: 100,
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Tooltip
+                                      title={new Date(
+                                        price.createdDate
+                                      ).toLocaleString("vi-VN")}
+                                      arrow
+                                    >
+                                      <span>
+                                        {new Date(
+                                          price.createdDate
+                                        ).toLocaleDateString("vi-VN")}
+                                      </span>
+                                    </Tooltip>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    {price.createdBy}
+                                  </TableCell>
+                                </TableRow>
+                              );
                             }
-                            sx={{
-                              backgroundColor:
-                                index % 2 === 0
-                                  ? "rgba(0, 0, 0, 0.02)"
-                                  : "transparent",
-                              "&:hover": {
-                                backgroundColor: "rgba(1, 70, 199, 0.05)",
-                                transition: "background-color 0.2s ease",
-                                cursor:
-                                  isAdmin && price.status === 1
-                                    ? "pointer"
-                                    : "default",
-                              },
-                              transition: "background-color 0.2s ease",
-                            }}
-                          >
-                            <TableCell align="center">{`${price.minKm} - ${price.maxKm}`}</TableCell>
-                            <TableCell align="center">
-                              {ContainerTypeMap[price.containerType] ||
-                                "Không xác định"}
-                            </TableCell>
-                            <TableCell align="center">
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
+                          )
+                        ) : (
+                          <TableRow>
+                            <TableCell
+                              colSpan={headCells.length}
+                              align="center"
+                              sx={{ py: 3 }}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
                               >
-                                {formatCurrency(price.minPricePerKm)}
-                                {isPriceIncreased && (
-                                  <ArrowUpwardIcon
-                                    fontSize="small"
-                                    color="error"
-                                    sx={{ ml: 0.5, fontSize: 16 }}
-                                  />
-                                )}
-                                {isPriceDecreased && (
-                                  <ArrowDownwardIcon
-                                    fontSize="small"
-                                    color="success"
-                                    sx={{ ml: 0.5, fontSize: 16 }}
-                                  />
-                                )}
-                              </Box>
-                            </TableCell>
-                            <TableCell align="center">
-                              {formatCurrency(price.maxPricePerKm)}
-                            </TableCell>
-                            <TableCell align="center">
-                              <Chip
-                                label={
-                                  StatusMap[price.status] || "Không xác định"
-                                }
-                                color={
-                                  price.status === 1 ? "success" : "default"
-                                }
-                                size="small"
-                                sx={{
-                                  fontWeight: 500,
-                                  minWidth: 100,
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell align="center">
-                              <Tooltip
-                                title={new Date(
-                                  price.createdDate
-                                ).toLocaleString("vi-VN")}
-                                arrow
-                              >
-                                <span>
-                                  {new Date(
-                                    price.createdDate
-                                  ).toLocaleDateString("vi-VN")}
-                                </span>
-                              </Tooltip>
-                            </TableCell>
-                            <TableCell align="center">
-                              {price.createdBy}
+                                Không có dữ liệu bảng giá cho container 40' Khô
+                              </Typography>
                             </TableCell>
                           </TableRow>
-                        );
-                      })
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={headCells.length + 1}
-                          align="center"
-                          sx={{ py: 4 }}
-                        >
-                          <Typography variant="body1" color="text.secondary">
-                            Không có dữ liệu bảng giá cho container 40'
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </>
-          )}
-        </Paper>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+
+                {/* Container Type 2 (Lạnh) */}
+                <Box sx={{ p: 2 }}>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      mb: 1,
+                      fontWeight: 600,
+                      color: "text.primary",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Box
+                      component="span"
+                      sx={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        bgcolor: "warning.main",
+                        display: "inline-block",
+                        mr: 1,
+                      }}
+                    />
+                    Container Lạnh
+                  </Typography>
+
+                  <TableContainer>
+                    <Table sx={{ minWidth: 700 }}>
+                      <TableHead>
+                        <TableRow>
+                          {headCells.map((headCell) => (
+                            <TableCell
+                              key={headCell.id}
+                              align="center"
+                              sortDirection={
+                                orderBy === headCell.id ? order : false
+                              }
+                              sx={{
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                                backgroundColor: "#f5f5f5",
+                                borderBottom: "2px solid #e0e0e0",
+                              }}
+                            >
+                              {headCell.sortable ? (
+                                <TableSortLabel
+                                  active={orderBy === headCell.id}
+                                  direction={
+                                    orderBy === headCell.id ? order : "asc"
+                                  }
+                                  onClick={() =>
+                                    handleRequestSort(String(headCell.id))
+                                  }
+                                  sx={{
+                                    "& .MuiTableSortLabel-icon": {
+                                      opacity:
+                                        orderBy === headCell.id ? 1 : 0.4,
+                                    },
+                                  }}
+                                >
+                                  {headCell.label}
+                                </TableSortLabel>
+                              ) : (
+                                headCell.label
+                              )}
+                              {headCell.tooltip && (
+                                <Tooltip title={headCell.tooltip} arrow>
+                                  <InfoIcon
+                                    fontSize="small"
+                                    sx={{
+                                      ml: 0.5,
+                                      fontSize: 16,
+                                      opacity: 0.6,
+                                      verticalAlign: "middle",
+                                    }}
+                                  />
+                                </Tooltip>
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {loading ? (
+                          renderSkeletons()
+                        ) : groupedPriceTables.size40.type2.length > 0 ? (
+                          groupedPriceTables.size40.type2.map(
+                            (price, index) => {
+                              // Calculate price change indicators
+                              const previousPrice =
+                                index > 0
+                                  ? groupedPriceTables.size40.type2[index - 1]
+                                  : null;
+                              const isPriceIncreased =
+                                previousPrice &&
+                                price.containerType ===
+                                  previousPrice.containerType &&
+                                price.minKm === previousPrice.minKm &&
+                                price.minPricePerKm >
+                                  previousPrice.minPricePerKm;
+                              const isPriceDecreased =
+                                previousPrice &&
+                                price.containerType ===
+                                  previousPrice.containerType &&
+                                price.minKm === previousPrice.minKm &&
+                                price.minPricePerKm <
+                                  previousPrice.minPricePerKm;
+
+                              return (
+                                <TableRow
+                                  key={price.priceId}
+                                  onClick={() =>
+                                    isAdmin &&
+                                    price.status === 1 &&
+                                    handleEditClick(price)
+                                  }
+                                  sx={{
+                                    backgroundColor:
+                                      index % 2 === 0
+                                        ? "rgba(0, 0, 0, 0.02)"
+                                        : "transparent",
+                                    "&:hover": {
+                                      backgroundColor: "rgba(1, 70, 199, 0.05)",
+                                      transition: "background-color 0.2s ease",
+                                      cursor:
+                                        isAdmin && price.status === 1
+                                          ? "pointer"
+                                          : "default",
+                                    },
+                                    transition: "background-color 0.2s ease",
+                                  }}
+                                >
+                                  <TableCell align="center">{`${price.minKm} - ${price.maxKm}`}</TableCell>
+                                  <TableCell align="center">
+                                    {ContainerTypeMap[price.containerType] ||
+                                      "Không xác định"}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                      }}
+                                    >
+                                      {formatCurrency(price.minPricePerKm)}
+                                      {isPriceIncreased && (
+                                        <ArrowUpwardIcon
+                                          fontSize="small"
+                                          color="error"
+                                          sx={{ ml: 0.5, fontSize: 16 }}
+                                        />
+                                      )}
+                                      {isPriceDecreased && (
+                                        <ArrowDownwardIcon
+                                          fontSize="small"
+                                          color="success"
+                                          sx={{ ml: 0.5, fontSize: 16 }}
+                                        />
+                                      )}
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    {formatCurrency(price.maxPricePerKm)}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Chip
+                                      label={
+                                        StatusMap[price.status] ||
+                                        "Không xác định"
+                                      }
+                                      color={
+                                        price.status === 1
+                                          ? "success"
+                                          : "default"
+                                      }
+                                      size="small"
+                                      sx={{
+                                        fontWeight: 500,
+                                        minWidth: 100,
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Tooltip
+                                      title={new Date(
+                                        price.createdDate
+                                      ).toLocaleString("vi-VN")}
+                                      arrow
+                                    >
+                                      <span>
+                                        {new Date(
+                                          price.createdDate
+                                        ).toLocaleDateString("vi-VN")}
+                                      </span>
+                                    </Tooltip>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    {price.createdBy}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            }
+                          )
+                        ) : (
+                          <TableRow>
+                            <TableCell
+                              colSpan={headCells.length}
+                              align="center"
+                              sx={{ py: 3 }}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Không có dữ liệu bảng giá cho container 40' Lạnh
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+
+                {/* Show message when both container types have no data */}
+                {groupedPriceTables.size40.type1.length === 0 &&
+                  groupedPriceTables.size40.type2.length === 0 &&
+                  !loading && (
+                    <Box sx={{ p: 3, textAlign: "center" }}>
+                      <Typography variant="body1" color="text.secondary">
+                        Không có dữ liệu bảng giá cho container 40'
+                      </Typography>
+                    </Box>
+                  )}
+              </>
+            )}
+          </AccordionDetails>
+        </Accordion>
       </Fade>
 
       {/* Edit Dialog */}
@@ -1190,7 +1863,21 @@ const PriceTableComponent: React.FC = () => {
       <Dialog open={importDialogOpen} onClose={handleImportDialogClose}>
         <DialogTitle>Tạo bảng cước phí mới</DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
+          <Box
+            sx={{
+              mt: 2,
+              p: 2,
+              border: "2px dashed",
+              borderColor: dragActive ? "primary.main" : "grey.400",
+              borderRadius: 2,
+              textAlign: "center",
+              position: "relative",
+              backgroundColor: dragActive ? "rgba(0, 0, 0, 0.04)" : "inherit",
+            }}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <input
               type="file"
               accept=".xlsx, .xls"
@@ -1198,10 +1885,14 @@ const PriceTableComponent: React.FC = () => {
               onChange={handleFileChange}
               style={{ display: "none" }}
             />
+            <Typography variant="body2" color="text.secondary">
+              Kéo và thả tệp Excel vào đây hoặc
+            </Typography>
             <Button
               variant="outlined"
               onClick={() => fileInputRef.current?.click()}
               startIcon={<FileUploadIcon />}
+              sx={{ mt: 1 }}
             >
               Chọn tệp
             </Button>
@@ -1211,6 +1902,11 @@ const PriceTableComponent: React.FC = () => {
               </Typography>
             )}
           </Box>
+          {fileError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {fileError}
+            </Alert>
+          )}
           {importError && (
             <Alert severity="error" sx={{ mt: 2 }}>
               {importError}

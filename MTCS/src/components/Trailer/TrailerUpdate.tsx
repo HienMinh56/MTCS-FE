@@ -551,7 +551,7 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Tải trọng tối đa (tấn)"
+                    label="Tải trọng tối đa"
                     name="maxLoadWeight"
                     type="number"
                     value={formData.maxLoadWeight}
