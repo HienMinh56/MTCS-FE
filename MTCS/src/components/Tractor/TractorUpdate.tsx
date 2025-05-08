@@ -127,6 +127,11 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
 
+  // Check if tractor has been used in trips
+  const hasTractorUseHistory = !!(
+    tractorDetails?.orderCount && tractorDetails.orderCount > 0
+  );
+
   // Initialize form with tractor details
   useEffect(() => {
     if (tractorDetails) {
@@ -330,6 +335,9 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const today = new Date();
+    // Set today to the start of the day for accurate comparison
+    today.setHours(0, 0, 0, 0);
 
     if (!formData.licensePlate.trim()) {
       newErrors.licensePlate = "Biển số xe không được để trống";
@@ -351,10 +359,37 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
       newErrors.maxLoadWeight = "Tải trọng tối đa phải lớn hơn 0";
     }
 
+    // Prevent changing max load weight, container type and license plate if tractor has been used
+    if (hasTractorUseHistory && tractorDetails) {
+      if (formData.maxLoadWeight !== tractorDetails.maxLoadWeight) {
+        newErrors.maxLoadWeight =
+          "Không thể thay đổi tải trọng tối đa khi đầu kéo đã được sử dụng trong chuyến hàng";
+      }
+
+      if (formData.containerType !== tractorDetails.containerType) {
+        newErrors.containerType =
+          "Không thể thay đổi loại container khi đầu kéo đã được sử dụng trong chuyến hàng";
+      }
+
+      if (formData.licensePlate !== tractorDetails.licensePlate) {
+        newErrors.licensePlate =
+          "Không thể thay đổi biển số xe khi đầu kéo đã được sử dụng trong chuyến hàng";
+      }
+    }
+
+    // Validate next maintenance date is not in the past
+    const nextMaintenance = new Date(formData.nextMaintenanceDate);
+    nextMaintenance.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+
+    if (nextMaintenance < today) {
+      newErrors.nextMaintenanceDate =
+        "Ngày bảo dưỡng tiếp theo không thể trong quá khứ";
+    }
+
     // Only validate lastMaintenanceDate if it's provided
     if (formData.lastMaintenanceDate) {
       const lastMaintenance = new Date(formData.lastMaintenanceDate);
-      const nextMaintenance = new Date(formData.nextMaintenanceDate);
+      lastMaintenance.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
 
       if (nextMaintenance <= lastMaintenance) {
         newErrors.nextMaintenanceDate =
@@ -482,6 +517,13 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
           </Alert>
         )}
 
+        {hasTractorUseHistory && (
+          <Alert severity="warning" sx={{ mb: 3, borderRadius: 1 }}>
+            Đầu kéo này đã lưu hành cho {tractorDetails?.orderCount} chuyến
+            hàng. Không thể thay đổi tải trọng tối đa và loại container.
+          </Alert>
+        )}
+
         <Grid container spacing={3}>
           {/* Basic Tractor Information */}
           <Grid item xs={12} md={6}>
@@ -509,7 +551,7 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
                     onChange={handleInputChange}
                     error={!!errors.licensePlate}
                     helperText={errors.licensePlate}
-                    disabled={loading}
+                    disabled={loading || hasTractorUseHistory}
                     variant="outlined"
                     size="small"
                     required
@@ -564,8 +606,13 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
                     value={formData.maxLoadWeight}
                     onChange={handleInputChange}
                     error={!!errors.maxLoadWeight}
-                    helperText={errors.maxLoadWeight}
-                    disabled={loading}
+                    helperText={
+                      errors.maxLoadWeight ||
+                      (hasTractorUseHistory
+                        ? "Không thể thay đổi khi đã lưu hành"
+                        : "")
+                    }
+                    disabled={loading || hasTractorUseHistory}
                     variant="outlined"
                     size="small"
                     required
@@ -579,7 +626,12 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
                 </Grid>
 
                 <Grid item xs={12}>
-                  <FormControl fullWidth size="small" disabled={loading}>
+                  <FormControl
+                    fullWidth
+                    size="small"
+                    disabled={loading || hasTractorUseHistory}
+                    error={!!errors.containerType}
+                  >
                     <InputLabel>Loại container</InputLabel>
                     <Select
                       name="containerType"
@@ -594,6 +646,20 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
                         Lạnh
                       </MenuItem>
                     </Select>
+                    {(errors.containerType || hasTractorUseHistory) && (
+                      <Typography
+                        variant="caption"
+                        color={
+                          errors.containerType ? "error" : "text.secondary"
+                        }
+                        sx={{ mt: 0.5, ml: 1.5 }}
+                      >
+                        {errors.containerType ||
+                          (hasTractorUseHistory
+                            ? "Không thể thay đổi khi đã lưu hành"
+                            : "")}
+                      </Typography>
+                    )}
                   </FormControl>
                 </Grid>
               </Grid>

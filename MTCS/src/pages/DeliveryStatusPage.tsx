@@ -201,6 +201,11 @@ const DeliveryStatusPage: React.FC = () => {
   };
 
   const toggleStatusActive = (statusId: string) => {
+    // Don't allow toggling for special statuses
+    if (["not_started", "completed"].includes(statusId)) {
+      return;
+    }
+
     setStatuses((prevStatuses) => {
       const updatedStatuses = prevStatuses.map((status) => {
         if (status.statusId === statusId) {
@@ -382,9 +387,21 @@ const DeliveryStatusPage: React.FC = () => {
 
       // Reload data to ensure consistent display
       await fetchStatusData();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating delivery statuses:", error);
-      showAlert("Không thể cập nhật trạng thái giao hàng", "error");
+
+      // Check for specific error message about trip in use
+      if (
+        error.response?.data?.message ===
+        "Can not create or update delivery status when there is a trip in use"
+      ) {
+        showAlert(
+          "Không thể tạo hoặc cập nhật trạng thái giao hàng khi có chuyến đang hoạt động",
+          "error"
+        );
+      } else {
+        showAlert("Không thể cập nhật trạng thái giao hàng", "error");
+      }
     } finally {
       setSaving(false);
     }
@@ -766,19 +783,28 @@ const DeliveryStatusPage: React.FC = () => {
                                 )}
                               </TableCell>
                               <TableCell align="center">
-                                <Tooltip title="Đổi trạng thái hoạt động">
-                                  <Switch
-                                    checked={status.isActive === 1}
-                                    onChange={() =>
-                                      toggleStatusActive(status.statusId)
-                                    }
-                                    size="small"
-                                    sx={{
-                                      "& .MuiSwitch-switchBase": {
-                                        p: 0.75,
-                                      },
-                                    }}
-                                  />
+                                <Tooltip
+                                  title={
+                                    isSpecialStatus
+                                      ? "Không thể thay đổi trạng thái"
+                                      : "Đổi trạng thái hoạt động"
+                                  }
+                                >
+                                  <span>
+                                    <Switch
+                                      checked={status.isActive === 1}
+                                      onChange={() =>
+                                        toggleStatusActive(status.statusId)
+                                      }
+                                      disabled={isSpecialStatus}
+                                      size="small"
+                                      sx={{
+                                        "& .MuiSwitch-switchBase": {
+                                          p: 0.75,
+                                        },
+                                      }}
+                                    />
+                                  </span>
                                 </Tooltip>
 
                                 {editModeId === status.statusId ? (
@@ -800,30 +826,33 @@ const DeliveryStatusPage: React.FC = () => {
                                     </IconButton>
                                   </Tooltip>
                                 ) : (
-                                  <Tooltip title="Sửa tên">
-                                    <IconButton
-                                      onClick={() =>
-                                        enableEditMode(
-                                          status.statusId,
-                                          status.statusName
-                                        )
-                                      }
-                                      size="small"
-                                      color="primary"
-                                      sx={{
-                                        ml: 1.5,
-                                        border: `1px solid ${theme.palette.grey[300]}`,
-                                        "&:hover": {
-                                          backgroundColor:
-                                            "rgba(25, 118, 210, 0.04)",
-                                          borderColor:
-                                            theme.palette.primary.main,
-                                        },
-                                      }}
-                                    >
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
+                                  // Only show edit button for non-special statuses
+                                  !isSpecialStatus && (
+                                    <Tooltip title="Sửa tên">
+                                      <IconButton
+                                        onClick={() =>
+                                          enableEditMode(
+                                            status.statusId,
+                                            status.statusName
+                                          )
+                                        }
+                                        size="small"
+                                        color="primary"
+                                        sx={{
+                                          ml: 1.5,
+                                          border: `1px solid ${theme.palette.grey[300]}`,
+                                          "&:hover": {
+                                            backgroundColor:
+                                              "rgba(25, 118, 210, 0.04)",
+                                            borderColor:
+                                              theme.palette.primary.main,
+                                          },
+                                        }}
+                                      >
+                                        <EditIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )
                                 )}
                               </TableCell>
                             </TableRow>

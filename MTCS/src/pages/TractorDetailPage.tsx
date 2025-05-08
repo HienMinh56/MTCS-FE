@@ -996,6 +996,7 @@ const TractorDetailPage = () => {
                       onClick={handleEditClick}
                       size={isMobile ? "small" : "medium"}
                       sx={{ px: 3, py: 1 }}
+                      disabled={details.status === TractorStatus.OnDuty}
                     >
                       Chỉnh sửa thông tin
                     </Button>

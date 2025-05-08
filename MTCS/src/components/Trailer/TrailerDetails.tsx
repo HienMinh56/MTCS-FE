@@ -781,6 +781,7 @@ const TrailerDetails = ({ open, trailerId, onClose, onDelete }: Props) => {
                 color="success"
                 startIcon={<CheckCircleIcon />}
                 variant="contained"
+                disabled={details.status === TrailerStatus.OnDuty}
               >
                 Kích hoạt
               </Button>
