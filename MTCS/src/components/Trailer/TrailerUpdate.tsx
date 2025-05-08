@@ -123,6 +123,11 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
 
+  // Check if trailer has been used in trips
+  const hasTrailerUseHistory = !!(
+    trailerDetails?.orderCount && trailerDetails.orderCount > 0
+  );
+
   // Initialize form with trailer details
   useEffect(() => {
     if (trailerDetails) {
@@ -333,6 +338,9 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const today = new Date();
+    // Set today to the start of the day for accurate comparison
+    today.setHours(0, 0, 0, 0);
 
     if (!formData.licensePlate.trim()) {
       newErrors.licensePlate = "Biển số xe không được để trống";
@@ -358,13 +366,53 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
       newErrors.containerSize = "Kích thước container không hợp lệ";
     }
 
+    // Prevent changing max load weight, container size and license plate if trailer has been used
+    if (hasTrailerUseHistory && trailerDetails) {
+      if (formData.licensePlate !== trailerDetails.licensePlate) {
+        newErrors.licensePlate =
+          "Không thể thay đổi biển số xe khi rơ moóc đã được sử dụng trong chuyến hàng";
+      }
+
+      if (formData.maxLoadWeight !== trailerDetails.maxLoadWeight) {
+        newErrors.maxLoadWeight =
+          "Không thể thay đổi tải trọng tối đa khi rơ moóc đã được sử dụng trong chuyến hàng";
+      }
+
+      // Convert containerSize back to database format (20->1, 40->2) for comparison
+      const containerSizeForComparison =
+        formData.containerSize === 20
+          ? 1
+          : formData.containerSize === 40
+          ? 2
+          : 0;
+      if (containerSizeForComparison !== trailerDetails.containerSize) {
+        newErrors.containerSize =
+          "Không thể thay đổi kích thước container khi rơ moóc đã được sử dụng trong chuyến hàng";
+      }
+    }
+
+    // Prepare dates for comparison by setting time to start of day
     const lastMaintenance = new Date(formData.lastMaintenanceDate);
+    lastMaintenance.setHours(0, 0, 0, 0);
+
     const nextMaintenance = new Date(formData.nextMaintenanceDate);
+    nextMaintenance.setHours(0, 0, 0, 0);
+
     const registration = new Date(formData.registrationDate);
+    registration.setHours(0, 0, 0, 0);
+
     const registrationExpiration = new Date(
       formData.registrationExpirationDate
     );
+    registrationExpiration.setHours(0, 0, 0, 0);
 
+    // Validate next maintenance date is not in the past
+    if (nextMaintenance < today) {
+      newErrors.nextMaintenanceDate =
+        "Ngày bảo dưỡng tiếp theo không thể là ngày trong quá khứ";
+    }
+
+    // Validate next maintenance date is after last maintenance date
     if (nextMaintenance <= lastMaintenance) {
       newErrors.nextMaintenanceDate =
         "Ngày bảo dưỡng tiếp theo phải sau ngày bảo dưỡng gần nhất";
@@ -445,7 +493,7 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
         }}
       >
         <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-          Cập nhật thông tin rơ moóc
+          Cập nhật thông tin rơ-moóc
         </Typography>
         <IconButton
           edge="end"
@@ -475,6 +523,14 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
           </Alert>
         )}
 
+        {hasTrailerUseHistory && (
+          <Alert severity="warning" sx={{ mb: 3, borderRadius: 1 }}>
+            Rơ moóc-này đã lưu hành cho {trailerDetails?.orderCount} chuyến
+            hàng. Không thể thay đổi biển số xe, tải trọng tối đa và kích thước
+            container.
+          </Alert>
+        )}
+
         <Grid container spacing={3}>
           {/* Basic Trailer Information */}
           <Grid item xs={12} md={6}>
@@ -501,8 +557,13 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
                     value={formData.licensePlate}
                     onChange={handleInputChange}
                     error={!!errors.licensePlate}
-                    helperText={errors.licensePlate}
-                    disabled={loading}
+                    helperText={
+                      errors.licensePlate ||
+                      (hasTrailerUseHistory
+                        ? "Không thể thay đổi khi đã lưu hành"
+                        : "")
+                    }
+                    disabled={loading || hasTrailerUseHistory}
                     variant="outlined"
                     size="small"
                     required
@@ -557,8 +618,13 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
                     value={formData.maxLoadWeight}
                     onChange={handleInputChange}
                     error={!!errors.maxLoadWeight}
-                    helperText={errors.maxLoadWeight}
-                    disabled={loading}
+                    helperText={
+                      errors.maxLoadWeight ||
+                      (hasTrailerUseHistory
+                        ? "Không thể thay đổi khi đã lưu hành"
+                        : "")
+                    }
+                    disabled={loading || hasTrailerUseHistory}
                     variant="outlined"
                     size="small"
                     required
@@ -572,7 +638,11 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
                 </Grid>
 
                 <Grid item xs={12}>
-                  <FormControl fullWidth size="small" disabled={loading}>
+                  <FormControl
+                    fullWidth
+                    size="small"
+                    disabled={loading || hasTrailerUseHistory}
+                  >
                     <InputLabel>Kích thước container</InputLabel>
                     <Select
                       name="containerSize"
@@ -583,6 +653,20 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
                       <MenuItem value={20}>20 feet</MenuItem>
                       <MenuItem value={40}>40 feet</MenuItem>
                     </Select>
+                    {(errors.containerSize || hasTrailerUseHistory) && (
+                      <Typography
+                        variant="caption"
+                        color={
+                          errors.containerSize ? "error" : "text.secondary"
+                        }
+                        sx={{ mt: 0.5, ml: 1.5 }}
+                      >
+                        {errors.containerSize ||
+                          (hasTrailerUseHistory
+                            ? "Không thể thay đổi khi đã lưu hành"
+                            : "")}
+                      </Typography>
+                    )}
                   </FormControl>
                 </Grid>
               </Grid>

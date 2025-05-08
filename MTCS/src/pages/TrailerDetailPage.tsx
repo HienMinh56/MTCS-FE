@@ -1006,6 +1006,7 @@ const TrailerDetailPage = () => {
                     onClick={handleEditClick}
                     size={isMobile ? "small" : "medium"}
                     sx={{ px: 3, py: 1 }}
+                    disabled={details.status === TrailerStatus.OnDuty}
                   >
                     Chỉnh sửa thông tin
                   </Button>

@@ -340,7 +340,7 @@ const TrailerIncidentHistoryTable: React.FC<
           Không có sự cố nào được ghi nhận
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Rơ moóc này chưa có báo cáo sự cố nào.
+          Rơ moóc-này chưa có báo cáo sự cố nào.
         </Typography>
       </Box>
     );
