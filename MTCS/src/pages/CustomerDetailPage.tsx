@@ -708,6 +708,7 @@ const CustomerDetailPage = () => {
     try {
       const updateData = {
         ContractId: editContractForm.ContractId,
+        Summary: editContractForm.Summary,
         StartDate: new Date(editContractForm.StartDate).toISOString(),
         EndDate: new Date(editContractForm.EndDate).toISOString(),
         Status: editContractForm.Status,
@@ -736,7 +737,7 @@ const CustomerDetailPage = () => {
       setSnackbar({
         open: true,
         message:
-          error.message || "Lỗi khi cập nhật hợp đồng. Vui lòng thử lại sau.",
+          "Vui lòng điền đầy đủ các field không để trống.",
         severity: "error",
       });
     } finally {
@@ -1721,7 +1722,8 @@ const CustomerDetailPage = () => {
                   fullWidth
                   value={editContractForm.Summary}
                   margin="dense"
-                  InputProps={{ readOnly: true }}
+                  onChange={handleContractInputChange}
+                  required
                 />
               </Grid>
               <Grid item xs={12} md={6}>
