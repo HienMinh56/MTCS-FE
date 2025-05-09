@@ -146,7 +146,7 @@ const TripTable: React.FC = () => {
       setLoading(true);
       try {
         const result = await getTripForTable();
-        
+
         if (Array.isArray(result)) {
           setTrips(result);
           setAllTrips(result);
@@ -231,11 +231,13 @@ const TripTable: React.FC = () => {
         const tripId = trip.tripId || ''; 
         const driverName = trip.driverName || ''; 
         const trackingCode = trip.trackingCode || '';
+        const driverId = trip.driverId || '';
         
         return (
           tripId.toLowerCase().includes(lowerSearchTerm) ||
           driverName.toLowerCase().includes(lowerSearchTerm) ||
-          trackingCode.toLowerCase().includes(lowerSearchTerm)
+          trackingCode.toLowerCase().includes(lowerSearchTerm) ||
+          driverId.toLowerCase().includes(lowerSearchTerm)
         );
       });
       setIsFiltering(true);
