@@ -385,10 +385,9 @@ const CustomerDetailPage = () => {
       newErrors.phoneNumber = "Số điện thoại chỉ được chứa số";
       isValid = false;
     } else if (
-      formData.phoneNumber.length < 10 ||
-      formData.phoneNumber.length > 15
+      formData.phoneNumber.length !== 10
     ) {
-      newErrors.phoneNumber = "Số điện thoại phải từ 10 đến 15 số";
+      newErrors.phoneNumber = "Số điện thoại phải đúng 10 số";
       isValid = false;
     }
 
