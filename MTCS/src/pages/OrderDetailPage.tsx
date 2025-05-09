@@ -905,7 +905,7 @@ const OrderDetailPage: React.FC = () => {
       setLoadingDrivers(false);
     }
   };
-
+  
   const loadTractors = async () => {
     try {
       setLoadingTractors(true);
@@ -954,8 +954,19 @@ const OrderDetailPage: React.FC = () => {
         ),
       ];
 
-      // Lọc tractors dựa trên containerType của đơn hàng
-      if (orderDetails && orderDetails.containerType) {
+      // Lấy trọng lượng từ order hiện tại
+      const orderWeight = orderDetails ? parseFloat(orderDetails.weight) : 0;
+      console.log("Order weight:", orderWeight);
+
+      // Lọc tractors dựa trên containerType và maxLoadWeight của đơn hàng
+      if (orderDetails) {
+        // Đầu tiên lọc theo trọng lượng
+        combinedTractors = combinedTractors.filter(
+          (tractor) => tractor.maxLoadWeight >= orderWeight
+        );
+        console.log("Tractors after weight filtering:", combinedTractors.length);
+
+        // Sau đó lọc theo loại container
         if (orderDetails.containerType === ContainerType["Container Lạnh"]) {
           // Nếu là container lạnh (type 2), chỉ lấy những tractor có containerType là 2
           combinedTractors = combinedTractors.filter(
@@ -969,7 +980,7 @@ const OrderDetailPage: React.FC = () => {
         }
       }
 
-      console.log("Combined tractors count:", combinedTractors.length);
+      console.log("Combined tractors count after all filtering:", combinedTractors.length);
       setTractors(combinedTractors);
     } catch (error) {
       console.error("Error loading tractors:", error);
@@ -1010,10 +1021,10 @@ const OrderDetailPage: React.FC = () => {
 
       // Lấy danh sách trailers từ cả hai response
       const activeTrailers = extractTrailers(activeResponse);
-      const onDutyTrailers = extractTrailers(onDutyResponse);
+      const onDutyTrailers = extractTrailers(onDutyResponse);      
 
       // Kết hợp danh sách và loại bỏ trùng lặp
-      const combinedTrailers = [
+      let combinedTrailers = [
         ...activeTrailers,
         ...onDutyTrailers.filter(
           (onDutyTrailer) =>
@@ -1024,6 +1035,17 @@ const OrderDetailPage: React.FC = () => {
         ),
       ];
 
+      const orderWeight = orderDetails ? parseFloat(orderDetails.weight) : 0;
+      console.log("Order weight:", orderWeight);
+
+      if (orderDetails) {
+        // Đầu tiên lọc theo trọng lượng
+        combinedTrailers = combinedTrailers.filter(
+          (trailer) => trailer.maxLoadWeight > orderWeight
+        );
+        console.log("Trailers after weight filtering:", combinedTrailers.length);        
+      }
+
       setTrailers(combinedTrailers);
     } catch (error) {
       console.error("Error loading trailers:", error);
@@ -1032,9 +1054,18 @@ const OrderDetailPage: React.FC = () => {
       setLoadingTrailers(false);
     }
   };
-
   const handleCloseCreateTripDialog = () => {
     setOpenCreateTripDialog(false);
+    // Reset tractor and trailer maxLoadWeight when closing the dialog
+    setTractorMaxLoadWeight(null);
+    setTrailerMaxLoadWeight(null);
+    // Reset the createTripData form values
+    setCreateTripData({
+      orderId: orderId || "",
+      driverId: "",
+      tractorId: "",
+      TrailerId: "",
+    });
   };
 
   const handleCreateTripChange = (
