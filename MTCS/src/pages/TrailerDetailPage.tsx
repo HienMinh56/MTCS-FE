@@ -1040,7 +1040,17 @@ const TrailerDetailPage = () => {
                       startIcon={<CheckCircleIcon />}
                       onClick={handleActivateClick}
                       size={isMobile ? "small" : "medium"}
-                      sx={{ px: 3, py: 1 }}
+                      sx={{
+                        px: 3,
+                        py: 1,
+                        "&.Mui-disabled": {
+                          backgroundColor: "#9e9e9e !important",
+                          color: "white !important",
+                        },
+                      }}
+                      disabled={isDateExpired(
+                        details.registrationExpirationDate
+                      )}
                     >
                       Kích hoạt rơ-moóc
                     </Button>
@@ -1443,16 +1453,17 @@ const TrailerDetailPage = () => {
           >
             <CloseIcon />
           </IconButton>
-        </DialogTitle>
+        </DialogTitle>{" "}
         <DialogContent sx={{ p: 0, textAlign: "center", bgcolor: "#f5f5f5" }}>
-          <img
+          <Box
+            component="img"
             src={imagePreview.src}
             alt={imagePreview.title}
-            style={{
+            sx={{
               maxWidth: "100%",
               maxHeight: "80vh",
               objectFit: "contain",
-              padding: 16,
+              p: 2,
             }}
           />
         </DialogContent>

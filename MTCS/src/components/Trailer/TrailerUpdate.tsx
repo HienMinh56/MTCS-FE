@@ -346,6 +346,27 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
       newErrors.licensePlate = "Biển số xe không được để trống";
     }
 
+    // Validate license plate format
+    const licensePlateRegex = /^\d{2}[A-Z]([A-Z0-9])?-\d{4,5}$/;
+    if (
+      formData.licensePlate &&
+      !licensePlateRegex.test(formData.licensePlate)
+    ) {
+      newErrors.licensePlate =
+        "Biển số xe phải có định dạng ví dụ: 51A-1234, 51AB-1234, 51A8-1234, 17S3-50555";
+    } else if (formData.licensePlate) {
+      // Validate first two digits are between 11-99
+      const firstTwoDigits = parseInt(formData.licensePlate.substring(0, 2));
+      if (firstTwoDigits < 11 || firstTwoDigits > 99) {
+        newErrors.licensePlate =
+          "Hai chữ số đầu tiên của biển số xe phải từ 11 đến 99";
+      }
+    }
+
+    if (formData.licensePlate.length < 8 || formData.licensePlate.length > 10) {
+      newErrors.licensePlate = "Biển số xe phải có từ 8 đến 10 ký tự";
+    }
+
     if (!formData.brand.trim()) {
       newErrors.brand = "Hãng sản xuất không được để trống";
     }
@@ -405,6 +426,56 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
       formData.registrationExpirationDate
     );
     registrationExpiration.setHours(0, 0, 0, 0);
+
+    // Define min and max date boundaries
+    const minYear = 1990;
+    const maxYear = 2035;
+    const minDate = new Date(minYear, 0, 1);
+    const maxDate = new Date(maxYear, 11, 31);
+
+    // Validate required dates aren't null or empty
+    if (!formData.nextMaintenanceDate) {
+      newErrors.nextMaintenanceDate =
+        "Ngày bảo dưỡng tiếp theo không được để trống";
+    }
+
+    if (!formData.registrationDate) {
+      newErrors.registrationDate = "Ngày đăng kiểm không được để trống";
+    }
+
+    if (!formData.registrationExpirationDate) {
+      newErrors.registrationExpirationDate =
+        "Ngày hết hạn đăng kiểm không được để trống";
+    }
+
+    // Validate date ranges
+    if (lastMaintenance < minDate || lastMaintenance > maxDate) {
+      newErrors.lastMaintenanceDate = `Ngày bảo dưỡng gần nhất phải từ năm ${minYear} đến năm ${maxYear}`;
+    }
+
+    // Last maintenance date cannot be in the future
+    if (lastMaintenance > today) {
+      newErrors.lastMaintenanceDate =
+        "Ngày bảo dưỡng gần nhất không thể là ngày trong tương lai";
+    }
+
+    if (nextMaintenance < minDate || nextMaintenance > maxDate) {
+      newErrors.nextMaintenanceDate = `Ngày bảo dưỡng tiếp theo phải từ năm ${minYear} đến năm ${maxYear}`;
+    }
+
+    if (registration < minDate || registration > maxDate) {
+      newErrors.registrationDate = `Ngày đăng kiểm phải từ năm ${minYear} đến năm ${maxYear}`;
+    }
+
+    // Registration date cannot be in the future
+    if (registration > today) {
+      newErrors.registrationDate =
+        "Ngày đăng kiểm không thể là ngày trong tương lai";
+    }
+
+    if (registrationExpiration < minDate || registrationExpiration > maxDate) {
+      newErrors.registrationExpirationDate = `Ngày hết hạn đăng kiểm phải từ năm ${minYear} đến năm ${maxYear}`;
+    }
 
     // Validate next maintenance date is not in the past
     if (nextMaintenance < today) {
@@ -705,6 +776,10 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
                     size="small"
                     required
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{
+                      min: "1990-01-01",
+                      max: "2035-12-31",
+                    }}
                   />
                 </Grid>
 
@@ -723,6 +798,10 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
                     size="small"
                     required
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{
+                      min: "1990-01-01",
+                      max: "2035-12-31",
+                    }}
                   />
                 </Grid>
 
@@ -741,6 +820,10 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
                     size="small"
                     required
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{
+                      min: "1990-01-01",
+                      max: "2035-12-31",
+                    }}
                   />
                 </Grid>
 
@@ -759,6 +842,10 @@ const TrailerUpdate: React.FC<TrailerUpdateProps> = ({
                     size="small"
                     required
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{
+                      min: "1990-01-01",
+                      max: "2035-12-31",
+                    }}
                   />
                 </Grid>
               </Grid>
