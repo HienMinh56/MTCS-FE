@@ -347,18 +347,6 @@ const AdminFinanceDashboard: React.FC = () => {
             anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
           >
             <MenuItem
-              onClick={handleOpenProfile}
-              sx={{
-                py: 1.5,
-                "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
-              }}
-            >
-              <AccountCircle
-                sx={{ mr: 1.5, color: theme.palette.primary.main }}
-              />
-              Hồ sơ
-            </MenuItem>
-            <MenuItem
               sx={{
                 color: "error.main",
                 py: 1.5,
@@ -418,8 +406,7 @@ const AdminFinanceDashboard: React.FC = () => {
               }),
             }}
           />
-          {drawerOpen && (
-            <Typography
+          {drawerOpen && (            <Typography
               variant="subtitle1"
               sx={{
                 fontWeight: 500,
@@ -431,7 +418,7 @@ const AdminFinanceDashboard: React.FC = () => {
                 transform: drawerOpen ? "translateX(0)" : "translateX(-20px)",
               }}
             >
-              Quản trị viên
+              {user?.fullName || "Quản trị viên"}
             </Typography>
           )}
         </Box>
