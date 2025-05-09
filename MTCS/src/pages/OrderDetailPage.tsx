@@ -3215,9 +3215,7 @@ const OrderDetailPage: React.FC = () => {
                                   },
                                 }}
                                 onClick={() =>
-                                  navigate(
-                                    `/staff-menu/drivers/${trip.driverId}`
-                                  )
+                                  navigate(`${prefix}/drivers/${trip.driverId}`)
                                 }
                               >
                                 <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} />{" "}
