@@ -161,7 +161,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
               containerType: tractor.containerType,
             }));
             if (incidentTractorMaxLoadWeight !== null) {
-              tractorOptions = tractorOptions.filter(t => t.maxLoadWeight !== null && t.maxLoadWeight > incidentTractorMaxLoadWeight);
+              tractorOptions = tractorOptions.filter(t => t.maxLoadWeight !== null && t.maxLoadWeight >= incidentTractorMaxLoadWeight);
             }
             setTractors(tractorOptions);
             setFilteredTractors(tractorOptions);
@@ -187,7 +187,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
                 maxLoadWeight: (trailer as unknown as { maxLoadWeight?: number }).maxLoadWeight ?? null,
               }));
               if (incidentTrailerMaxLoadWeight !== null) {
-                trailerOptions = trailerOptions.filter(t => t.maxLoadWeight !== null && t.maxLoadWeight > incidentTrailerMaxLoadWeight);
+                trailerOptions = trailerOptions.filter(t => t.maxLoadWeight !== null && t.maxLoadWeight >= incidentTrailerMaxLoadWeight);
               }
               setTrailers(trailerOptions);
             }
