@@ -16,9 +16,12 @@ import {
 import { tripRelace } from "../types/trip";
 import { createTripReplace } from "../services/tripApi";
 import { getDriverList } from "../services/DriverApi";
-import { getTractors } from "../services/tractorApi";
-import { getTrailers } from "../services/trailerApi";
+import { getTractors, getTractorDetails } from "../services/tractorApi";
+import { getTrailers, getTrailerDetails } from "../services/trailerApi";
 import { getOrderDetails } from "../services/orderApi";
+import { TractorStatus } from "../types/tractor";
+import { TrailerStatus } from "../types/trailer";
+
 interface ReplaceTripModalProps {
   open: boolean;
   onClose: () => void;
@@ -26,6 +29,8 @@ interface ReplaceTripModalProps {
   orderId?: string; // Add orderId prop to get order details
   onSuccess?: () => void;
   vehicleType?: number; // Thêm prop vehicleType để xác định loại phương tiện hư hỏng
+  incidentTractorId?: string;
+  incidentTrailerId?: string;
 }
 
 // Driver option interface
@@ -40,7 +45,7 @@ interface TractorOption {
   id: string;
   licensePlate: string;
   brand: string;
-  maxLoadWeight?: number;
+  maxLoadWeight: number | null; // always present
   containerType?: number;
 }
 
@@ -49,10 +54,10 @@ interface TrailerOption {
   id: string;
   licensePlate: string;
   brand: string;
-  maxLoadWeight?: number;
+  maxLoadWeight: number | null; // always present
 }
 
-const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleType }: ReplaceTripModalProps) => {
+const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleType, incidentTractorId, incidentTrailerId }: ReplaceTripModalProps) => {
   const [formData, setFormData] = useState({
     driverId: "",
     tractorId: "",
@@ -78,6 +83,8 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
   // Add state variables for maxLoadWeight
   const [tractorMaxLoadWeight, setTractorMaxLoadWeight] = useState<number | null>(null);
   const [trailerMaxLoadWeight, setTrailerMaxLoadWeight] = useState<number | null>(null);
+  const [incidentTractorMaxLoadWeight, setIncidentTractorMaxLoadWeight] = useState<number | null>(null);
+  const [incidentTrailerMaxLoadWeight, setIncidentTrailerMaxLoadWeight] = useState<number | null>(null);
 
   // Kiểm tra xem có nên hiển thị phần chọn trailer hay không
   const shouldShowTrailer = vehicleType === 2 || vehicleType === undefined;
@@ -89,17 +96,35 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
     }
   }, [open, orderId]);
 
+  // Fetch incident tractor/trailer maxLoadWeight on open
+  useEffect(() => {
+    const fetchIncidentVehicleWeights = async () => {
+      if (open && incidentTractorId) {
+        try {
+          const tractorDetails = await getTractorDetails(incidentTractorId);
+          setIncidentTractorMaxLoadWeight(tractorDetails?.data?.maxLoadWeight || null);
+        } catch {
+          setIncidentTractorMaxLoadWeight(null);
+        }
+      }
+      if (open && shouldShowTrailer && incidentTrailerId) {
+        try {
+          const trailerDetails = await getTrailerDetails(incidentTrailerId);
+          setIncidentTrailerMaxLoadWeight(trailerDetails?.data?.maxLoadWeight || null);
+        } catch {
+          setIncidentTrailerMaxLoadWeight(null);
+        }
+      }
+    };
+    fetchIncidentVehicleWeights();
+  }, [open, incidentTractorId, incidentTrailerId, shouldShowTrailer]);
+
   // Fetch data when modal opens
   useEffect(() => {
     if (open) {
       fetchDrivers();
-      fetchTractors();
-      // Chỉ tải dữ liệu trailer nếu cần hiển thị phần chọn trailer
-      if (shouldShowTrailer) {
-        fetchTrailers();
-      }
     }
-  }, [open, shouldShowTrailer]);
+  }, [open]);
 
   // Effect to filter tractors based on order containerType
   useEffect(() => {
@@ -119,6 +144,64 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
     }
   }, [tractors, orderContainerType]);
 
+  // Refetch tractors/trailers when incident maxLoadWeight changes (after async fetch)
+  useEffect(() => {
+    if (open) {
+      // Inline fetchTractors
+      (async () => {
+        setLoadingTractors(true);
+        try {
+          const response = await getTractors(1, 100, undefined, TractorStatus.Active);
+          if (response && response.data && response.data.tractors) {
+            let tractorOptions = response.data.tractors.items.map(tractor => ({
+              id: tractor.tractorId,
+              licensePlate: tractor.licensePlate,
+              brand: tractor.brand || "",
+              maxLoadWeight: (tractor as unknown as { maxLoadWeight?: number }).maxLoadWeight ?? null,
+              containerType: tractor.containerType,
+            }));
+            if (incidentTractorMaxLoadWeight !== null) {
+              tractorOptions = tractorOptions.filter(t => t.maxLoadWeight !== null && t.maxLoadWeight > incidentTractorMaxLoadWeight);
+            }
+            setTractors(tractorOptions);
+            setFilteredTractors(tractorOptions);
+          }
+        } catch (err: unknown) {
+          console.error("Error fetching tractors:", err);
+          setError("Không thể tải danh sách đầu kéo");
+        } finally {
+          setLoadingTractors(false);
+        }
+      })();
+      // Inline fetchTrailers
+      if (shouldShowTrailer) {
+        (async () => {
+          setLoadingTrailers(true);
+          try {
+            const response = await getTrailers(1, 100, undefined, TrailerStatus.Active);
+            if (response && response.data && response.data.trailers) {
+              let trailerOptions = response.data.trailers.items.map(trailer => ({
+                id: trailer.trailerId,
+                licensePlate: trailer.licensePlate,
+                brand: trailer.brand || "",
+                maxLoadWeight: (trailer as unknown as { maxLoadWeight?: number }).maxLoadWeight ?? null,
+              }));
+              if (incidentTrailerMaxLoadWeight !== null) {
+                trailerOptions = trailerOptions.filter(t => t.maxLoadWeight !== null && t.maxLoadWeight > incidentTrailerMaxLoadWeight);
+              }
+              setTrailers(trailerOptions);
+            }
+          } catch (err: unknown) {
+            console.error("Error fetching trailers:", err);
+            setError("Không thể tải danh sách moóc");
+          } finally {
+            setLoadingTrailers(false);
+          }
+        })();
+      }
+    }
+  }, [incidentTractorMaxLoadWeight, incidentTrailerMaxLoadWeight, open, shouldShowTrailer]);
+
   // Fetch order details to get containerType
   const fetchOrderDetails = async (orderId: string) => {
     setLoadingOrder(true);
@@ -129,7 +212,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
         setOrderContainerType(orderDetails.containerType);
         console.log("Order container type:", orderDetails.containerType);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error fetching order details:", err);
       setError("Không thể tải thông tin đơn hàng");
     } finally {
@@ -150,57 +233,11 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
         }));
         setDrivers(driverOptions);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error fetching drivers:", err);
       setError("Không thể tải danh sách tài xế");
     } finally {
       setLoadingDrivers(false);
-    }
-  };
-
-  // Fetch tractors from API
-  const fetchTractors = async () => {
-    setLoadingTractors(true);
-    try {
-      const response = await getTractors(1, 100, undefined, 1); // Active tractors
-      if (response && response.data && response.data.tractors) {
-        const tractorOptions = response.data.tractors.items.map(tractor => ({
-          id: tractor.tractorId,
-          licensePlate: tractor.licensePlate,
-          brand: tractor.brand || "",
-          maxLoadWeight: tractor.maxLoadWeight || null,
-          containerType: tractor.containerType,
-        }));
-        setTractors(tractorOptions);
-        console.log("Fetched total tractors:", tractorOptions.length);
-      }
-    } catch (err) {
-      console.error("Error fetching tractors:", err);
-      setError("Không thể tải danh sách đầu kéo");
-    } finally {
-      setLoadingTractors(false);
-    }
-  };
-
-  // Fetch trailers from API
-  const fetchTrailers = async () => {
-    setLoadingTrailers(true);
-    try {
-      const response = await getTrailers(1, 100, undefined, 1); // Active trailers
-      if (response && response.data && response.data.trailers) {
-        const trailerOptions = response.data.trailers.items.map(trailer => ({
-          id: trailer.trailerId,
-          licensePlate: trailer.licensePlate,
-          brand: trailer.brand || "",
-          maxLoadWeight: trailer.maxLoadWeight || null,
-        }));
-        setTrailers(trailerOptions);
-      }
-    } catch (err) {
-      console.error("Error fetching trailers:", err);
-      setError("Không thể tải danh sách moóc");
-    } finally {
-      setLoadingTrailers(false);
     }
   };
 
@@ -211,8 +248,8 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
     }));
   };
 
-  // Update handleTractorChange to also get maxLoadWeight
-  const handleTractorChange = (_: any, newValue: TractorOption | null) => {
+  // Fix handler types
+  const handleTractorChange = (_: React.SyntheticEvent, newValue: TractorOption | null) => {
     handleChange("tractorId", newValue?.id || "");
     if (newValue) {
       setTractorMaxLoadWeight(newValue.maxLoadWeight || null);
@@ -221,8 +258,7 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
     }
   };
 
-  // Update handleTrailerChange to also get maxLoadWeight
-  const handleTrailerChange = (_: any, newValue: TrailerOption | null) => {
+  const handleTrailerChange = (_: React.SyntheticEvent, newValue: TrailerOption | null) => {
     handleChange("trailerId", newValue?.id || "");
     if (newValue) {
       setTrailerMaxLoadWeight(newValue.maxLoadWeight || null);
@@ -249,25 +285,20 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
       if (onSuccess) {
         onSuccess();
       }
-    } catch (err: any) {
-      console.error("Failed to create replacement trip:", err);
-      setError(
-        err.response?.data?.message || 
-        `Không thể tạo chuyến thay thế. Lỗi: ${err.message || 'Vui lòng thử lại sau.'}`
-      );
+    } catch (err: unknown) {
+      let errorMessage = 'Không thể tạo chuyến thay thế. Vui lòng thử lại sau.';
+      if (typeof err === 'object' && err !== null) {
+        const e = err as { response?: { data?: { message?: string } }, message?: string };
+        errorMessage = e.response?.data?.message || `Không thể tạo chuyến thay thế. Lỗi: ${e.message || 'Vui lòng thử lại sau.'}`;
+      }
+      setError(errorMessage);
+      console.error('Failed to create replacement trip:', err);
     } finally {
       setLoading(false);
     }
   };
 
   const isLoading = loadingDrivers || loadingTractors || loadingTrailers || loadingOrder;
-
-  // Trả về tên loại container dựa trên giá trị
-  const getContainerTypeText = (type: number | null) => {
-    if (type === 1) return "Container Khô";
-    if (type === 2) return "Container Lạnh";
-    return "Không xác định";
-  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -285,19 +316,6 @@ const ReplaceTripModal = ({ open, onClose, tripId, orderId, onSuccess, vehicleTy
               <Typography variant="subtitle2" gutterBottom>
                 Mã chuyến đi cần thay thế: {tripId}
               </Typography>
-              {/* {vehicleType && (
-                <Typography variant="subtitle2" color="primary" gutterBottom>
-                  Phương tiện hư hỏng: {vehicleType === 1 ? "Đầu kéo" : vehicleType === 2 ? "Rơ-moóc" : "Không xác định"}
-                </Typography>
-              )}
-              {orderContainerType !== null && (
-                <Typography variant="subtitle2" color="secondary" gutterBottom>
-                  Loại container: {getContainerTypeText(orderContainerType)}
-                  {orderContainerType === 2 && (
-                    <span> (Chỉ hiển thị đầu kéo container lạnh)</span>
-                  )}
-                </Typography>
-              )} */}
             </Grid>
             
             {/* Driver Dropdown */}

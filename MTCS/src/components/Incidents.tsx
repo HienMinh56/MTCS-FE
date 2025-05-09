@@ -624,9 +624,10 @@ const IncidentDetailDialog = ({
         onClose={() => setOpenReplaceTripModal(false)}
         tripId={incident.tripId}
         orderId={incident.order.orderId}
-        onSuccess={() => handleReplaceTripSuccess(true)}
-        onError={() => handleReplaceTripSuccess(false)}
         vehicleType={incident.vehicleType}
+        incidentTractorId={incident.trip?.tractorId}
+        incidentTrailerId={incident.trip?.trailerId}
+        onSuccess={() => handleReplaceTripSuccess(true)}
       />
     </Dialog>
   );

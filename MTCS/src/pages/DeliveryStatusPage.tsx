@@ -615,7 +615,7 @@ const DeliveryStatusPage: React.FC = () => {
                     align="center"
                     sx={{ fontWeight: "bold", py: 2 }}
                   >
-                    Index
+                    Thứ tự
                   </TableCell>
                   <TableCell
                     width="30%"
