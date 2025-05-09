@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   Coordinates,
   DistanceMatrixResponse,
@@ -17,7 +17,6 @@ import {
   Chip,
   Card,
   CardContent,
-  Stack,
   IconButton,
   Tooltip,
   useTheme,
@@ -37,12 +36,9 @@ import {
 } from "@mui/material";
 import LocationAutocomplete from "./LocationAutocomplete";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
-import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DirectionsIcon from "@mui/icons-material/Directions";
 import TimerIcon from "@mui/icons-material/Timer";
 import StraightenIcon from "@mui/icons-material/Straighten";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
@@ -56,7 +52,6 @@ import {
   formatDuration,
   DEFAULT_VEHICLE_TYPE,
   GEOLOCATION_OPTIONS,
-  MAP_MESSAGES,
 } from "../utils/mapConfig";
 
 const DistanceCalculator: React.FC = () => {
@@ -70,16 +65,19 @@ const DistanceCalculator: React.FC = () => {
   const [originCoordinatesSetByGeocoding, setOriginCoordinatesSetByGeocoding] =
     useState(false);
 
-  const [destinations, setDestinations] = useState<
-    {
-      address: string;
-      lat: string;
-      lng: string;
-      coordinatesSetByGeocoding: boolean;
-    }[]
-  >([{ address: "", lat: "", lng: "", coordinatesSetByGeocoding: false }]);
+  // Delivery destination
+  const [destAddress, setDestAddress] = useState("");
+  const [destLat, setDestLat] = useState("");
+  const [destLng, setDestLng] = useState("");
+  const [destCoordinatesSetByGeocoding, setDestCoordinatesSetByGeocoding] =
+    useState(false);
 
+  // First leg result: origin -> delivery
   const [results, setResults] = useState<DistanceMatrixResponse | null>(null);
+  // Second leg result: delivery -> return container
+  const [returnResult, setReturnResult] =
+    useState<DistanceMatrixResponse | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notification, setNotification] = useState({
@@ -97,55 +95,54 @@ const DistanceCalculator: React.FC = () => {
   const [priceLoading, setPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState("");
 
+  // Return container location
+  const [returnAddress, setReturnAddress] = useState("");
+  const [returnLat, setReturnLat] = useState("");
+  const [returnLng, setReturnLng] = useState("");
+  const [returnCoordinatesSetByGeocoding, setReturnCoordinatesSetByGeocoding] =
+    useState(false);
+
   const [activeStep, setActiveStep] = useState(0);
 
-  const addDestination = () => {
-    setDestinations([
-      ...destinations,
-      { address: "", lat: "", lng: "", coordinatesSetByGeocoding: false },
-    ]);
-    setTimeout(() => {
-      const elements = document.querySelectorAll(".destination-item");
-      if (elements.length > 0) {
-        elements[elements.length - 1].scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }
-    }, 100);
+  // Handlers for single destination and return location
+  const handleDestinationLocationChange = (
+    value: string,
+    _placePrediction?: PlacePrediction,
+    coordinates?: Coordinates
+  ) => {
+    setDestAddress(value);
+    if (coordinates) {
+      setDestLat(coordinates.lat.toString());
+      setDestLng(coordinates.lng.toString());
+      setDestCoordinatesSetByGeocoding(true);
+      setNotification({ open: true, message: `Đã chọn điểm đến: ${value}` });
+    } else {
+      setDestCoordinatesSetByGeocoding(false);
+    }
   };
 
-  const removeDestination = (index: number) => {
-    if (destinations.length > 1) {
-      const newDestinations = [...destinations];
-      newDestinations.splice(index, 1);
-      setDestinations(newDestinations);
+  const handleReturnLocationChange = (
+    value: string,
+    _placePrediction?: PlacePrediction,
+    coordinates?: Coordinates
+  ) => {
+    setReturnAddress(value);
+    if (coordinates) {
+      setReturnLat(coordinates.lat.toString());
+      setReturnLng(coordinates.lng.toString());
+      setReturnCoordinatesSetByGeocoding(true);
       setNotification({
         open: true,
-        message: "Đã xóa điểm đến",
+        message: `Đã chọn điểm trả cont: ${value}`,
       });
+    } else {
+      setReturnCoordinatesSetByGeocoding(false);
     }
-  };
-
-  const updateDestination = (
-    index: number,
-    field: "address" | "lat" | "lng",
-    value: string,
-    isFromGeocoding: boolean = false
-  ) => {
-    const newDestinations = [...destinations];
-    newDestinations[index][field] = value;
-
-    if ((field === "lat" || field === "lng") && !isFromGeocoding) {
-      newDestinations[index].coordinatesSetByGeocoding = false;
-    }
-
-    setDestinations(newDestinations);
   };
 
   const handleOriginLocationChange = (
     value: string,
-    placeData?: PlacePrediction,
+    _placePrediction?: PlacePrediction,
     coordinates?: Coordinates
   ) => {
     setOriginAddress(value);
@@ -163,59 +160,44 @@ const DistanceCalculator: React.FC = () => {
     }
   };
 
-  const handleDestinationLocationChange = (
-    index: number,
-    value: string,
-    placeData?: PlacePrediction,
-    coordinates?: Coordinates
-  ) => {
-    updateDestination(index, "address", value);
-
-    if (coordinates) {
-      updateDestination(index, "lat", coordinates.lat.toString(), true);
-      updateDestination(index, "lng", coordinates.lng.toString(), true);
-
-      const newDestinations = [...destinations];
-      newDestinations[index].coordinatesSetByGeocoding = true;
-      setDestinations(newDestinations);
-      setNotification({
-        open: true,
-        message: `Đã chọn điểm đến ${index + 1}: ${value}`,
-      });
-    }
-  };
-
   const handleCalculate = async () => {
     try {
       setError("");
       setLoading(true);
 
-      if (!originLat || !originLng) {
+      if (!originLat || !originLng)
         throw new Error("Cần có tọa độ điểm xuất phát");
-      }
-
-      const validDestinations = destinations.filter((d) => d.lat && d.lng);
-      if (validDestinations.length === 0) {
-        throw new Error("Cần có ít nhất một điểm đến hợp lệ");
-      }
+      if (!destLat || !destLng) throw new Error("Cần có điểm đến hợp lệ");
+      if (!returnLat || !returnLng)
+        throw new Error("Cần có điểm trả cont hợp lệ");
 
       const origins: Coordinates = {
         lat: parseFloat(originLat),
         lng: parseFloat(originLng),
       };
 
-      const destinationCoords: Coordinates[] = validDestinations.map((d) => ({
-        lat: parseFloat(d.lat),
-        lng: parseFloat(d.lng),
-      }));
-
-      const result = await calculateDistance({
+      // leg 1: origin -> delivery
+      const deliveryCoord = {
+        lat: parseFloat(destLat),
+        lng: parseFloat(destLng),
+      };
+      const r1 = await calculateDistance({
         origins,
-        destinations: destinationCoords,
+        destinations: [deliveryCoord],
         vehicle: DEFAULT_VEHICLE_TYPE,
       });
-
-      setResults(result);
+      setResults(r1);
+      // leg 2: delivery -> return
+      const returnCoord = {
+        lat: parseFloat(returnLat),
+        lng: parseFloat(returnLng),
+      };
+      const r2 = await calculateDistance({
+        origins: deliveryCoord,
+        destinations: [returnCoord],
+        vehicle: DEFAULT_VEHICLE_TYPE,
+      });
+      setReturnResult(r2);
 
       handleNext();
 
@@ -232,6 +214,7 @@ const DistanceCalculator: React.FC = () => {
         err instanceof Error ? err.message : "Không thể tính khoảng cách"
       );
       console.error(err);
+      setReturnResult(null);
     } finally {
       setLoading(false);
     }
@@ -278,10 +261,6 @@ const DistanceCalculator: React.FC = () => {
     }
   };
 
-  const validateCoordinate = (value: string): boolean => {
-    return !value || !isNaN(parseFloat(value));
-  };
-
   const getCurrentLocation = (): Coordinates | undefined => {
     if (originLat && originLng) {
       return {
@@ -292,26 +271,24 @@ const DistanceCalculator: React.FC = () => {
     return undefined;
   };
 
-  const canCalculate =
-    originLat && originLng && destinations.some((d) => d.lat && d.lng);
+  const canCalculate = !!(
+    originLat &&
+    originLng &&
+    destLat &&
+    destLng &&
+    returnLat &&
+    returnLng
+  );
 
   const calculateTotals = () => {
-    if (!results?.rows[0]?.elements)
-      return { totalDistance: 0, totalDuration: 0 };
-
-    const totalDistance = results.rows[0].elements.reduce(
-      (total, element) =>
-        element.status === "OK" ? total + element.distance.value : total,
-      0
-    );
-
-    const totalDuration = results.rows[0].elements.reduce(
-      (total, element) =>
-        element.status === "OK" ? total + element.duration.value : total,
-      0
-    );
-
-    return { totalDistance, totalDuration };
+    // sum distances and durations from both legs
+    const el1 = results?.rows[0]?.elements[0];
+    const el2 = returnResult?.rows[0]?.elements[0];
+    const d1 = el1?.status === "OK" ? el1.distance.value : 0;
+    const t1 = el1?.status === "OK" ? el1.duration.value : 0;
+    const d2 = el2?.status === "OK" ? el2.distance.value : 0;
+    const t2 = el2?.status === "OK" ? el2.duration.value : 0;
+    return { totalDistance: d1 + d2, totalDuration: t1 + t2 };
   };
 
   const handleCalculatePrice = async () => {
@@ -524,125 +501,71 @@ const DistanceCalculator: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card
-                sx={{
-                  mb: 3,
-                  borderRadius: 2,
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  border: "1px solid",
-                  borderColor: "divider",
-                }}
-              >
+              {/* Single destination input */}
+              <Card sx={{ mb: 3 }}>
                 <CardContent>
-                  <Box
-                    sx={{
-                      mb: 2,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <LocationOnIcon
-                        sx={{
-                          mr: 1,
-                          color: theme.palette.error.main,
-                        }}
-                      />
-                      <Typography variant="subtitle1" fontWeight={500}>
-                        Điểm đến
-                      </Typography>
-                    </Box>
-                    <Tooltip title="Thêm điểm đến">
-                      <Button
-                        startIcon={<AddIcon />}
-                        onClick={addDestination}
-                        variant="outlined"
-                        size="small"
-                        sx={{ textTransform: "none" }}
-                      >
-                        Thêm điểm đến
-                      </Button>
-                    </Tooltip>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <LocationOnIcon
+                      sx={{ mr: 1, color: theme.palette.error.main }}
+                    />
+                    <Typography variant="subtitle1" fontWeight={500}>
+                      Điểm đến
+                    </Typography>
                   </Box>
-
-                  <Stack spacing={3}>
-                    {destinations.map((dest, index) => (
-                      <Box key={index} className="destination-item">
-                        <Grid container spacing={2}>
-                          <Grid item xs={12}>
-                            <Box sx={{ display: "flex", alignItems: "center" }}>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  mr: 1,
-                                  fontWeight: 500,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  backgroundColor: theme.palette.primary.main,
-                                  color: "white",
-                                  borderRadius: "50%",
-                                  width: 24,
-                                  height: 24,
-                                  justifyContent: "center",
-                                }}
-                              >
-                                {index + 1}
-                              </Typography>
-                              {destinations.length > 1 && (
-                                <Tooltip title="Xóa điểm đến này">
-                                  <IconButton
-                                    color="error"
-                                    size="small"
-                                    onClick={() => removeDestination(index)}
-                                    sx={{ ml: "auto" }}
-                                  >
-                                    <DeleteOutlineIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </Box>
-                            <LocationAutocomplete
-                              label="Nhập địa điểm đến"
-                              value={dest.address}
-                              onChange={(value, placeData, coordinates) =>
-                                handleDestinationLocationChange(
-                                  index,
-                                  value,
-                                  placeData,
-                                  coordinates
-                                )
-                              }
-                              placeholder="Tìm kiếm địa điểm hoặc địa chỉ"
-                              currentLocation={getCurrentLocation()}
-                            />
-                            {dest.coordinatesSetByGeocoding &&
-                              dest.lat &&
-                              dest.lng && (
-                                <Fade in={dest.coordinatesSetByGeocoding}>
-                                  <Box mt={1}>
-                                    <Chip
-                                      icon={<LocationOnIcon />}
-                                      label={
-                                        dest.address
-                                          ? `Đã chọn: ${dest.address}`
-                                          : "Đã chọn vị trí"
-                                      }
-                                      color="success"
-                                      size="small"
-                                      sx={{ fontWeight: 500 }}
-                                    />
-                                  </Box>
-                                </Fade>
-                              )}
-                          </Grid>
-                        </Grid>
-                        {index < destinations.length - 1 && (
-                          <Divider sx={{ mt: 2 }} />
-                        )}
+                  <LocationAutocomplete
+                    label="Nhập điểm đến"
+                    value={destAddress}
+                    onChange={handleDestinationLocationChange}
+                    placeholder="Tìm kiếm địa điểm hoặc địa chỉ"
+                    currentLocation={getCurrentLocation()}
+                  />
+                  {destCoordinatesSetByGeocoding && (
+                    <Fade in>
+                      <Box mt={1}>
+                        <Chip
+                          icon={<LocationOnIcon />}
+                          label={`Đã chọn: ${destAddress}`}
+                          color="success"
+                          size="small"
+                          sx={{ fontWeight: 500 }}
+                        />
                       </Box>
-                    ))}
-                  </Stack>
+                    </Fade>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Return container location input */}
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <LocationOnIcon
+                      sx={{ mr: 1, color: theme.palette.info.main }}
+                    />
+                    <Typography variant="subtitle1" fontWeight={500}>
+                      Điểm trả cont
+                    </Typography>
+                  </Box>
+                  <LocationAutocomplete
+                    label="Nhập điểm trả cont"
+                    value={returnAddress}
+                    onChange={handleReturnLocationChange}
+                    placeholder="Tìm kiếm điểm trả cont"
+                    currentLocation={getCurrentLocation()}
+                  />
+                  {returnCoordinatesSetByGeocoding && (
+                    <Fade in>
+                      <Box mt={1}>
+                        <Chip
+                          icon={<LocationOnIcon />}
+                          label={`Đã chọn: ${returnAddress}`}
+                          color="info"
+                          size="small"
+                          sx={{ fontWeight: 500 }}
+                        />
+                      </Box>
+                    </Fade>
+                  )}
                 </CardContent>
               </Card>
 
@@ -687,7 +610,7 @@ const DistanceCalculator: React.FC = () => {
                 {loading ? (
                   <CircularProgress size={24} color="inherit" />
                 ) : canCalculate ? (
-                  "Tính tuyến đường xe tải"
+                  "Tính tuyến đường vận chuyển"
                 ) : (
                   "Nhập địa điểm để tính"
                 )}
@@ -746,7 +669,6 @@ const DistanceCalculator: React.FC = () => {
                     Thông tin tuyến đường
                   </Typography>
 
-                  {/* Xuất phát từ - Origin */}
                   <Box sx={{ mb: 2 }}>
                     <Typography
                       variant="body2"
@@ -768,7 +690,6 @@ const DistanceCalculator: React.FC = () => {
                     </Typography>
                   </Box>
 
-                  {/* Đến - Destinations */}
                   <Box sx={{ mb: 2 }}>
                     <Typography
                       variant="body2"
@@ -786,20 +707,42 @@ const DistanceCalculator: React.FC = () => {
                       Đến:
                     </Typography>
                     <Box sx={{ ml: 3, mt: 0.5 }}>
-                      {destinations.map(
-                        (dest, index) =>
-                          results.rows[0]?.elements[index]?.status === "OK" && (
-                            <Typography key={`dest-${index}`} sx={{ mb: 0.5 }}>
-                              {index + 1}. {dest.address || "Vị trí đã chọn"}
-                            </Typography>
-                          )
+                      {results?.rows[0]?.elements[0]?.status === "OK" && (
+                        <Typography>
+                          {destAddress || "Địa điểm đã chọn"}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+
+                  {/* Địa điểm trả container separate section */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        fontWeight: 500,
+                        color: theme.palette.info.main,
+                      }}
+                    >
+                      <LocationOnIcon
+                        fontSize="small"
+                        sx={{ mr: 0.5, color: theme.palette.info.main }}
+                      />
+                      Địa điểm trả container:
+                    </Typography>
+                    <Box sx={{ ml: 3, mt: 0.5 }}>
+                      {returnResult?.rows[0]?.elements[0]?.status === "OK" && (
+                        <Typography>
+                          {returnAddress || "Địa điểm đã chọn"}
+                        </Typography>
                       )}
                     </Box>
                   </Box>
 
                   <Divider sx={{ mb: 2, mt: 1 }} />
 
-                  {/* Tổng quãng đường & thời gian */}
                   <Box
                     sx={{
                       display: "flex",
@@ -837,40 +780,6 @@ const DistanceCalculator: React.FC = () => {
                   </Box>
                 </CardContent>
               </Card>
-
-              {results.rows[0]?.elements.map((element, index) => (
-                <Card
-                  key={`destination-${index}`}
-                  sx={{
-                    mb: 2,
-                    borderRadius: 2,
-                    borderLeft:
-                      element.status === "OK"
-                        ? `4px solid ${theme.palette.success.main}`
-                        : `4px solid ${theme.palette.error.main}`,
-                    transition: "all 0.2s ease-in-out",
-                    "&:hover": {
-                      transform: "translateY(-2px)",
-                      boxShadow: 3,
-                    },
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                    position: "relative",
-                    overflow: "hidden",
-                    "&::before":
-                      element.status === "OK"
-                        ? {
-                            content: '""',
-                            position: "absolute",
-                            width: "100%",
-                            height: "100%",
-                            background: `linear-gradient(90deg, ${theme.palette.success.light}22, transparent)`,
-                            top: 0,
-                            left: 0,
-                          }
-                        : {},
-                  }}
-                ></Card>
-              ))}
 
               <Box
                 sx={{ display: "flex", justifyContent: "space-between", mt: 4 }}
@@ -903,7 +812,6 @@ const DistanceCalculator: React.FC = () => {
         {activeStep === 2 && results && (
           <Fade in={activeStep === 2}>
             <Box>
-              {/* First show the previous results */}
               <Card
                 sx={{
                   mb: 3,
@@ -922,7 +830,6 @@ const DistanceCalculator: React.FC = () => {
                     Thông tin tuyến đường
                   </Typography>
 
-                  {/* Xuất phát từ - Origin */}
                   <Box sx={{ mb: 2 }}>
                     <Typography
                       variant="body2"
@@ -944,7 +851,6 @@ const DistanceCalculator: React.FC = () => {
                     </Typography>
                   </Box>
 
-                  {/* Đến - Destinations */}
                   <Box sx={{ mb: 2 }}>
                     <Typography
                       variant="body2"
@@ -962,20 +868,59 @@ const DistanceCalculator: React.FC = () => {
                       Đến:
                     </Typography>
                     <Box sx={{ ml: 3, mt: 0.5 }}>
-                      {destinations.map(
-                        (dest, index) =>
-                          results.rows[0]?.elements[index]?.status === "OK" && (
-                            <Typography key={`dest-${index}`} sx={{ mb: 0.5 }}>
-                              {index + 1}. {dest.address || "Vị trí đã chọn"}
-                            </Typography>
+                      {/* leg 1: origin -> delivery */}
+                      {results?.rows[0]?.elements[0]?.status === "OK" && (
+                        <Typography>
+                          1. {originAddress} → {destAddress}:{" "}
+                          {formatDistance(
+                            results.rows[0].elements[0].distance.value
+                          )}{" "}
+                          (
+                          {formatDuration(
+                            results.rows[0].elements[0].duration.value
+                          )}
                           )
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+
+                  {/* Địa điểm trả container separate section */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        fontWeight: 500,
+                        color: theme.palette.info.main,
+                      }}
+                    >
+                      <LocationOnIcon
+                        fontSize="small"
+                        sx={{ mr: 0.5, color: theme.palette.info.main }}
+                      />
+                      Địa điểm trả container:
+                    </Typography>
+                    <Box sx={{ ml: 3, mt: 0.5 }}>
+                      {returnResult?.rows[0]?.elements[0]?.status === "OK" && (
+                        <Typography>
+                          2. {destAddress} → {returnAddress}:{" "}
+                          {formatDistance(
+                            returnResult.rows[0].elements[0].distance.value
+                          )}{" "}
+                          (
+                          {formatDuration(
+                            returnResult.rows[0].elements[0].duration.value
+                          )}
+                          )
+                        </Typography>
                       )}
                     </Box>
                   </Box>
 
                   <Divider sx={{ mb: 2, mt: 1 }} />
 
-                  {/* Tổng quãng đường & thời gian */}
                   <Box
                     sx={{
                       display: "flex",
@@ -1014,7 +959,6 @@ const DistanceCalculator: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Then show the price calculation section */}
               <Card
                 sx={{
                   borderRadius: 2,
