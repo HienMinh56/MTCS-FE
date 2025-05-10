@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import {
   Box,
   Drawer,
@@ -51,6 +52,7 @@ const StaffMenu: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const { user } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeTab, setActiveTab] = useState<string>("orders");
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -301,18 +303,6 @@ const StaffMenu: React.FC = () => {
             anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
           >
             <MenuItem
-              onClick={handleOpenProfile}
-              sx={{
-                py: 1.5,
-                "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
-              }}
-            >
-              <AccountCircleIcon
-                sx={{ mr: 1.5, color: theme.palette.primary.main }}
-              />
-              Hồ sơ
-            </MenuItem>
-            <MenuItem
               sx={{
                 color: "error.main",
                 py: 1.5,
@@ -386,7 +376,7 @@ const StaffMenu: React.FC = () => {
                 transform: drawerOpen ? "translateX(0)" : "translateX(-20px)",
               }}
             >
-              Nhân viên
+              {user?.fullName || "Nhân viên"}
             </Typography>
           )}
         </Box>

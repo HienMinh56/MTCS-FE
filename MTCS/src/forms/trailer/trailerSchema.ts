@@ -35,14 +35,45 @@ export const trailerSchema = z
       .number()
       .min(0.1, "Trọng tải tối đa phải lớn hơn 0")
       .max(100, "Trọng tải tối đa không được vượt quá 100"),
-    lastMaintenanceDate: z.date().refine((date) => date <= new Date(), {
-      message: "Ngày bảo dưỡng cuối không được trong tương lai",
-    }),
-    nextMaintenanceDate: z.date(),
-    registrationDate: z.date().refine((date) => date <= new Date(), {
-      message: "Ngày đăng ký không được trong tương lai",
-    }),
-    registrationExpirationDate: z.date(),
+    lastMaintenanceDate: z
+      .date({
+        required_error: "Ngày bảo dưỡng gần nhất không được để trống",
+        invalid_type_error:
+          "Vui lòng chọn một ngày hợp lệ cho ngày bảo dưỡng gần nhất",
+      })
+      .nullable()
+      .refine((date) => !date || date <= new Date(), {
+        message: "Ngày bảo dưỡng cuối không được trong tương lai",
+      }),
+    nextMaintenanceDate: z
+      .date({
+        required_error: "Ngày bảo dưỡng tiếp theo không được để trống",
+        invalid_type_error:
+          "Vui lòng chọn một ngày hợp lệ cho ngày bảo dưỡng tiếp theo",
+      })
+      .refine((date) => date > new Date(), {
+        message: "Ngày bảo dưỡng tiếp theo phải là ngày trong tương lai",
+      })
+      .refine((date) => date.getFullYear() <= 2035, {
+        message: "Năm bảo dưỡng tiếp theo không được vượt quá 2035",
+      }),
+    registrationDate: z
+      .date({
+        required_error: "Ngày đăng ký không được để trống",
+        invalid_type_error: "Vui lòng chọn một ngày hợp lệ cho ngày đăng ký",
+      })
+      .refine((date) => date <= new Date(), {
+        message: "Ngày đăng ký không được trong tương lai",
+      }),
+    registrationExpirationDate: z
+      .date({
+        required_error: "Ngày hết hạn đăng kiểm không được để trống",
+        invalid_type_error:
+          "Vui lòng chọn một ngày hợp lệ cho ngày hết hạn đăng kiểm",
+      })
+      .refine((date) => date.getFullYear() <= 2035, {
+        message: "Năm hết hạn đăng kiểm không được vượt quá 2035",
+      }),
     containerSize: z
       .number()
       .refine(
@@ -61,6 +92,17 @@ export const trailerSchema = z
       message: "Ngày hết hạn đăng ký phải sau ngày đăng ký",
       path: ["registrationExpirationDate"],
     }
+  )
+  .refine(
+    (data) => {
+      // Skip this validation if lastMaintenanceDate is null
+      if (!data.lastMaintenanceDate) return true;
+      return data.nextMaintenanceDate > data.lastMaintenanceDate;
+    },
+    {
+      message: "Ngày bảo dưỡng tiếp theo phải sau ngày bảo dưỡng gần nhất",
+      path: ["nextMaintenanceDate"],
+    }
   );
 
 export type TrailerFormValues = z.infer<typeof trailerSchema>;
@@ -68,7 +110,9 @@ export type TrailerFormValues = z.infer<typeof trailerSchema>;
 export const formatTrailerFormForApi = (data: TrailerFormValues) => {
   return {
     ...data,
-    lastMaintenanceDate: data.lastMaintenanceDate.toISOString(),
+    lastMaintenanceDate: data.lastMaintenanceDate
+      ? data.lastMaintenanceDate.toISOString()
+      : null,
     nextMaintenanceDate: data.nextMaintenanceDate.toISOString(),
     registrationDate: new Date(data.registrationDate)
       .toISOString()

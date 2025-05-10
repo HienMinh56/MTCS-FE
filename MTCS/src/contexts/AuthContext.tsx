@@ -6,6 +6,7 @@ import { jwtDecode } from "jwt-decode";
 interface User {
   id: string;
   role: "Staff" | "Admin" | string;
+  fullName?: string;
 }
 
 interface JwtPayload {
@@ -57,8 +58,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           ];
         const role = decoded.role || msRole;
 
+        // Check all possible formats of the name claim
+        const fullName =
+          decoded["name"] ||
+          decoded[
+            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
+          ] ||
+          decoded[
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/name"
+          ] ||
+          "Nhân viên";
+        console.log("Token decoded:", decoded);
+        console.log("FullName found:", fullName);
+
         if (userId && role) {
-          return { id: userId, role };
+          return { id: userId, role, fullName };
         }
       } catch (error) {
         console.error("Failed to decode token:", error);
@@ -110,8 +124,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             ];
           const role = decoded.role || msRole;
 
+          // Check all possible formats of the name claim
+          const fullName =
+            decoded["name"] ||
+            decoded[
+              "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
+            ] ||
+            decoded[
+              "http://schemas.microsoft.com/ws/2008/06/identity/claims/name"
+            ] ||
+            "Nhân viên";
+          console.log("Token refresh - decoded:", decoded);
+          console.log("Token refresh - FullName found:", fullName);
+
           if (userId && role) {
-            setUser({ id: userId, role });
+            setUser({ id: userId, role, fullName });
           }
         } catch (error) {
           console.error("Failed to decode token:", error);

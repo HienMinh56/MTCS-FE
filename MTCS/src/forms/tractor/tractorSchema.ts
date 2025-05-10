@@ -33,18 +33,44 @@ export const tractorSchema = z
       .min(0.1, "Trọng tải tối đa phải lớn hơn 0")
       .max(100, "Trọng tải tối đa không được vượt quá 100"),
     lastMaintenanceDate: z
-      .date()
+      .date({
+        required_error: "Ngày bảo dưỡng gần nhất không được để trống",
+        invalid_type_error:
+          "Vui lòng chọn một ngày hợp lệ cho ngày bảo dưỡng gần nhất",
+      })
       .nullable()
       .refine((date) => !date || date <= new Date(), {
         message: "Ngày bảo dưỡng cuối không được trong tương lai",
       }),
-    nextMaintenanceDate: z.date().refine((date) => date > new Date(), {
-      message: "Ngày bảo dưỡng tiếp theo phải là ngày trong tương lai",
-    }),
-    registrationDate: z.date().refine((date) => date <= new Date(), {
-      message: "Ngày đăng ký không được trong tương lai",
-    }),
-    registrationExpirationDate: z.date(),
+    nextMaintenanceDate: z
+      .date({
+        required_error: "Ngày bảo dưỡng tiếp theo không được để trống",
+        invalid_type_error:
+          "Vui lòng chọn một ngày hợp lệ cho ngày bảo dưỡng tiếp theo",
+      })
+      .refine((date) => date > new Date(), {
+        message: "Ngày bảo dưỡng tiếp theo phải là ngày trong tương lai",
+      })
+      .refine((date) => date.getFullYear() <= 2035, {
+        message: "Năm bảo dưỡng tiếp theo không được vượt quá 2035",
+      }),
+    registrationDate: z
+      .date({
+        required_error: "Ngày đăng ký không được để trống",
+        invalid_type_error: "Vui lòng chọn một ngày hợp lệ cho ngày đăng ký",
+      })
+      .refine((date) => date <= new Date(), {
+        message: "Ngày đăng ký không được trong tương lai",
+      }),
+    registrationExpirationDate: z
+      .date({
+        required_error: "Ngày hết hạn đăng kiểm không được để trống",
+        invalid_type_error:
+          "Vui lòng chọn một ngày hợp lệ cho ngày hết hạn đăng kiểm",
+      })
+      .refine((date) => date.getFullYear() <= 2035, {
+        message: "Năm hết hạn đăng kiểm không được vượt quá 2035",
+      }),
     containerType: z.number().min(1).max(2),
   })
   .refine(

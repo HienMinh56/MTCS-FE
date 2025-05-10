@@ -343,6 +343,27 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
       newErrors.licensePlate = "Biển số xe không được để trống";
     }
 
+    // Validate license plate format
+    const licensePlateRegex = /^\d{2}[A-Z]([A-Z0-9])?-\d{4,5}$/;
+    if (
+      formData.licensePlate &&
+      !licensePlateRegex.test(formData.licensePlate)
+    ) {
+      newErrors.licensePlate =
+        "Biển số xe phải có định dạng ví dụ: 51A-1234, 51AB-1234, 51A8-1234, 17S3-50555";
+    } else if (formData.licensePlate) {
+      // Validate first two digits are between 11-99
+      const firstTwoDigits = parseInt(formData.licensePlate.substring(0, 2));
+      if (firstTwoDigits < 11 || firstTwoDigits > 99) {
+        newErrors.licensePlate =
+          "Hai chữ số đầu tiên của biển số xe phải từ 11 đến 99";
+      }
+    }
+
+    if (formData.licensePlate.length < 8 || formData.licensePlate.length > 10) {
+      newErrors.licensePlate = "Biển số xe phải có từ 8 đến 10 ký tự";
+    }
+
     if (!formData.brand.trim()) {
       newErrors.brand = "Hãng sản xuất không được để trống";
     }
@@ -350,9 +371,9 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
     if (
       !formData.manufactureYear ||
       formData.manufactureYear < 1900 ||
-      formData.manufactureYear > new Date().getFullYear()
+      formData.manufactureYear > 2035
     ) {
-      newErrors.manufactureYear = "Năm sản xuất không hợp lệ";
+      newErrors.manufactureYear = "Năm sản xuất không hợp lệ (1900-2035)";
     }
 
     if (!formData.maxLoadWeight || formData.maxLoadWeight <= 0) {
@@ -377,6 +398,27 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
       }
     }
 
+    // Define min and max date boundaries
+    const minYear = 1990;
+    const maxYear = 2035;
+    const minDate = new Date(minYear, 0, 1);
+    const maxDate = new Date(maxYear, 11, 31);
+
+    // Validate required dates aren't null or empty
+    if (!formData.nextMaintenanceDate) {
+      newErrors.nextMaintenanceDate =
+        "Ngày bảo dưỡng tiếp theo không được để trống";
+    }
+
+    if (!formData.registrationDate) {
+      newErrors.registrationDate = "Ngày đăng kiểm không được để trống";
+    }
+
+    if (!formData.registrationExpirationDate) {
+      newErrors.registrationExpirationDate =
+        "Ngày hết hạn đăng kiểm không được để trống";
+    }
+
     // Validate next maintenance date is not in the past
     const nextMaintenance = new Date(formData.nextMaintenanceDate);
     nextMaintenance.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
@@ -384,6 +426,10 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
     if (nextMaintenance < today) {
       newErrors.nextMaintenanceDate =
         "Ngày bảo dưỡng tiếp theo không thể trong quá khứ";
+    }
+
+    if (nextMaintenance < minDate || nextMaintenance > maxDate) {
+      newErrors.nextMaintenanceDate = `Ngày bảo dưỡng tiếp theo phải từ năm ${minYear} đến năm ${maxYear}`;
     }
 
     // Only validate lastMaintenanceDate if it's provided
@@ -395,12 +441,39 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
         newErrors.nextMaintenanceDate =
           "Ngày bảo dưỡng tiếp theo phải sau ngày bảo dưỡng gần nhất";
       }
+
+      // Last maintenance date cannot be in the future
+      if (lastMaintenance > today) {
+        newErrors.lastMaintenanceDate =
+          "Ngày bảo dưỡng gần nhất không thể là ngày trong tương lai";
+      }
+
+      if (lastMaintenance < minDate || lastMaintenance > maxDate) {
+        newErrors.lastMaintenanceDate = `Ngày bảo dưỡng gần nhất phải từ năm ${minYear} đến năm ${maxYear}`;
+      }
     }
 
     const registration = new Date(formData.registrationDate);
+    registration.setHours(0, 0, 0, 0);
+
     const registrationExpiration = new Date(
       formData.registrationExpirationDate
     );
+    registrationExpiration.setHours(0, 0, 0, 0);
+
+    // Registration date cannot be in the future
+    if (registration > today) {
+      newErrors.registrationDate =
+        "Ngày đăng kiểm không thể là ngày trong tương lai";
+    }
+
+    if (registration < minDate || registration > maxDate) {
+      newErrors.registrationDate = `Ngày đăng kiểm phải từ năm ${minYear} đến năm ${maxYear}`;
+    }
+
+    if (registrationExpiration < minDate || registrationExpiration > maxDate) {
+      newErrors.registrationExpirationDate = `Ngày hết hạn đăng kiểm phải từ năm ${minYear} đến năm ${maxYear}`;
+    }
 
     if (registrationExpiration <= registration) {
       newErrors.registrationExpirationDate =
@@ -591,7 +664,7 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
                     InputProps={{
                       inputProps: {
                         min: 1900,
-                        max: new Date().getFullYear(),
+                        max: 2035,
                       },
                     }}
                   />
@@ -700,6 +773,10 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
                     variant="outlined"
                     size="small"
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{
+                      min: "1990-01-01",
+                      max: "2035-12-31",
+                    }}
                   />
                 </Grid>
 
@@ -718,6 +795,10 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
                     size="small"
                     required
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{
+                      min: "1990-01-01",
+                      max: "2035-12-31",
+                    }}
                   />
                 </Grid>
 
@@ -736,6 +817,10 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
                     size="small"
                     required
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{
+                      min: "1990-01-01",
+                      max: "2035-12-31",
+                    }}
                   />
                 </Grid>
 
@@ -754,6 +839,10 @@ const TractorUpdate: React.FC<TractorUpdateProps> = ({
                     size="small"
                     required
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{
+                      min: "1990-01-01",
+                      max: "2035-12-31",
+                    }}
                   />
                 </Grid>
               </Grid>
