@@ -349,11 +349,11 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
                         Kích thước
                       </Typography>
                       <Typography variant="body1">
-                        {orderData.containerSize === 1
+                        {orderData.containerSize === 20
                           ? "Container 20 FEET"
-                          : orderData.containerSize === 2
+                          : orderData.containerSize === 40
                           ? "Container 40 FEET"
-                          : "Container 45 FEET"}
+                          : "Không tìm thấy"}
                       </Typography>
                     </Grid>
                     <Grid item xs={12} md={4}>
