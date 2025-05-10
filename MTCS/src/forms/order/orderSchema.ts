@@ -7,7 +7,7 @@ import dayjs from "dayjs";
 // - 4th character: U, J or Z (indicator of container type)
 // - Next 6 characters: serial number (digits)
 // - Last 1 character: check digit (digit)
-const containerNumberPattern = /^[A-Z]{3}[UJZ]\d{6}\d{1}$/;
+const containerNumberPattern = /^[A-Z]{3}[URJZ]\d{6}\d{1}$/;
 
 // Custom string validator for no leading/trailing spaces and no consecutive spaces
 const validateStringFormat = (errorMessage: string) => {
@@ -26,6 +26,24 @@ const validateStringFormat = (errorMessage: string) => {
   };
 };
 
+const currentYear = dayjs().year();
+
+function isValidDateObject(val: Date) {
+  if (!(val instanceof Date) || isNaN(val.getTime())) return false;
+  const year = val.getFullYear();
+  const month = val.getMonth() + 1; // getMonth() trả về 0-11
+  const day = val.getDate();
+
+  if (year !== currentYear) return false;
+  if (month < 1 || month > 12) return false;
+
+  // Kiểm tra số ngày hợp lệ theo tháng
+  const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (day < 1 || day > daysInMonth[month - 1]) return false;
+
+  return true;
+}
+
 export const orderSchema = z.object({
   companyName: z.string().min(1, 'Tên công ty là bắt buộc'),
   temperature: z.number()
@@ -34,8 +52,50 @@ export const orderSchema = z.object({
   weight: z.coerce.number({ invalid_type_error: 'Trọng lượng phải là một số' })
     .min(0.1, 'Trọng lượng phải lớn hơn 0 tấn')
     .max(100, 'Trọng lượng không được vượt quá 100 tấn'),
-  pickUpDate: z.date().or(z.string()).nullable(),
-  deliveryDate: z.date().or(z.string()).nullable(),
+  pickUpDate: z.any().superRefine((val, ctx) => {
+  if (val === null || val === undefined || val === "") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Ngày lấy hàng là bắt buộc",
+    });
+    return;
+  }
+  if (!(val instanceof Date) || isNaN(val.getTime())) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Ngày lấy hàng không hợp lệ",
+    });
+    return;
+  }
+  if (!isValidDateObject(val)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Ngày lấy hàng phải hợp lệ và năm phải là ${currentYear}`,
+    });
+  }
+}),
+deliveryDate: z.any().superRefine((val, ctx) => {
+  if (val === null || val === undefined || val === "") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Ngày giao hàng là bắt buộc",
+    });
+    return;
+  }
+  if (!(val instanceof Date) || isNaN(val.getTime())) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Ngày giao hàng không hợp lệ",
+    });
+    return;
+  }
+  if (!isValidDateObject(val)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Ngày giao hàng phải hợp lệ và năm phải là ${currentYear}`,
+    });
+  }
+}),
   note: z.string()
     .min(1, 'Ghi chú là bắt buộc')
     .max(500, 'Ghi chú không được vượt quá 500 ký tự')

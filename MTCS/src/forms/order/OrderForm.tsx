@@ -480,7 +480,10 @@ const OrderForm: React.FC<OrderFormProps> = ({
                                   - Kí tự thứ 4:
                                 </Typography>
                                 <Typography variant="body2">
-                                  &nbsp;&nbsp;U: Container chở hàng
+                                  &nbsp;&nbsp;U: Container chở hàng khô
+                                </Typography>
+                                <Typography variant="body2">
+                                  &nbsp;&nbsp;R: Container chở hàng lạnh
                                 </Typography>
                                 <Typography variant="body2">
                                   &nbsp;&nbsp;J: Thiết bị có thể tháo rời của

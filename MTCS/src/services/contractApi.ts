@@ -75,6 +75,7 @@ export const createContract = async (formData: FormData) => {
 
 export const updateContract = async (contractData : {
   ContractId: string;
+  Summary: string;
   StartDate: string;
   EndDate: string;
   Status: number;
@@ -87,6 +88,7 @@ export const updateContract = async (contractData : {
     // Create FormData for the API call
     const formData = new FormData();
     formData.append('ContractId', contractData.ContractId);
+    formData.append('Summary', contractData.Summary);
     formData.append('StartDate', contractData.StartDate);
     formData.append('EndDate', contractData.EndDate);
     formData.append('Status', contractData.Status.toString());

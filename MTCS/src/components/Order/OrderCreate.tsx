@@ -160,7 +160,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
           open: true,
           message: "Tạo đơn hàng thành công!",
           severity: "success",
-          duration: 3000,
+          duration: 1500,
         });
 
         // Delay navigation to allow the toast to be visible
@@ -173,7 +173,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
           } else {
             navigate("/staff-menu/orders");
           }
-        }, 4000);
+        }, 2500);
       } else if (response.status == -1) {
         // Keep isSuccess as false to allow retrying
         setIsSuccess(false);
@@ -182,7 +182,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
           open: true,
           message: "Tạo đơn hàng thất bại!",
           severity: "error",
-          duration: 3000,
+          duration: 1500,
         });
 
         // Show error message
@@ -190,7 +190,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
           open: true,
           message: `${response.message}`,
           severity: "error",
-          duration: 3000,
+          duration: 1500,
         });
       }
     } catch (error: any) {
@@ -201,7 +201,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
         open: true,
         message: error,
         severity: "error",
-        duration: 3000,
+        duration: 2000,
       });
     } finally {
       setIsSubmitting(false);
@@ -377,7 +377,7 @@ const OrderCreate: React.FC<OrderCreateProps> = ({ onClose, onSuccess }) => {
                         Trọng lượng
                       </Typography>
                       <Typography variant="body1">
-                        {orderData.weight} kg
+                        {orderData.weight} tấn
                       </Typography>
                     </Grid>
                     {orderData.containerType ===
