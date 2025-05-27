@@ -52,6 +52,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import ImageIcon from "@mui/icons-material/Image";
 import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import FolderIcon from "@mui/icons-material/Folder";
 import { useAuth } from "../contexts/AuthContext";
 
 import { format } from "date-fns";
@@ -59,6 +60,8 @@ import { vi } from "date-fns/locale";
 import { tripDetail, tripStatusHistory } from "../types/trip";
 import { getTripDetail, CancelTrip } from "../services/tripApi"; // Import getTripDetail and CancelTrip
 import { getDeliveryStatus } from "../services/deliveryStatus";
+import { getExpenseReportByTrip } from "../services/expenseReportApi";
+import { ExpenseReport, ExpenseReportFile } from "../types/expenseReport";
 
 const TripDetailPage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
@@ -73,6 +76,13 @@ const TripDetailPage: React.FC = () => {
     [key: string]: { statusName: string; color: string };
   } | null>(null);
   const [statusesLoaded, setStatusesLoaded] = useState<boolean>(false);
+
+  // Expense report states
+  const [expenseReports, setExpenseReports] = useState<ExpenseReport[]>([]);
+  const [expenseReportsLoading, setExpenseReportsLoading] = useState<boolean>(true);
+  const [fileDialogOpen, setFileDialogOpen] = useState<boolean>(false);
+  const [selectedFiles, setSelectedFiles] = useState<ExpenseReportFile[]>([]);
+  const [selectedReportName, setSelectedReportName] = useState<string>("");
 
   // Add states for cancel trip functionality
   const [cancelModalOpen, setCancelModalOpen] = useState<boolean>(false);
@@ -94,6 +104,32 @@ const TripDetailPage: React.FC = () => {
     src: "",
     title: "",
   });
+
+  // Fetch expense reports
+  useEffect(() => {
+    if (tripId) {
+      const fetchExpenseReports = async () => {
+        try {
+          setExpenseReportsLoading(true);
+          const data = await getExpenseReportByTrip(tripId);
+          setExpenseReports(Array.isArray(data) ? data : []);
+        } catch (err) {
+          console.error("Error fetching expense reports:", err);
+        } finally {
+          setExpenseReportsLoading(false);
+        }
+      };
+
+      fetchExpenseReports();
+    }
+  }, [tripId]);
+
+  // Handle opening file dialog
+  const handleOpenFileDialog = (files: ExpenseReportFile[], reportName: string) => {
+    setSelectedFiles(files);
+    setSelectedReportName(reportName);
+    setFileDialogOpen(true);
+  };
 
   // Add validation function for note
   const validateNote = (note: string): string => {
@@ -841,7 +877,7 @@ const TripDetailPage: React.FC = () => {
                 )}
               </Grid>
 
-              {/* Fuel Reports - Full width on mobile, half width on md+ */}
+              {/* Expense Reports - Replace Fuel Reports */}
               <Grid item xs={12}>
                 <Typography
                   variant="h6"
@@ -849,76 +885,45 @@ const TripDetailPage: React.FC = () => {
                   fontWeight="500"
                   sx={{ mb: 2 }}
                 >
-                  Báo cáo nhiên liệu
+                  Báo cáo chi phí
                 </Typography>
-                {tripData.fuelReports && tripData.fuelReports.length > 0 ? (
+                {expenseReportsLoading ? (
+                  <Box display="flex" justifyContent="center" p={2}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : expenseReports && expenseReports.length > 0 ? (
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableHead>
                         <TableRow>
                           <TableCell>Thời gian</TableCell>
-                          <TableCell align="center">Lượng tiêu thụ</TableCell>
+                          <TableCell>Loại chi phí</TableCell>
+                          <TableCell>Địa điểm</TableCell>
                           <TableCell align="center">Chi phí</TableCell>
+                          <TableCell align="center">Trạng thái</TableCell>
                           <TableCell align="center">Hoá đơn</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {tripData.fuelReports.map((report: any, index) => (
-                          <TableRow key={index}>
-                            <TableCell>
-                              {formatDateTime(report.reportTime)}
+                        {expenseReports.map((report, index) => (
+                          <TableRow key={report.reportId || index}>
+                            <TableCell>{formatDateTime(report.reportTime)}</TableCell>
+                            <TableCell>{report.reportTypeId}</TableCell>
+                            <TableCell>{report.location}</TableCell>
+                            <TableCell align="center">
+                              {new Intl.NumberFormat("vi-VN").format(report.cost)} VNĐ
                             </TableCell>
                             <TableCell align="center">
-                              {report.refuelAmount} lít
+                              {report.isPay === 1 ? "Đã thanh toán" : "Chưa thanh toán"}
                             </TableCell>
                             <TableCell align="center">
-                              {new Intl.NumberFormat("vi-VN").format(
-                                report.fuelCost
-                              )}{" "}
-                              VNĐ
-                            </TableCell>
-                            <TableCell
-                              align="center"
-                              sx={{
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              {report.fuelReportFiles &&
-                              report.fuelReportFiles.length > 0 ? (
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    gap: 1,
-                                    flexWrap: "wrap",
-                                    justifyContent: "center", // Center the image container horizontally
-                                    alignItems: "center", // Center items vertically
-                                  }}
+                              {report.expenseReportFiles && report.expenseReportFiles.length > 0 ? (
+                                <IconButton
+                                  color="primary"
+                                  onClick={() => handleOpenFileDialog(report.expenseReportFiles, `Chi phí ${report.reportTypeId}`)}
                                 >
-                                  {report.fuelReportFiles.map(
-                                    (file: any, fileIndex: number) => (
-                                      <Box
-                                        key={fileIndex}
-                                        component="img"
-                                        src={file.fileUrl}
-                                        alt="Hoá đơn nhiên liệu"
-                                        sx={{
-                                          width: 80,
-                                          height: 60,
-                                          objectFit: "cover",
-                                          cursor: "pointer",
-                                          borderRadius: 1,
-                                        }}
-                                        onClick={() =>
-                                          openImagePreview(
-                                            file.fileUrl,
-                                            "Hoá đơn nhiên liệu"
-                                          )
-                                        }
-                                      />
-                                    )
-                                  )}
-                                </Box>
+                                  <FolderIcon />
+                                </IconButton>
                               ) : (
                                 "Không có hoá đơn"
                               )}
@@ -930,7 +935,7 @@ const TripDetailPage: React.FC = () => {
                   </TableContainer>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    Không có báo cáo nhiên liệu
+                    Không có báo cáo chi phí
                   </Typography>
                 )}
               </Grid>
@@ -1597,6 +1602,59 @@ const TripDetailPage: React.FC = () => {
             Đóng
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Expense Report Files Dialog */}
+      <Dialog
+        open={fileDialogOpen}
+        onClose={() => setFileDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6">Hoá đơn: {selectedReportName}</Typography>
+            <IconButton edge="end" color="inherit" onClick={() => setFileDialogOpen(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2}>
+            {selectedFiles.map((file, index) => (
+              <Grid item xs={12} sm={6} md={4} key={file.fileId || index}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    p: 1,
+                    border: '1px solid #eee',
+                    borderRadius: 1,
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={file.fileUrl}
+                    alt={file.fileName}
+                    sx={{
+                      width: '100%',
+                      height: 150,
+                      objectFit: "cover",
+                      cursor: "pointer",
+                      borderRadius: 1,
+                      mb: 1
+                    }}
+                    onClick={() => openImagePreview(file.fileUrl, file.fileName)}
+                  />
+                  <Typography variant="caption" noWrap sx={{ width: '100%', textAlign: 'center' }}>
+                    {file.fileName}
+                  </Typography>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
       </Dialog>
 
       {/* Cancel Success Snackbar */}
