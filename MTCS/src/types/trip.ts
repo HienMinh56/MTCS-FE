@@ -1,6 +1,6 @@
 export enum matchBy {
   System = 1,
-  Staff = 2
+  Staff = 2,
 }
 
 export interface tripRelace {
@@ -51,4 +51,39 @@ export interface trip {
   incidentReports: incidentReports[] | null;
   inspectionLogs: null;
   tripStatusHistories: tripStatusHistory[] | null;
+
+export interface TripTimeTableItem {
+  tripId: string;
+  trackingCode: string;
+  pickUpLocation: string;
+  deliveryLocation: string;
+  conReturnLocation: string;
+  orderDetailId: string;
+  driverId: string;
+  driverName: string;
+  startTime: string;
+  endTime: string | null;
+  matchTime: string;
+  status: string;
 }
+
+export interface TripTimeTableResponse {
+  success: boolean;
+  data: TripTimeTableItem[];
+  message: string;
+  messageVN: string;
+  errors: null | any;
+}
+
+// export interface fuelReports {
+//   reportId: string,
+//   tripId: string,
+//   refuelAmount: number,
+//   fuelCost": 1000000,
+//           "location": "101 Đường Hàng Tre, Hồ Chí Minh",
+//           "reportTime": "2025-04-11T01:54:36.57",
+//           "reportBy": "Nguyễn Đức Linh",
+//           "licensePlate": null,
+//           "fuelReportFiles": [],
+//           "trip": null
+// }
