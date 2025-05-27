@@ -9,10 +9,10 @@ import {
   Button,
   Card,
   CardContent,
+  CardActions,
   Divider,
   Alert,
   Chip,
-  Tooltip,
   IconButton,
   Dialog,
   DialogContent,
@@ -28,16 +28,15 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   Checkbox,
   Snackbar,
   Fade,
   Slide,
-  SlideProps,
-  ButtonGroup,
-  useTheme,
-  useMediaQuery,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -60,6 +59,10 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as zod from "zod";
+import { Controller } from "react-hook-form";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { FormHelperText, ListItemIcon } from "@mui/material";
+import { createOrderDetail, updateOrderDetail } from "../services/orderApi";
 import {
   OrderDetails,
   ContainerType,
@@ -68,14 +71,16 @@ import {
   OrderStatus,
   IsPay,
   OrderFile,
+  OrderDetailDetail,
 } from "../types/order";
 import {
   getOrderDetails,
   updateOrder,
   updatePaymentStatus,
   cancelOrder,
+  getOrderDetailDetail,
 } from "../services/orderApi";
-import { getContracts, createContract } from "../services/contractApi";
+import { getContracts } from "../services/contractApi";
 import {
   getTrip,
   manualCreateTrip,
@@ -84,9 +89,9 @@ import {
 import { trip } from "../types/trip";
 import { ContractFile } from "../types/contract";
 import { format } from "date-fns";
-import AddContractFileModal from "../components/contract/AddContractFileModal";
 import OrderForm from "../forms/order/OrderForm";
 import { OrderFormValues } from "../forms/order/orderSchema";
+import dayjs from "dayjs";
 import { formatTime } from "../utils/dateUtils";
 import { getDriverList } from "../services/DriverApi";
 import { getTractors } from "../services/tractorApi";
@@ -110,7 +115,6 @@ const OrderDetailPage: React.FC = () => {
   const [tripError, setTripError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [openAddContractModal, setOpenAddContractModal] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState<string | null>(null);
@@ -120,6 +124,9 @@ const OrderDetailPage: React.FC = () => {
   const [autoScheduleLoading, setAutoScheduleLoading] = useState(false);
   const [autoScheduleError, setAutoScheduleError] = useState<string | null>(
     null
+  );
+  const [orderDetailList, setOrderDetailList] = useState<OrderDetailDetail[]>(
+    []
   );
   const [autoScheduleSuccess, setAutoScheduleSuccess] = useState<string | null>(
     null
@@ -148,7 +155,7 @@ const OrderDetailPage: React.FC = () => {
   } | null>(null);
   const [openCreateTripDialog, setOpenCreateTripDialog] = useState(false);
   const [createTripData, setCreateTripData] = useState({
-    orderId: "",
+    orderDetailId: "",
     driverId: "",
     tractorId: "",
     TrailerId: "",
@@ -213,6 +220,470 @@ const OrderDetailPage: React.FC = () => {
   const [cancelFinalConfirmDialogOpen, setCancelFinalConfirmDialogOpen] =
     useState(false);
 
+  const [createOrderDetailOpen, setCreateOrderDetailOpen] = useState(false);
+  const [createOrderDetailSuccess, setCreateOrderDetailSuccess] = useState<
+    string | null
+  >(null);
+  const [createOrderDetailLoading, setCreateOrderDetailLoading] =
+    useState(false);
+  const [createOrderDetailError, setCreateOrderDetailError] = useState<
+    string | null
+  >(null);
+  const [newOrderDetailFiles, setNewOrderDetailFiles] = useState<File[]>([]);
+  const [newOrderDetailFileDescriptions, setNewOrderDetailFileDescriptions] =
+    useState<string[]>([]);
+  const [newOrderDetailFileNotes, setNewOrderDetailFileNotes] = useState<
+    string[]
+  >([]);
+
+  // Add these at the top of your component with other state declarations
+  const [editOrderDetailOpen, setEditOrderDetailOpen] = useState(false);
+  const [editingOrderDetail, setEditingOrderDetail] =
+    useState<OrderDetailDetail | null>(null);
+  const [editOrderDetailLoading, setEditOrderDetailLoading] = useState(false);
+  const [editOrderDetailError, setEditOrderDetailError] = useState<
+    string | null
+  >(null);
+  const [editOrderDetailSuccess, setEditOrderDetailSuccess] = useState<
+    string | null
+  >(null);
+  const [editOrderDetailFiles, setEditOrderDetailFiles] = useState<File[]>([]);
+  const [editOrderDetailDescriptions, setEditOrderDetailDescriptions] =
+    useState<string[]>([]);
+  const [editOrderDetailNotes, setEditOrderDetailNotes] = useState<string[]>(
+    []
+  );
+  const [editOrderDetailFilesToRemove, setEditOrderDetailFilesToRemove] =
+    useState<string[]>([]);
+
+  const [containerTrips, setContainerTrips] = useState<Record<string, trip[]>>(
+    {}
+  );
+  const [loadingContainerTrips, setLoadingContainerTrips] = useState<
+    Record<string, boolean>
+  >({});
+  const [containerTripsError, setContainerTripsError] = useState<
+    Record<string, string | null>
+  >({});
+
+  const handleCreateOrderDetailOpen = () => {
+    setCreateOrderDetailOpen(true);
+    setCreateOrderDetailError(null);
+    setNewOrderDetailFiles([]);
+    setNewOrderDetailFileDescriptions([]);
+    setNewOrderDetailFileNotes([]);
+  };
+
+  const handleCreateOrderDetailClose = () => {
+    setCreateOrderDetailOpen(false);
+  };
+
+  const createOrderDetailSchema = zod.object({
+    containerNumber: zod
+      .string()
+      .min(1, "Mã Container là bắt buộc")
+      .max(50, "Mã Container không được vượt quá 50 ký tự"),
+    containerType: zod.nativeEnum(ContainerType),
+    containerSize: zod.nativeEnum(ContainerSize),
+    weight: zod
+      .number()
+      .min(0, "Khối lượng không được âm")
+      .max(100, "Khối lượng không được vượt quá 100 tấn"),
+    temperature: zod.number().nullable().optional(),
+    pickUpLocation: zod.string().min(1, "Địa điểm lấy hàng là bắt buộc"),
+    deliveryLocation: zod.string().min(1, "Địa điểm giao hàng là bắt buộc"),
+    conReturnLocation: zod
+      .string()
+      .min(1, "Địa điểm trả container là bắt buộc"),
+    completionTime: zod.string().nullable().optional(),
+    distance: zod.number().min(0, "Khoảng cách không được âm"),
+    pickUpDate: zod.date(),
+    deliveryDate: zod.date(),
+  });
+
+  // Add the type definition
+  type CreateOrderDetailFormValues = zod.infer<typeof createOrderDetailSchema>;
+
+  const {
+    register: registerOrderDetail,
+    handleSubmit: handleSubmitOrderDetail,
+    formState: { errors: errorsOrderDetail },
+    setValue: setValueOrderDetail,
+    watch: watchOrderDetail,
+    reset: resetOrderDetail,
+    control: controlOrderDetail,
+  } = useForm<CreateOrderDetailFormValues>({
+    resolver: zodResolver(createOrderDetailSchema),
+    defaultValues: {
+      containerNumber: "",
+      containerType: ContainerType["Container Khô"],
+      containerSize: ContainerSize["Container 20 FEET"],
+      weight: 0,
+      temperature: null,
+      pickUpLocation: "",
+      deliveryLocation: "",
+      conReturnLocation: "",
+      completionTime: null,
+      distance: 0,
+      pickUpDate: new Date(),
+      deliveryDate: new Date(),
+    },
+  });
+
+  // Watch container type to conditionally render temperature field
+  const watchContainerType = watchOrderDetail("containerType");
+
+  // Add the submit handler
+  const onSubmitCreateOrderDetail = async (
+    data: CreateOrderDetailFormValues
+  ) => {
+    if (!orderId) return;
+
+    setCreateOrderDetailLoading(true);
+    setCreateOrderDetailError(null);
+
+    try {
+      const formatDateString = (date: Date): string => {
+        return date.toISOString().split("T")[0]; // Gets only the YYYY-MM-DD part
+      };
+      // Prepare the data for API call
+      const orderDetailData = {
+        orderId,
+        containerNumber: data.containerNumber,
+        containerType: data.containerType,
+        containerSize: data.containerSize,
+        weight: data.weight,
+        temperature: data.temperature || 0,
+        pickUpLocation: data.pickUpLocation,
+        deliveryLocation: data.deliveryLocation,
+        conReturnLocation: data.conReturnLocation,
+        completionTime: data.completionTime || format(new Date(), "HH:mm"),
+        distance: data.distance,
+        pickUpDate: formatDateString(data.pickUpDate),
+        deliveryDate: formatDateString(data.deliveryDate),
+        description:
+          newOrderDetailFileDescriptions.length > 0
+            ? newOrderDetailFileDescriptions
+            : null,
+        notes:
+          newOrderDetailFileNotes.length > 0 ? newOrderDetailFileNotes : null,
+        files: newOrderDetailFiles.length > 0 ? newOrderDetailFiles : null,
+      };
+
+      console.log("Creating order detail with data:", orderDetailData);
+
+      // Call the API
+      const result = await createOrderDetail(orderDetailData);
+
+      // Handle success
+      setCreateOrderDetailSuccess("Thêm container thành công!");
+      handleCreateOrderDetailClose();
+
+      // Refresh the order detail list
+      fetchData();
+
+      // Show success notification
+      setLoadingSnackbar({
+        open: true,
+        message: "Thêm container thành công!",
+        severity: "success",
+        autoHideDuration: 3000,
+      });
+
+      setTimeout(() => {
+        setCreateOrderDetailSuccess(null);
+      }, 5000);
+    } catch (error) {
+      console.error("Error creating order detail:", error);
+      setCreateOrderDetailError(
+        "Không thể thêm container. Vui lòng thử lại sau."
+      );
+
+      setLoadingSnackbar({
+        open: true,
+        message: "Có lỗi xảy ra khi thêm container. Vui lòng thử lại!",
+        severity: "error",
+        autoHideDuration: 3000,
+      });
+    } finally {
+      setCreateOrderDetailLoading(false);
+    }
+  };
+
+  const handleNewOrderDetailFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      setNewOrderDetailFiles([...newOrderDetailFiles, ...filesArray]);
+
+      const newDescriptions = Array(filesArray.length).fill("");
+      const newNotes = Array(filesArray.length).fill("");
+
+      setNewOrderDetailFileDescriptions([
+        ...newOrderDetailFileDescriptions,
+        ...newDescriptions,
+      ]);
+      setNewOrderDetailFileNotes([...newOrderDetailFileNotes, ...newNotes]);
+    }
+  };
+
+  const handleRemoveNewOrderDetailFile = (index: number) => {
+    const updatedFiles = [...newOrderDetailFiles];
+    updatedFiles.splice(index, 1);
+    setNewOrderDetailFiles(updatedFiles);
+
+    const updatedDescriptions = [...newOrderDetailFileDescriptions];
+    updatedDescriptions.splice(index, 1);
+    setNewOrderDetailFileDescriptions(updatedDescriptions);
+
+    const updatedNotes = [...newOrderDetailFileNotes];
+    updatedNotes.splice(index, 1);
+    setNewOrderDetailFileNotes(updatedNotes);
+  };
+
+  const handleOrderDetailFileDescriptionChange = (
+    index: number,
+    value: string
+  ) => {
+    const newDescriptions = [...newOrderDetailFileDescriptions];
+    newDescriptions[index] = value;
+    setNewOrderDetailFileDescriptions(newDescriptions);
+  };
+
+  const handleOrderDetailFileNoteChange = (index: number, value: string) => {
+    const newNotes = [...newOrderDetailFileNotes];
+    newNotes[index] = value;
+    setNewOrderDetailFileNotes(newNotes);
+  };
+
+  // Đây là phần xử lý update Order Detail
+  const handleEditOrderDetailOpen = (detail: OrderDetailDetail) => {
+    setEditingOrderDetail(detail);
+    setEditOrderDetailOpen(true);
+    setEditOrderDetailError(null);
+    setEditOrderDetailFiles([]);
+    setEditOrderDetailDescriptions([]);
+    setEditOrderDetailNotes([]);
+    setEditOrderDetailFilesToRemove([]);
+
+    // Reset form with current values
+    resetEditOrderDetail({
+      containerNumber: detail.containerNumber,
+      containerType: detail.containerType,
+      containerSize: detail.containerSize,
+      weight: detail.weight,
+      temperature: detail.temperature,
+      pickUpLocation: detail.pickUpLocation,
+      deliveryLocation: detail.deliveryLocation,
+      conReturnLocation: detail.conReturnLocation,
+      completionTime: detail.completionTime || null,
+      distance: detail.distance,
+      pickUpDate: new Date(detail.pickUpDate),
+      deliveryDate: new Date(detail.deliveryDate),
+    });
+  };
+
+  const handleEditOrderDetailClose = () => {
+    setEditOrderDetailOpen(false);
+    setEditingOrderDetail(null);
+  };
+
+  const handleEditOrderDetailFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      setEditOrderDetailFiles([...editOrderDetailFiles, ...filesArray]);
+
+      const newDescriptions = Array(filesArray.length).fill("");
+      const newNotes = Array(filesArray.length).fill("");
+
+      setEditOrderDetailDescriptions([
+        ...editOrderDetailDescriptions,
+        ...newDescriptions,
+      ]);
+      setEditOrderDetailNotes([...editOrderDetailNotes, ...newNotes]);
+    }
+  };
+
+  const handleRemoveEditOrderDetailFile = (index: number) => {
+    const updatedFiles = [...editOrderDetailFiles];
+    updatedFiles.splice(index, 1);
+    setEditOrderDetailFiles(updatedFiles);
+
+    const updatedDescriptions = [...editOrderDetailDescriptions];
+    updatedDescriptions.splice(index, 1);
+    setEditOrderDetailDescriptions(updatedDescriptions);
+
+    const updatedNotes = [...editOrderDetailNotes];
+    updatedNotes.splice(index, 1);
+    setEditOrderDetailNotes(updatedNotes);
+  };
+
+  const handleToggleExistingFileRemoval = (fileUrl: string) => {
+    if (editOrderDetailFilesToRemove.includes(fileUrl)) {
+      setEditOrderDetailFilesToRemove(
+        editOrderDetailFilesToRemove.filter((url) => url !== fileUrl)
+      );
+    } else {
+      setEditOrderDetailFilesToRemove([
+        ...editOrderDetailFilesToRemove,
+        fileUrl,
+      ]);
+    }
+  };
+
+  const handleEditOrderDetailDescriptionChange = (
+    index: number,
+    value: string
+  ) => {
+    const newDescriptions = [...editOrderDetailDescriptions];
+    newDescriptions[index] = value;
+    setEditOrderDetailDescriptions(newDescriptions);
+  };
+
+  const handleEditOrderDetailNoteChange = (index: number, value: string) => {
+    const newNotes = [...editOrderDetailNotes];
+    newNotes[index] = value;
+    setEditOrderDetailNotes(newNotes);
+  };
+
+  const editOrderDetailSchema = zod.object({
+    containerNumber: zod
+      .string()
+      .min(1, "Mã Container là bắt buộc")
+      .max(50, "Mã Container không được vượt quá 50 ký tự"),
+    containerType: zod.nativeEnum(ContainerType),
+    containerSize: zod.nativeEnum(ContainerSize),
+    weight: zod
+      .number()
+      .min(0, "Khối lượng không được âm")
+      .max(100, "Khối lượng không được vượt quá 100 tấn"),
+    temperature: zod.number().nullable().optional(),
+    pickUpLocation: zod.string().min(1, "Địa điểm lấy hàng là bắt buộc"),
+    deliveryLocation: zod.string().min(1, "Địa điểm giao hàng là bắt buộc"),
+    conReturnLocation: zod
+      .string()
+      .min(1, "Địa điểm trả container là bắt buộc"),
+    completionTime: zod.string().nullable().optional(),
+    distance: zod.number().min(0, "Khoảng cách không được âm"),
+    pickUpDate: zod.date(),
+    deliveryDate: zod.date(),
+  });
+
+  type EditOrderDetailFormValues = zod.infer<typeof editOrderDetailSchema>;
+
+  const {
+    register: registerEditOrderDetail,
+    handleSubmit: handleSubmitEditOrderDetail,
+    formState: { errors: errorsEditOrderDetail },
+    setValue: setValueEditOrderDetail,
+    watch: watchEditOrderDetail,
+    reset: resetEditOrderDetail,
+    control: controlEditOrderDetail,
+  } = useForm<EditOrderDetailFormValues>({
+    resolver: zodResolver(editOrderDetailSchema),
+    defaultValues: {
+      containerNumber: "",
+      containerType: ContainerType["Container Khô"],
+      containerSize: ContainerSize["Container 20 FEET"],
+      weight: 0,
+      temperature: null,
+      pickUpLocation: "",
+      deliveryLocation: "",
+      conReturnLocation: "",
+      completionTime: null,
+      distance: 0,
+      pickUpDate: new Date(),
+      deliveryDate: new Date(),
+    },
+  });
+
+  // Watch container type to conditionally render temperature field
+  const watchEditContainerType = watchEditOrderDetail("containerType");
+
+  const onSubmitEditOrderDetail = async (data: EditOrderDetailFormValues) => {
+    if (!editingOrderDetail || !orderId) return;
+
+    setEditOrderDetailLoading(true);
+    setEditOrderDetailError(null);
+
+    try {
+      // Format dates as YYYY-MM-DD
+      const formatDateString = (date: Date): string => {
+        return date.toISOString().split("T")[0]; // Gets only the YYYY-MM-DD part
+      };
+
+      // Prepare the data for API call
+      const orderDetailData = {
+        orderId: editingOrderDetail.orderDetailId,
+        containerNumber: data.containerNumber,
+        containerType: data.containerType,
+        containerSize: data.containerSize,
+        weight: data.weight,
+        temperature: data.temperature || 0,
+        pickUpLocation: data.pickUpLocation,
+        deliveryLocation: data.deliveryLocation,
+        conReturnLocation: data.conReturnLocation,
+        completionTime: data.completionTime || format(new Date(), "HH:mm"),
+        distance: data.distance,
+        pickUpDate: formatDateString(data.pickUpDate),
+        deliveryDate: formatDateString(data.deliveryDate),
+        description:
+          editOrderDetailDescriptions.length > 0
+            ? editOrderDetailDescriptions
+            : null,
+        notes: editOrderDetailNotes.length > 0 ? editOrderDetailNotes : null,
+        filesToRemove:
+          editOrderDetailFilesToRemove.length > 0
+            ? editOrderDetailFilesToRemove
+            : null,
+        filesToAdd:
+          editOrderDetailFiles.length > 0 ? editOrderDetailFiles : null,
+      };
+
+      console.log("Updating order detail with data:", orderDetailData);
+
+      // Call the API
+      const result = await updateOrderDetail(orderDetailData);
+
+      // Handle success
+      setEditOrderDetailSuccess("Cập nhật container thành công!");
+      handleEditOrderDetailClose();
+
+      // Refresh the order detail list
+      fetchData();
+
+      // Show success notification
+      setLoadingSnackbar({
+        open: true,
+        message: "Cập nhật container thành công!",
+        severity: "success",
+        autoHideDuration: 3000,
+      });
+
+      setTimeout(() => {
+        setEditOrderDetailSuccess(null);
+      }, 5000);
+    } catch (error) {
+      console.error("Error updating order detail:", error);
+      setEditOrderDetailError(
+        "Không thể cập nhật container. Vui lòng thử lại sau."
+      );
+
+      setLoadingSnackbar({
+        open: true,
+        message: "Có lỗi xảy ra khi cập nhật container. Vui lòng thử lại!",
+        severity: "error",
+        autoHideDuration: 3000,
+      });
+    } finally {
+      setEditOrderDetailLoading(false);
+    }
+  };
+  // ==========================================
+
   // Close loading snackbar
   const handleCloseLoadingSnackbar = () => {
     setLoadingSnackbar({
@@ -222,6 +693,9 @@ const OrderDetailPage: React.FC = () => {
   };
 
   const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+
     try {
       if (!orderId) {
         console.error("No orderId provided in URL params");
@@ -244,6 +718,22 @@ const OrderDetailPage: React.FC = () => {
           setLoading(false);
           return;
         }
+
+        // Fetch order detail information
+        try {
+          // Get order details list
+          const orderDetailData = await getOrderDetailDetail(orderId);
+          setOrderDetailList(orderDetailData);
+
+          const tripsPromises = orderDetailData.map(async (detail) => {
+            await loadContainerTrips(detail.orderDetailId);
+          });
+
+          await Promise.all(tripsPromises);
+        } catch (detailError) {
+          console.error("Error fetching order details:", detailError);
+          setOrderDetailList([]);
+        }
       } catch (orderError) {
         console.error("Error fetching order details:", orderError);
         setError("Lỗi khi tải thông tin đơn hàng");
@@ -253,8 +743,8 @@ const OrderDetailPage: React.FC = () => {
 
       try {
         setTripLoading(true);
-        console.log("Fetching trip data for order:", orderId);
-        const tripResponse = await getTrip(orderId);
+        console.log("Fetching trip data for order:", orderData.trackingCode);
+        const tripResponse = await getTrip(orderData.trackingCode);
         console.log("Trip data received:", tripResponse);
         setTripData(tripResponse);
         setTripLoading(false);
@@ -403,21 +893,29 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+  // Thêm hàm trợ giúp để nhóm trips theo containerNumber
+  const groupTripsByContainer = (trips: trip[]): Record<string, trip[]> => {
+    const groupedTrips: Record<string, trip[]> = {};
+
+    if (!trips) return groupedTrips;
+
+    trips.forEach((trip) => {
+      const containerNumber = trip.containerNumber || "unknown";
+      if (!groupedTrips[containerNumber]) {
+        groupedTrips[containerNumber] = [];
+      }
+      groupedTrips[containerNumber].push(trip);
+    });
+
+    return groupedTrips;
+  };
+
   // Navigate back
   const handleBack = () => {
     const prefix = user?.role === "Admin" ? "/admin" : "/staff-menu";
     navigate(`${prefix}/orders`);
   };
 
-  const handleOpenAddContractModal = () => {
-    setOpenAddContractModal(true);
-  };
-
-  const handleCloseAddContractModal = () => {
-    setOpenAddContractModal(false);
-  };
-
-  // Define a more specific validation schema for the edit form
   const editOrderSchema = zod.object({
     note: zod
       .string()
@@ -429,10 +927,10 @@ const OrderDetailPage: React.FC = () => {
       .refine((val) => !/\s{2,}/.test(val), {
         message: "Ghi chú không được chứa nhiều hơn một dấu cách giữa các từ",
       }),
-    price: zod
+    totalAmount: zod
       .number()
-      .min(0, "Giá không được âm")
-      .max(1000000000, "Giá không được vượt quá 1 tỷ VND"),
+      .min(0, "Tổng tiền không được âm")
+      .max(1000000000, "Tổng tiền không được vượt quá 1 tỷ VNĐ"),
     contactPerson: zod
       .string()
       .min(1, "Tên người liên hệ là bắt buộc")
@@ -441,14 +939,6 @@ const OrderDetailPage: React.FC = () => {
         message:
           "Tên người liên hệ không được bắt đầu hoặc kết thúc bằng dấu cách",
       }),
-    containerNumber: zod
-      .string()
-      .min(1, "Số container là bắt buộc")
-      .max(20, "Số container không được vượt quá 20 ký tự")
-      .regex(
-        /^[A-Z]{3}[UJZ]\d{7}$/,
-        "Số container phải có định dạng hợp lệ (ví dụ: SEGU5593802)"
-      ),
     contactPhone: zod
       .string()
       .length(10, "Số điện thoại phải có đúng 10 số")
@@ -461,11 +951,6 @@ const OrderDetailPage: React.FC = () => {
         message:
           "Người đặt hàng không được bắt đầu hoặc kết thúc bằng dấu cách",
       }),
-    temperature: zod
-      .number()
-      .min(-30, "Nhiệt độ không được thấp hơn -30°C")
-      .max(40, "Nhiệt độ không được cao hơn 40°C")
-      .nullable(),
   });
 
   // Define the type for our form
@@ -483,12 +968,10 @@ const OrderDetailPage: React.FC = () => {
     resolver: zodResolver(editOrderSchema),
     defaultValues: {
       note: "",
-      price: 0,
+      totalAmount: 0,
       contactPerson: "",
-      containerNumber: "",
       contactPhone: "",
       orderPlacer: "",
-      temperature: null,
     },
   });
 
@@ -497,12 +980,10 @@ const OrderDetailPage: React.FC = () => {
       // Reset form with current order details
       reset({
         note: orderDetails.note || "",
-        price: orderDetails.price || 0,
+        totalAmount: orderDetails.totalAmount || 0,
         contactPerson: orderDetails.contactPerson || "",
-        containerNumber: orderDetails.containerNumber || "",
         contactPhone: orderDetails.contactPhone || "",
         orderPlacer: orderDetails.orderPlacer || "",
-        temperature: orderDetails.temperature || null,
       });
 
       // Set the state for payment status which is handled separately
@@ -603,40 +1084,14 @@ const OrderDetailPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      console.log("Current order details:", orderDetails);
-      console.log("Current files to delete:", filesToDelete);
-      console.log("Current new files:", newFiles);
-
-      // Process files and their metadata
-      if (newFiles.length > 0) {
-        while (fileDescriptions.length < newFiles.length) {
-          fileDescriptions.push("");
-        }
-
-        while (fileNotes.length < newFiles.length) {
-          fileNotes.push("");
-        }
-      }
-
       const updateData = {
         orderId: orderId,
-        status: orderDetails.status,
         note: data.note || "",
-        price: data.price,
+        totalAmount: data.totalAmount,
         contactPerson: data.contactPerson || "",
-        containerNumber: data.containerNumber || "",
         contactPhone: data.contactPhone || "",
         orderPlacer: data.orderPlacer || "",
         isPay: editFormData.isPay,
-        temperature:
-          orderDetails.containerType === ContainerType["Container Lạnh"]
-            ? data.temperature
-            : null,
-        description:
-          newFiles.length > 0 ? fileDescriptions.slice(0, newFiles.length) : [],
-        notes: newFiles.length > 0 ? fileNotes.slice(0, newFiles.length) : [],
-        filesToRemove: filesToDelete.length > 0 ? filesToDelete : null,
-        filesToAdd: newFiles.length > 0 ? newFiles : null,
       };
 
       console.log("Sending update data:", updateData);
@@ -850,10 +1305,10 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
-  const handleOpenCreateTripDialog = async () => {
-    if (orderId) {
+  const handleOpenCreateTripDialog = async (orderDetailId: string) => {
+    if (orderDetailId) {
       setCreateTripData({
-        orderId: orderId,
+        orderDetailId: orderDetailId,
         driverId: "",
         tractorId: "",
         TrailerId: "",
@@ -865,13 +1320,13 @@ const OrderDetailPage: React.FC = () => {
         await loadDrivers();
 
         try {
-          await loadTractors();
+          await loadTractors(orderDetailId); // Pass the orderDetailId
         } catch (tractorError) {
           console.error("Tractor loading failed independently:", tractorError);
         }
 
         try {
-          await loadTrailers();
+          await loadTrailers(orderDetailId); // Pass the orderDetailId
         } catch (trailerError) {
           console.error("Trailer loading failed independently:", trailerError);
         }
@@ -881,6 +1336,10 @@ const OrderDetailPage: React.FC = () => {
           "Không thể tải đủ dữ liệu cho biểu mẫu. Một số tùy chọn có thể không khả dụng."
         );
       }
+    } else {
+      setCreateTripError(
+        "Không thể tạo chuyến - không tìm thấy thông tin chi tiết đơn hàng"
+      );
     }
   };
 
@@ -905,10 +1364,19 @@ const OrderDetailPage: React.FC = () => {
       setLoadingDrivers(false);
     }
   };
-  
-  const loadTractors = async () => {
+
+  const loadTractors = async (orderDetailId: string) => {
     try {
       setLoadingTractors(true);
+
+      // Find the specific container detail
+      const selectedDetail = orderDetailList.find(
+        (detail) => detail.orderDetailId === orderDetailId
+      );
+
+      if (!selectedDetail) {
+        throw new Error("Container không tìm thấy");
+      }
 
       // Thực hiện hai lần gọi API riêng biệt
       const activeResponse = await getTractors(1, 100, undefined, "Active");
@@ -954,45 +1422,56 @@ const OrderDetailPage: React.FC = () => {
         ),
       ];
 
-      // Lấy trọng lượng từ order hiện tại
-      const orderWeight = orderDetails ? parseFloat(orderDetails.weight) : 0;
-      console.log("Order weight:", orderWeight);
+      // Lấy trọng lượng từ container được chọn
+      const containerWeight = selectedDetail.weight || 0;
+      console.log("Selected container weight:", containerWeight);
 
-      // Lọc tractors dựa trên containerType và maxLoadWeight của đơn hàng
-      if (orderDetails) {
-        // Đầu tiên lọc theo trọng lượng
+      // Lọc tractors dựa trên containerType và maxLoadWeight của container
+      // Đầu tiên lọc theo trọng lượng
+      combinedTractors = combinedTractors.filter(
+        (tractor) => tractor.maxLoadWeight >= containerWeight
+      );
+      console.log("Tractors after weight filtering:", combinedTractors.length);
+
+      // Sau đó lọc theo loại container
+      if (selectedDetail.containerType === ContainerType["Container Lạnh"]) {
+        // Nếu là container lạnh (type 2), chỉ lấy những tractor có containerType là 2
         combinedTractors = combinedTractors.filter(
-          (tractor) => tractor.maxLoadWeight >= orderWeight
+          (tractor) => tractor.containerType === 2
         );
-        console.log("Tractors after weight filtering:", combinedTractors.length);
-
-        // Sau đó lọc theo loại container
-        if (orderDetails.containerType === ContainerType["Container Lạnh"]) {
-          // Nếu là container lạnh (type 2), chỉ lấy những tractor có containerType là 2
-          combinedTractors = combinedTractors.filter(
-            (tractor) => tractor.containerType === 2
-          );
-        } else if (
-          orderDetails.containerType === ContainerType["Container Khô"]
-        ) {
-          // Nếu là container khô (type 1), lấy cả tractor loại 1 và loại 2
-          // Không cần lọc gì thêm vì đã lấy tất cả
-        }
+      } else if (
+        selectedDetail.containerType === ContainerType["Container Khô"]
+      ) {
+        // Nếu là container khô (type 1), lấy cả tractor loại 1 và loại 2
+        // Không cần lọc gì thêm vì đã lấy tất cả
       }
 
-      console.log("Combined tractors count after all filtering:", combinedTractors.length);
+      console.log(
+        "Combined tractors count after all filtering:",
+        combinedTractors.length
+      );
       setTractors(combinedTractors);
     } catch (error) {
       console.error("Error loading tractors:", error);
       setCreateTripError("Không thể tải dữ liệu đầu kéo. Vui lòng thử lại.");
+      throw error;
     } finally {
       setLoadingTractors(false);
     }
   };
 
-  const loadTrailers = async () => {
+  const loadTrailers = async (orderDetailId: string) => {
     try {
       setLoadingTrailers(true);
+
+      // Find the specific container detail
+      const selectedDetail = orderDetailList.find(
+        (detail) => detail.orderDetailId === orderDetailId
+      );
+
+      if (!selectedDetail) {
+        throw new Error("Container không tìm thấy");
+      }
 
       // Thực hiện hai lần gọi API riêng biệt
       const activeResponse = await getTrailers(1, 100, undefined, "Active");
@@ -1021,7 +1500,7 @@ const OrderDetailPage: React.FC = () => {
 
       // Lấy danh sách trailers từ cả hai response
       const activeTrailers = extractTrailers(activeResponse);
-      const onDutyTrailers = extractTrailers(onDutyResponse);      
+      const onDutyTrailers = extractTrailers(onDutyResponse);
 
       // Kết hợp danh sách và loại bỏ trùng lặp
       let combinedTrailers = [
@@ -1035,25 +1514,121 @@ const OrderDetailPage: React.FC = () => {
         ),
       ];
 
-      const orderWeight = orderDetails ? parseFloat(orderDetails.weight) : 0;
-      console.log("Order weight:", orderWeight);
+      // Lấy trọng lượng từ container được chọn
+      const containerWeight = selectedDetail.weight || 0;
+      console.log("Selected container weight:", containerWeight);
 
-      if (orderDetails) {
-        // Đầu tiên lọc theo trọng lượng
-        combinedTrailers = combinedTrailers.filter(
-          (trailer) => trailer.maxLoadWeight > orderWeight
-        );
-        console.log("Trailers after weight filtering:", combinedTrailers.length);        
-      }
+      // Lọc trailers theo trọng lượng
+      combinedTrailers = combinedTrailers.filter(
+        (trailer) => trailer.maxLoadWeight > containerWeight
+      );
+      console.log("Trailers after weight filtering:", combinedTrailers.length);
 
       setTrailers(combinedTrailers);
     } catch (error) {
       console.error("Error loading trailers:", error);
       setCreateTripError("Không thể tải dữ liệu rơ moóc. Vui lòng thử lại.");
+      throw error;
     } finally {
       setLoadingTrailers(false);
     }
   };
+
+  const loadContainerTrips = async (orderDetailId: string) => {
+    try {
+      setLoadingContainerTrips((prev) => ({ ...prev, [orderDetailId]: true }));
+      setContainerTripsError((prev) => ({ ...prev, [orderDetailId]: null }));
+
+      // Get the container number for tracking code
+      const container = orderDetailList.find(
+        (d) => d.orderDetailId === orderDetailId
+      );
+      if (!container) {
+        throw new Error("Container không tồn tại");
+      }
+
+      const trips = await getTrip(container.containerNumber);
+      console.log(
+        `Loaded trips for container ${container.containerNumber}:`,
+        trips
+      );
+
+      setContainerTrips((prev) => ({
+        ...prev,
+        [orderDetailId]: trips,
+      }));
+
+      return trips;
+    } catch (error) {
+      console.error(
+        `Error loading trips for container ${orderDetailId}:`,
+        error
+      );
+      setContainerTripsError((prev) => ({
+        ...prev,
+        [orderDetailId]: "Không thể tải dữ liệu chuyến đi",
+      }));
+      return [];
+    } finally {
+      setLoadingContainerTrips((prev) => ({ ...prev, [orderDetailId]: false }));
+    }
+  };
+
+  const hasActiveTrips = (orderDetailId: string): boolean => {
+    // Tìm container number từ orderDetailId
+    const detail = orderDetailList.find(
+      (d) => d.orderDetailId === orderDetailId
+    );
+    if (!detail) return false;
+
+    const containerNum = detail.containerNumber;
+
+    // Kiểm tra trong dữ liệu trips của container cụ thể
+    const containerSpecificTrips = containerTrips[orderDetailId] || [];
+    const hasActiveInContainerTrips = containerSpecificTrips.some(
+      (trip) => trip.status !== "not_started" && trip.status !== "canceled"
+    );
+
+    // Kiểm tra trong dữ liệu trips toàn cục
+    const hasActiveInGlobalTrips = tripData
+      ? tripData.some(
+          (trip) =>
+            trip.containerNumber === containerNum &&
+            trip.status !== "not_started" &&
+            trip.status !== "canceled"
+        )
+      : false;
+
+    return hasActiveInContainerTrips || hasActiveInGlobalTrips;
+  };
+
+  const hasCompletedTrips = (orderDetailId: string): boolean => {
+    // Tìm container number từ orderDetailId
+    const detail = orderDetailList.find(
+      (d) => d.orderDetailId === orderDetailId
+    );
+    if (!detail) return false;
+
+    const containerNum = detail.containerNumber;
+
+    // Kiểm tra trong dữ liệu trips của container cụ thể
+    const containerSpecificTrips = containerTrips[orderDetailId] || [];
+    const hasCompletedInContainerTrips = containerSpecificTrips.some(
+      (trip) => trip.status == "completed"
+    );
+
+    // Kiểm tra trong dữ liệu trips toàn cục
+    const hasCompletedInGlobalTrips = tripData
+      ? tripData.some(
+          (trip) =>
+            trip.containerNumber === containerNum &&
+            trip.status == "completedcompleted"
+        )
+      : false;
+
+    return hasCompletedInContainerTrips || hasCompletedInGlobalTrips;
+  };
+
   const handleCloseCreateTripDialog = () => {
     setOpenCreateTripDialog(false);
     // Reset tractor and trailer maxLoadWeight when closing the dialog
@@ -1061,7 +1636,7 @@ const OrderDetailPage: React.FC = () => {
     setTrailerMaxLoadWeight(null);
     // Reset the createTripData form values
     setCreateTripData({
-      orderId: orderId || "",
+      orderDetailId: orderId || "",
       driverId: "",
       tractorId: "",
       TrailerId: "",
@@ -1099,7 +1674,7 @@ const OrderDetailPage: React.FC = () => {
 
     try {
       if (
-        !createTripData.orderId ||
+        !createTripData.orderDetailId ||
         !createTripData.driverId ||
         !createTripData.tractorId ||
         !createTripData.TrailerId
@@ -1153,7 +1728,7 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
-  const handleAutoScheduleTrip = async () => {
+  const handleAutoScheduleTrip = async (orderDetailId: string) => {
     // Hiển thị thông báo đang xử lý và không tự động đóng
     setLoadingSnackbar({
       open: true,
@@ -1163,22 +1738,22 @@ const OrderDetailPage: React.FC = () => {
     });
 
     try {
-      if (!orderId) {
-        throw new Error("Không tìm thấy mã đơn hàng");
+      if (!orderDetailId) {
+        throw new Error("Không tìm thấy mã chi tiết đơn hàng");
       }
 
-      console.log("Auto scheduling trip for order:", orderId);
-      const result = await autoScheduleTrip(orderId);
+      console.log("Auto scheduling trip for order detail:", orderDetailId);
+      const result = await autoScheduleTrip(orderDetailId); // Use orderDetailId instead of orderId
       console.log("Auto scheduling result:", result);
 
       if (result.status == 1) {
         // Cập nhật state thành công
-        setAutoScheduleSuccess("Đã tạo chuyến cho đơn hàng!");
+        setAutoScheduleSuccess("Đã tạo chuyến cho container!");
 
         // Cập nhật snackbar hiện tại thành thông báo thành công
         setLoadingSnackbar({
           open: true,
-          message: "Đã xếp chuyến thành công cho đơn hàng!",
+          message: "Đã xếp chuyến thành công cho container!",
           severity: "success",
           autoHideDuration: 3000,
         });
@@ -1490,13 +2065,11 @@ const OrderDetailPage: React.FC = () => {
       <Button startIcon={<ArrowBackIcon />} onClick={handleBack} sx={{ mb: 2 }}>
         Quay lại danh sách đơn hàng
       </Button>
-
       {updateSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
           {updateSuccess}
         </Alert>
       )}
-
       <Box
         display="flex"
         justifyContent="space-between"
@@ -1555,7 +2128,6 @@ const OrderDetailPage: React.FC = () => {
             )}
         </Box>
       </Box>
-
       <Grid container spacing={3}>
         <Grid item xs={12} md={7}>
           <Paper
@@ -1639,7 +2211,9 @@ const OrderDetailPage: React.FC = () => {
                     Giá
                   </Typography>
                   <Typography variant="body1" gutterBottom>
-                    {new Intl.NumberFormat("vi-VN").format(orderDetails.price)}{" "}
+                    {new Intl.NumberFormat("vi-VN").format(
+                      orderDetails.totalAmount
+                    )}{" "}
                     VNĐ
                   </Typography>
                 </Grid>
@@ -1682,95 +2256,6 @@ const OrderDetailPage: React.FC = () => {
                     }
                   >
                     {orderDetails.companyName || "N/A"}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Số container
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {orderDetails.containerNumber || "N/A"}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Loại container
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {getContainerTypeName(orderDetails.containerType)}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Kích thước container
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {getContainerSizeName(
-                      orderDetails.containerSize ||
-                        ContainerSize["Container 20 FEET"]
-                    )}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Loại vận chuyển
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {getDeliveryTypeName(orderDetails.deliveryType)}
-                  </Typography>
-                </Grid>
-
-                {orderDetails.containerType ===
-                  ContainerType["Container Lạnh"] && (
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      Nhiệt độ
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      {orderDetails.temperature !== null
-                        ? `${orderDetails.temperature}°C`
-                        : "N/A"}
-                    </Typography>
-                  </Grid>
-                )}
-
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Trọng lượng
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {orderDetails.weight} tấn
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Ngày lấy hàng
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {formatDate(orderDetails.pickUpDate)}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Ngày giao hàng
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {formatDate(orderDetails.deliveryDate)}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Ước lượng thời gian tài xế chạy
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {orderDetails.completionTime || "N/A"}
                   </Typography>
                 </Grid>
 
@@ -1822,6 +2307,7 @@ const OrderDetailPage: React.FC = () => {
             </Box>
           </Paper>
 
+          {/* Đây là phần hiển thị thông tin đơn nhỏ */}
           <Paper elevation={2} sx={{ p: 3 }}>
             <Box
               sx={{
@@ -1832,6 +2318,7 @@ const OrderDetailPage: React.FC = () => {
                 color: "primary.contrastText",
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "space-between",
                 gap: 1,
                 mx: -3,
                 mt: -3,
@@ -1840,57 +2327,857 @@ const OrderDetailPage: React.FC = () => {
                 pb: 1.5,
               }}
             >
-              <LocationOnIcon sx={{ color: "inherit" }} />
-              <Typography variant="h6" sx={{ fontWeight: 500 }}>
-                Thông tin địa điểm
-              </Typography>
+              <Box display="flex" alignItems="center" gap={1}>
+                <LocationOnIcon sx={{ color: "inherit" }} />
+                <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                  Thông tin đơn
+                </Typography>
+              </Box>
+
+              {/* Add the create button - only show for Staff role and if order is in appropriate status */}
+              {user?.role === "Staff" &&
+                (orderDetails.status === OrderStatus.Pending ||
+                  orderDetails.status === OrderStatus.Scheduled) && (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={handleCreateOrderDetailOpen}
+                    sx={{
+                      background:
+                        "linear-gradient(135deg, #1976d2 0%, #2196f3 100%)",
+                      color: "white",
+                      boxShadow: "0 4px 8px rgba(25, 118, 210, 0.3)",
+                      fontWeight: 500,
+                      padding: "6px 16px",
+                      transition: "all 0.3s ease",
+                      "&:hover": {
+                        background:
+                          "linear-gradient(135deg, #1565c0 0%, #1976d2 100%)",
+                        boxShadow: "0 6px 12px rgba(21, 101, 192, 0.4)",
+                        transform: "translateY(-1px)",
+                      },
+                    }}
+                  >
+                    Thêm container
+                  </Button>
+                )}
             </Box>
-            {/* <Divider sx={{ mb: 2 }} /> */}
 
             <Box mt={3}>
               <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Địa điểm lấy hàng
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {orderDetails.pickUpLocation}
-                  </Typography>
-                </Grid>
+                {orderDetailList.length > 0 ? (
+                  orderDetailList.map((detail, index) => (
+                    <Grid item xs={12} key={detail.orderDetailId || index}>
+                      <Accordion defaultExpanded={index === 0}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                          <Box
+                            display="flex"
+                            width="100%"
+                            justifyContent="space-between"
+                            alignItems="center"
+                          >
+                            <Typography variant="subtitle1" fontWeight="medium">
+                              Mã Con: {detail.containerNumber} -{" "}
+                              {getContainerTypeName(detail.containerType)}(
+                              {getContainerSizeName(detail.containerSize)})
+                            </Typography>
 
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Địa điểm giao hàng
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {orderDetails.deliveryLocation}
-                  </Typography>
-                </Grid>
+                            {hasActiveTrips(detail.orderDetailId) && (
+                              <Chip
+                                size="small"
+                                label="Đang giao"
+                                color="primary"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
 
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Địa điểm trả container
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {orderDetails.conReturnLocation}
-                  </Typography>
-                </Grid>
+                            {hasCompletedTrips(detail.orderDetailId) && (
+                              <Chip
+                                size="small"
+                                label="Đa hóa"
+                                color="success"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
 
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Tổng quãng đường
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {orderDetails.distance
-                      ? `${orderDetails.distance} km`
-                      : "N/A"}
-                  </Typography>
-                </Grid>
+                            {/* Only show update button for Staff role and if order is in appropriate status */}
+                            {user?.role === "Staff" &&
+                              detail.status === OrderStatus.Pending && (
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  startIcon={<EditIcon />}
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevent accordion from toggling
+                                    handleEditOrderDetailOpen(detail);
+                                  }}
+                                  sx={{ minWidth: 100 }}
+                                >
+                                  Cập nhật
+                                </Button>
+                              )}
+                          </Box>
+                        </AccordionSummary>
+
+                        <AccordionDetails>
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
+                                Ngày lấy Container
+                              </Typography>
+                              <Typography variant="body1" gutterBottom>
+                                {formatDate(detail.pickUpDate)}
+                              </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
+                                Ngày giao Container
+                              </Typography>
+                              <Typography variant="body1" gutterBottom>
+                                {formatDate(detail.deliveryDate)}
+                              </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
+                                khối lượng
+                              </Typography>
+                              <Typography variant="body1" gutterBottom>
+                                {detail.weight || "N/A"} Tấn
+                              </Typography>
+                            </Grid>
+
+                            {detail.containerType ===
+                              ContainerType["Container Lạnh"] && (
+                              <Grid item xs={12} sm={6}>
+                                <Typography
+                                  variant="subtitle2"
+                                  color="text.secondary"
+                                >
+                                  Nhiệt độ
+                                </Typography>
+                                <Typography variant="body1" gutterBottom>
+                                  {detail.temperature !== null
+                                    ? `${detail.temperature}°C`
+                                    : "N/A"}
+                                </Typography>
+                              </Grid>
+                            )}
+
+                            <Grid item xs={12} sm={6}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
+                                Khoảng cách
+                              </Typography>
+                              <Typography variant="body1" gutterBottom>
+                                {detail.distance} km
+                              </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
+                                Trạng thái đơn
+                              </Typography>
+                              <Typography variant="body1" gutterBottom>
+                                {getStatusDisplay(detail.status).label}
+                              </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
+                                Ước lượng thời gian giao hàng
+                              </Typography>
+                              <Typography variant="body1" gutterBottom>
+                                {detail.completionTime}
+                              </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
+                                Nơi lấy Container
+                              </Typography>
+                              <Typography variant="body1" gutterBottom>
+                                {detail.pickUpLocation || "N/A"}
+                              </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
+                                Nơi giao Container
+                              </Typography>
+                              <Typography variant="body1" gutterBottom>
+                                {detail.deliveryLocation || "N/A"}
+                              </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
+                                Nơi trả Container
+                              </Typography>
+                              <Typography variant="body1" gutterBottom>
+                                {detail.conReturnLocation || "N/A"}
+                              </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} sm={12}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.primary"
+                              >
+                                Giấy tờ
+                              </Typography>
+                              {detail.files && detail.files.length > 0 ? (
+                                <Box
+                                  sx={{
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(2, 1fr)",
+                                    gap: 2,
+                                    gridAutoFlow: "dense",
+                                  }}
+                                >
+                                  {detail.files.map((fileObj, index) => {
+                                    const fileUrl =
+                                      typeof fileObj === "string"
+                                        ? fileObj
+                                        : fileObj.fileUrl;
+                                    const fileName =
+                                      typeof fileObj === "string"
+                                        ? `Tài liệu ${index + 1}`
+                                        : fileObj.fileName;
+                                    const fileType =
+                                      typeof fileObj === "string"
+                                        ? null
+                                        : fileObj.fileType;
+
+                                    const isImage = fileType
+                                      ? fileType === "Image" ||
+                                        fileType
+                                          .toLowerCase()
+                                          .includes("image/")
+                                      : /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(
+                                          fileUrl
+                                        );
+
+                                    const isPdf =
+                                      fileType === "PDF Document" ||
+                                      (fileType &&
+                                        fileType
+                                          .toLowerCase()
+                                          .includes("pdf")) ||
+                                      fileUrl.toLowerCase().endsWith(".pdf");
+
+                                    const isXlsx =
+                                      fileType === "Excel Spreadsheet" ||
+                                      (fileType &&
+                                        fileType
+                                          .toLowerCase()
+                                          .includes("excel")) ||
+                                      fileUrl.toLowerCase().endsWith(".xls") ||
+                                      fileUrl.toLowerCase().endsWith(".xlsx");
+
+                                    const isDocx =
+                                      fileType === "Word Document" ||
+                                      (fileType &&
+                                        fileType
+                                          .toLowerCase()
+                                          .includes("word")) ||
+                                      fileUrl.toLowerCase().endsWith(".doc") ||
+                                      fileUrl.toLowerCase().endsWith(".docx");
+
+                                    const isPptx =
+                                      fileType === "PowerPoint Presentation" ||
+                                      (fileType &&
+                                        fileType
+                                          .toLowerCase()
+                                          .includes("powerpoint")) ||
+                                      fileUrl.toLowerCase().endsWith(".ppt") ||
+                                      fileUrl.toLowerCase().endsWith(".pptx");
+
+                                    return (
+                                      <Card
+                                        key={`order-file-${index}`}
+                                        sx={{
+                                          gridColumn: "span 1",
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          overflow: "hidden",
+                                          height: 180, // Tăng chiều cao để hiển thị đủ mô tả và ghi chú
+                                          width: "100%",
+                                        }}
+                                      >
+                                        <CardContent
+                                          sx={{
+                                            p: 1,
+                                            "&:last-child": { pb: 1 },
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            height: "100%",
+                                            overflow: "hidden",
+                                          }}
+                                        >
+                                          {isImage ? (
+                                            <>
+                                              <Box
+                                                component="img"
+                                                src={fileUrl}
+                                                alt={
+                                                  fileName ||
+                                                  `Order file ${index + 1}`
+                                                }
+                                                sx={{
+                                                  width: "100%",
+                                                  height: 80,
+                                                  objectFit: "cover",
+                                                  cursor: "pointer",
+                                                  borderRadius: 1,
+                                                }}
+                                                onClick={() =>
+                                                  openImagePreview(
+                                                    fileUrl,
+                                                    fileName
+                                                  )
+                                                }
+                                              />
+                                              <Box
+                                                sx={{
+                                                  width: "100%",
+                                                  overflow: "hidden",
+                                                }}
+                                              >
+                                                <Typography
+                                                  variant="caption"
+                                                  display="block"
+                                                  mt={0.5}
+                                                  noWrap
+                                                  sx={{
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    maxWidth: "100%",
+                                                  }}
+                                                  title={
+                                                    fileName ||
+                                                    `Hình ảnh ${index + 1}`
+                                                  }
+                                                >
+                                                  {fileName ||
+                                                    `Hình ảnh ${index + 1}`}
+                                                </Typography>
+                                              </Box>
+                                            </>
+                                          ) : isPdf ? (
+                                            <>
+                                              <Box
+                                                sx={{
+                                                  width: "100%",
+                                                  height: 80,
+                                                  display: "flex",
+                                                  flexDirection: "column",
+                                                  justifyContent: "center",
+                                                  alignItems: "center",
+                                                  background: "#f5f5f5",
+                                                  cursor: "pointer",
+                                                  borderRadius: 1,
+                                                  border: "1px solid #e0e0e0",
+                                                  position: "relative",
+                                                  overflow: "hidden",
+                                                }}
+                                                onClick={() =>
+                                                  handleFileClick(
+                                                    fileUrl,
+                                                    fileName ||
+                                                      `file-${index + 1}`,
+                                                    fileType
+                                                  )
+                                                }
+                                              >
+                                                <PictureAsPdfIcon
+                                                  sx={{
+                                                    fontSize: 40,
+                                                    color: "#f44336",
+                                                  }}
+                                                />
+                                                <Typography
+                                                  variant="caption"
+                                                  sx={{ mt: 0.5 }}
+                                                >
+                                                  Xem PDF
+                                                </Typography>
+                                                <Box
+                                                  sx={{
+                                                    position: "absolute",
+                                                    bottom: 0,
+                                                    left: 0,
+                                                    width: "100%",
+                                                    height: "4px",
+                                                    background:
+                                                      "linear-gradient(90deg, #f44336 0%, #ff9800 100%)",
+                                                  }}
+                                                />
+                                              </Box>
+                                              <Box
+                                                sx={{
+                                                  width: "100%",
+                                                  overflow: "hidden",
+                                                }}
+                                              >
+                                                <Typography
+                                                  variant="caption"
+                                                  display="block"
+                                                  mt={0.5}
+                                                  noWrap
+                                                  sx={{
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    maxWidth: "100%",
+                                                  }}
+                                                  title={
+                                                    fileName ||
+                                                    `PDF Document ${index + 1}`
+                                                  }
+                                                >
+                                                  {fileName ||
+                                                    `PDF Document ${index + 1}`}
+                                                </Typography>
+                                              </Box>
+                                            </>
+                                          ) : isXlsx ? (
+                                            <>
+                                              <Box
+                                                sx={{
+                                                  width: "100%",
+                                                  height: 80,
+                                                  display: "flex",
+                                                  flexDirection: "column",
+                                                  justifyContent: "center",
+                                                  alignItems: "center",
+                                                  background: "#f5f5f5",
+                                                  cursor: "pointer",
+                                                  borderRadius: 1,
+                                                  border: "1px solid #e0e0e0",
+                                                  position: "relative",
+                                                  overflow: "hidden",
+                                                }}
+                                                onClick={() =>
+                                                  handleFileClick(
+                                                    fileUrl,
+                                                    fileName ||
+                                                      `file-${index + 1}`,
+                                                    fileType
+                                                  )
+                                                }
+                                              >
+                                                <ArticleIcon
+                                                  sx={{
+                                                    fontSize: 40,
+                                                    color: "#4caf50",
+                                                  }}
+                                                />
+                                                <Typography
+                                                  variant="caption"
+                                                  sx={{ mt: 0.5 }}
+                                                >
+                                                  Xem Excel
+                                                </Typography>
+                                                <Box
+                                                  sx={{
+                                                    position: "absolute",
+                                                    bottom: 0,
+                                                    left: 0,
+                                                    width: "100%",
+                                                    height: "4px",
+                                                    background:
+                                                      "linear-gradient(90deg, #4caf50 0%, #8bc34a 100%)",
+                                                  }}
+                                                />
+                                              </Box>
+                                              <Box
+                                                sx={{
+                                                  width: "100%",
+                                                  overflow: "hidden",
+                                                }}
+                                              >
+                                                <Typography
+                                                  variant="caption"
+                                                  display="block"
+                                                  mt={0.5}
+                                                  noWrap
+                                                  sx={{
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    maxWidth: "100%",
+                                                  }}
+                                                  title={
+                                                    fileName ||
+                                                    `Excel File ${index + 1}`
+                                                  }
+                                                >
+                                                  {fileName ||
+                                                    `Excel File ${index + 1}`}
+                                                </Typography>
+                                              </Box>
+                                            </>
+                                          ) : isDocx ? (
+                                            <>
+                                              <Box
+                                                sx={{
+                                                  width: "100%",
+                                                  height: 80,
+                                                  display: "flex",
+                                                  flexDirection: "column",
+                                                  justifyContent: "center",
+                                                  alignItems: "center",
+                                                  background: "#f5f5f5",
+                                                  cursor: "pointer",
+                                                  borderRadius: 1,
+                                                  border: "1px solid #e0e0e0",
+                                                  position: "relative",
+                                                  overflow: "hidden",
+                                                }}
+                                                onClick={() =>
+                                                  handleFileClick(
+                                                    fileUrl,
+                                                    fileName ||
+                                                      `file-${index + 1}`,
+                                                    fileType
+                                                  )
+                                                }
+                                              >
+                                                <DescriptionIcon
+                                                  sx={{
+                                                    fontSize: 40,
+                                                    color: "#1976d2",
+                                                  }}
+                                                />
+                                                <Typography
+                                                  variant="caption"
+                                                  sx={{ mt: 0.5 }}
+                                                >
+                                                  Xem Word
+                                                </Typography>
+                                                <Box
+                                                  sx={{
+                                                    position: "absolute",
+                                                    bottom: 0,
+                                                    left: 0,
+                                                    width: "100%",
+                                                    height: "4px",
+                                                    background:
+                                                      "linear-gradient(90deg, #1976d2 0%, #64b5f6 100%)",
+                                                  }}
+                                                />
+                                              </Box>
+                                              <Box
+                                                sx={{
+                                                  width: "100%",
+                                                  overflow: "hidden",
+                                                }}
+                                              >
+                                                <Typography
+                                                  variant="caption"
+                                                  display="block"
+                                                  mt={0.5}
+                                                  noWrap
+                                                  sx={{
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    maxWidth: "100%",
+                                                  }}
+                                                  title={
+                                                    fileName ||
+                                                    `Word Document ${index + 1}`
+                                                  }
+                                                >
+                                                  {fileName ||
+                                                    `Word Document ${
+                                                      index + 1
+                                                    }`}
+                                                </Typography>
+                                              </Box>
+                                            </>
+                                          ) : isPptx ? (
+                                            <>
+                                              <Box
+                                                sx={{
+                                                  width: "100%",
+                                                  height: 80,
+                                                  display: "flex",
+                                                  flexDirection: "column",
+                                                  justifyContent: "center",
+                                                  alignItems: "center",
+                                                  background: "#f5f5f5",
+                                                  cursor: "pointer",
+                                                  borderRadius: 1,
+                                                  border: "1px solid #e0e0e0",
+                                                  position: "relative",
+                                                  overflow: "hidden",
+                                                }}
+                                                onClick={() =>
+                                                  handleFileClick(
+                                                    fileUrl,
+                                                    fileName ||
+                                                      `file-${index + 1}`,
+                                                    fileType
+                                                  )
+                                                }
+                                              >
+                                                <ArticleIcon
+                                                  sx={{
+                                                    fontSize: 40,
+                                                    color: "#ff9800",
+                                                  }}
+                                                />
+                                                <Typography
+                                                  variant="caption"
+                                                  sx={{ mt: 0.5 }}
+                                                >
+                                                  Xem PowerPoint
+                                                </Typography>
+                                                <Box
+                                                  sx={{
+                                                    position: "absolute",
+                                                    bottom: 0,
+                                                    left: 0,
+                                                    width: "100%",
+                                                    height: "4px",
+                                                    background:
+                                                      "linear-gradient(90deg, #ff9800 0%, #ffc107 100%)",
+                                                  }}
+                                                />
+                                              </Box>
+                                              <Box
+                                                sx={{
+                                                  width: "100%",
+                                                  overflow: "hidden",
+                                                }}
+                                              >
+                                                <Typography
+                                                  variant="caption"
+                                                  display="block"
+                                                  mt={0.5}
+                                                  noWrap
+                                                  sx={{
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    maxWidth: "100%",
+                                                  }}
+                                                  title={
+                                                    fileName ||
+                                                    `PowerPoint File ${
+                                                      index + 1
+                                                    }`
+                                                  }
+                                                >
+                                                  {fileName ||
+                                                    `PowerPoint File ${
+                                                      index + 1
+                                                    }`}
+                                                </Typography>
+                                              </Box>
+                                            </>
+                                          ) : (
+                                            <Box
+                                              sx={{
+                                                display: "flex",
+                                                flexDirection: "column",
+                                              }}
+                                            >
+                                              <Box
+                                                sx={{
+                                                  width: "100%",
+                                                  height: 80,
+                                                  display: "flex",
+                                                  flexDirection: "column",
+                                                  justifyContent: "center",
+                                                  alignItems: "center",
+                                                  background: "#f5f5f5",
+                                                  cursor: "pointer",
+                                                  borderRadius: 1,
+                                                  border: "1px solid #e0e0e0",
+                                                  position: "relative",
+                                                  overflow: "hidden",
+                                                }}
+                                                onClick={() =>
+                                                  handleFileClick(
+                                                    fileUrl,
+                                                    fileName ||
+                                                      `file-${index + 1}`,
+                                                    fileType
+                                                  )
+                                                }
+                                              >
+                                                <AttachFileIcon
+                                                  sx={{
+                                                    fontSize: 40,
+                                                    color: "#757575",
+                                                  }}
+                                                />
+                                                <Typography
+                                                  variant="caption"
+                                                  sx={{ mt: 0.5 }}
+                                                >
+                                                  Xem tài liệu
+                                                </Typography>
+                                                <Box
+                                                  sx={{
+                                                    position: "absolute",
+                                                    bottom: 0,
+                                                    left: 0,
+                                                    width: "100%",
+                                                    height: "4px",
+                                                    background:
+                                                      "linear-gradient(90deg, #757575 0%, #bdbdbd 100%)",
+                                                  }}
+                                                />
+                                              </Box>
+                                              <Box
+                                                sx={{
+                                                  width: "100%",
+                                                  overflow: "hidden",
+                                                }}
+                                              >
+                                                <Typography
+                                                  variant="caption"
+                                                  display="block"
+                                                  mt={0.5}
+                                                  noWrap
+                                                  sx={{
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    maxWidth: "100%",
+                                                  }}
+                                                  title={
+                                                    fileName ||
+                                                    `File ${index + 1}`
+                                                  }
+                                                >
+                                                  {fileName ||
+                                                    `File ${index + 1}`}
+                                                </Typography>
+                                              </Box>
+                                            </Box>
+                                          )}
+                                        </CardContent>
+                                      </Card>
+                                    );
+                                  })}
+                                </Box>
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  Không có giấy tờ đặt hàng
+                                </Typography>
+                              )}
+                            </Grid>
+
+                            {user?.role === "Staff" &&
+                              orderDetails.status === OrderStatus.Pending && (
+                                <Grid item xs={12}>
+                                  <Divider sx={{ mt: 1, mb: 2 }} />
+                                  <Typography variant="subtitle2" gutterBottom>
+                                    Xếp chuyến đi cho container này
+                                  </Typography>
+
+                                  {hasActiveTrips(detail.orderDetailId) ? (
+                                    <Alert severity="info" sx={{ mt: 1 }}>
+                                      Container này đang có chuyến vận chuyển
+                                    </Alert>
+                                  ) : (
+                                    <>
+                                      {detail.files &&
+                                      detail.files.length > 0 &&
+                                      contractFiles &&
+                                      contractFiles.length > 0 ? (
+                                        <Box display="flex" gap={2} mt={1}>
+                                          <Button
+                                            variant="outlined"
+                                            color="primary"
+                                            size="small"
+                                            startIcon={<AddIcon />}
+                                            onClick={() =>
+                                              handleAutoScheduleTrip(
+                                                detail.orderDetailId
+                                              )
+                                            }
+                                            disabled={autoScheduleLoading}
+                                          >
+                                            {autoScheduleLoading
+                                              ? "Đang xếp chuyến..."
+                                              : "Hệ thống xếp chuyến"}
+                                          </Button>
+
+                                          <Button
+                                            variant="outlined"
+                                            color="primary"
+                                            size="small"
+                                            startIcon={<AddIcon />}
+                                            onClick={() =>
+                                              handleOpenCreateTripDialog(
+                                                detail.orderDetailId
+                                              )
+                                            }
+                                          >
+                                            Tạo chuyến thủ công
+                                          </Button>
+                                        </Box>
+                                      ) : (
+                                        <Alert
+                                          severity="warning"
+                                          sx={{ mt: 1 }}
+                                        >
+                                          Cần có tài liệu container và tài liệu
+                                          hợp đồng để tạo chuyến đi
+                                        </Alert>
+                                      )}
+                                    </>
+                                  )}
+                                </Grid>
+                              )}
+                          </Grid>
+                        </AccordionDetails>
+                      </Accordion>
+                    </Grid>
+                  ))
+                ) : (
+                  <Grid item xs={12}>
+                    <Alert severity="info">
+                      Không có thông tin chi tiết đơn
+                    </Alert>
+                  </Grid>
+                )}
               </Grid>
             </Box>
           </Paper>
         </Grid>
 
+        {/* Đây là phần hiển thị thông tin liên hệ */}
         <Grid item xs={12} md={5}>
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
             <Box
@@ -1915,8 +3202,6 @@ const OrderDetailPage: React.FC = () => {
                 Thông tin liên hệ
               </Typography>
             </Box>
-
-            {/* <Divider sx={{ mb: 2 }} /> */}
 
             <Box mt={3}>
               <Grid container spacing={2}>
@@ -1975,507 +3260,6 @@ const OrderDetailPage: React.FC = () => {
               <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Tài liệu hồ sơ
               </Typography>
-            </Box>
-            {/* <Divider sx={{ mb: 2 }} /> */}
-
-            <Box mb={3}>
-              <Typography variant="subtitle2" gutterBottom>
-                Tài liệu đơn hàng
-              </Typography>
-              {orderDetails.orderFiles && orderDetails.orderFiles.length > 0 ? (
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(2, 1fr)",
-                    gap: 2,
-                    gridAutoFlow: "dense",
-                  }}
-                >
-                  {orderDetails.orderFiles.map((fileObj, index) => {
-                    const fileUrl =
-                      typeof fileObj === "string" ? fileObj : fileObj.fileUrl;
-                    const fileName =
-                      typeof fileObj === "string"
-                        ? `Tài liệu ${index + 1}`
-                        : fileObj.fileName;
-                    const fileType =
-                      typeof fileObj === "string" ? null : fileObj.fileType;
-                    const description =
-                      typeof fileObj === "string" ? null : fileObj.description;
-                    const notes =
-                      typeof fileObj === "string" ? null : fileObj.note;
-
-                    const isImage = fileType
-                      ? fileType === "Image" ||
-                        fileType.toLowerCase().includes("image/")
-                      : /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(fileUrl);
-
-                    const isPdf =
-                      fileType === "PDF Document" ||
-                      (fileType && fileType.toLowerCase().includes("pdf")) ||
-                      fileUrl.toLowerCase().endsWith(".pdf");
-
-                    const isXlsx =
-                      fileType === "Excel Spreadsheet" ||
-                      (fileType && fileType.toLowerCase().includes("excel")) ||
-                      fileUrl.toLowerCase().endsWith(".xls") ||
-                      fileUrl.toLowerCase().endsWith(".xlsx");
-
-                    const isDocx =
-                      fileType === "Word Document" ||
-                      (fileType && fileType.toLowerCase().includes("word")) ||
-                      fileUrl.toLowerCase().endsWith(".doc") ||
-                      fileUrl.toLowerCase().endsWith(".docx");
-
-                    const isPptx =
-                      fileType === "PowerPoint Presentation" ||
-                      (fileType &&
-                        fileType.toLowerCase().includes("powerpoint")) ||
-                      fileUrl.toLowerCase().endsWith(".ppt") ||
-                      fileUrl.toLowerCase().endsWith(".pptx");
-
-                    return (
-                      <Card
-                        key={`order-file-${index}`}
-                        sx={{
-                          gridColumn: "span 1",
-                          display: "flex",
-                          flexDirection: "column",
-                          overflow: "hidden",
-                          height: 180, // Tăng chiều cao để hiển thị đủ mô tả và ghi chú
-                          width: "100%",
-                        }}
-                      >
-                        <CardContent
-                          sx={{
-                            p: 1,
-                            "&:last-child": { pb: 1 },
-                            display: "flex",
-                            flexDirection: "column",
-                            height: "100%",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {isImage ? (
-                            <>
-                              <Box
-                                component="img"
-                                src={fileUrl}
-                                alt={fileName || `Order file ${index + 1}`}
-                                sx={{
-                                  width: "100%",
-                                  height: 80,
-                                  objectFit: "cover",
-                                  cursor: "pointer",
-                                  borderRadius: 1,
-                                }}
-                                onClick={() =>
-                                  openImagePreview(fileUrl, fileName)
-                                }
-                              />
-                              <Box sx={{ width: "100%", overflow: "hidden" }}>
-                                <Typography
-                                  variant="caption"
-                                  display="block"
-                                  mt={0.5}
-                                  noWrap
-                                  sx={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    maxWidth: "100%",
-                                  }}
-                                  title={fileName || `Hình ảnh ${index + 1}`}
-                                >
-                                  {fileName || `Hình ảnh ${index + 1}`}
-                                </Typography>
-                              </Box>
-                            </>
-                          ) : isPdf ? (
-                            <>
-                              <Box
-                                sx={{
-                                  width: "100%",
-                                  height: 80,
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                  background: "#f5f5f5",
-                                  cursor: "pointer",
-                                  borderRadius: 1,
-                                  border: "1px solid #e0e0e0",
-                                  position: "relative",
-                                  overflow: "hidden",
-                                }}
-                                onClick={() =>
-                                  handleFileClick(
-                                    fileUrl,
-                                    fileName || `file-${index + 1}`,
-                                    fileType
-                                  )
-                                }
-                              >
-                                <PictureAsPdfIcon
-                                  sx={{ fontSize: 40, color: "#f44336" }}
-                                />
-                                <Typography variant="caption" sx={{ mt: 0.5 }}>
-                                  Xem PDF
-                                </Typography>
-                                <Box
-                                  sx={{
-                                    position: "absolute",
-                                    bottom: 0,
-                                    left: 0,
-                                    width: "100%",
-                                    height: "4px",
-                                    background:
-                                      "linear-gradient(90deg, #f44336 0%, #ff9800 100%)",
-                                  }}
-                                />
-                              </Box>
-                              <Box sx={{ width: "100%", overflow: "hidden" }}>
-                                <Typography
-                                  variant="caption"
-                                  display="block"
-                                  mt={0.5}
-                                  noWrap
-                                  sx={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    maxWidth: "100%",
-                                  }}
-                                  title={
-                                    fileName || `PDF Document ${index + 1}`
-                                  }
-                                >
-                                  {fileName || `PDF Document ${index + 1}`}
-                                </Typography>
-                              </Box>
-                            </>
-                          ) : isXlsx ? (
-                            <>
-                              <Box
-                                sx={{
-                                  width: "100%",
-                                  height: 80,
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                  background: "#f5f5f5",
-                                  cursor: "pointer",
-                                  borderRadius: 1,
-                                  border: "1px solid #e0e0e0",
-                                  position: "relative",
-                                  overflow: "hidden",
-                                }}
-                                onClick={() =>
-                                  handleFileClick(
-                                    fileUrl,
-                                    fileName || `file-${index + 1}`,
-                                    fileType
-                                  )
-                                }
-                              >
-                                <ArticleIcon
-                                  sx={{ fontSize: 40, color: "#4caf50" }}
-                                />
-                                <Typography variant="caption" sx={{ mt: 0.5 }}>
-                                  Xem Excel
-                                </Typography>
-                                <Box
-                                  sx={{
-                                    position: "absolute",
-                                    bottom: 0,
-                                    left: 0,
-                                    width: "100%",
-                                    height: "4px",
-                                    background:
-                                      "linear-gradient(90deg, #4caf50 0%, #8bc34a 100%)",
-                                  }}
-                                />
-                              </Box>
-                              <Box sx={{ width: "100%", overflow: "hidden" }}>
-                                <Typography
-                                  variant="caption"
-                                  display="block"
-                                  mt={0.5}
-                                  noWrap
-                                  sx={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    maxWidth: "100%",
-                                  }}
-                                  title={fileName || `Excel File ${index + 1}`}
-                                >
-                                  {fileName || `Excel File ${index + 1}`}
-                                </Typography>
-                              </Box>
-                            </>
-                          ) : isDocx ? (
-                            <>
-                              <Box
-                                sx={{
-                                  width: "100%",
-                                  height: 80,
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                  background: "#f5f5f5",
-                                  cursor: "pointer",
-                                  borderRadius: 1,
-                                  border: "1px solid #e0e0e0",
-                                  position: "relative",
-                                  overflow: "hidden",
-                                }}
-                                onClick={() =>
-                                  handleFileClick(
-                                    fileUrl,
-                                    fileName || `file-${index + 1}`,
-                                    fileType
-                                  )
-                                }
-                              >
-                                <DescriptionIcon
-                                  sx={{ fontSize: 40, color: "#1976d2" }}
-                                />
-                                <Typography variant="caption" sx={{ mt: 0.5 }}>
-                                  Xem Word
-                                </Typography>
-                                <Box
-                                  sx={{
-                                    position: "absolute",
-                                    bottom: 0,
-                                    left: 0,
-                                    width: "100%",
-                                    height: "4px",
-                                    background:
-                                      "linear-gradient(90deg, #1976d2 0%, #64b5f6 100%)",
-                                  }}
-                                />
-                              </Box>
-                              <Box sx={{ width: "100%", overflow: "hidden" }}>
-                                <Typography
-                                  variant="caption"
-                                  display="block"
-                                  mt={0.5}
-                                  noWrap
-                                  sx={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    maxWidth: "100%",
-                                  }}
-                                  title={
-                                    fileName || `Word Document ${index + 1}`
-                                  }
-                                >
-                                  {fileName || `Word Document ${index + 1}`}
-                                </Typography>
-                              </Box>
-                            </>
-                          ) : isPptx ? (
-                            <>
-                              <Box
-                                sx={{
-                                  width: "100%",
-                                  height: 80,
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                  background: "#f5f5f5",
-                                  cursor: "pointer",
-                                  borderRadius: 1,
-                                  border: "1px solid #e0e0e0",
-                                  position: "relative",
-                                  overflow: "hidden",
-                                }}
-                                onClick={() =>
-                                  handleFileClick(
-                                    fileUrl,
-                                    fileName || `file-${index + 1}`,
-                                    fileType
-                                  )
-                                }
-                              >
-                                <ArticleIcon
-                                  sx={{ fontSize: 40, color: "#ff9800" }}
-                                />
-                                <Typography variant="caption" sx={{ mt: 0.5 }}>
-                                  Xem PowerPoint
-                                </Typography>
-                                <Box
-                                  sx={{
-                                    position: "absolute",
-                                    bottom: 0,
-                                    left: 0,
-                                    width: "100%",
-                                    height: "4px",
-                                    background:
-                                      "linear-gradient(90deg, #ff9800 0%, #ffc107 100%)",
-                                  }}
-                                />
-                              </Box>
-                              <Box sx={{ width: "100%", overflow: "hidden" }}>
-                                <Typography
-                                  variant="caption"
-                                  display="block"
-                                  mt={0.5}
-                                  noWrap
-                                  sx={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    maxWidth: "100%",
-                                  }}
-                                  title={
-                                    fileName || `PowerPoint File ${index + 1}`
-                                  }
-                                >
-                                  {fileName || `PowerPoint File ${index + 1}`}
-                                </Typography>
-                              </Box>
-                            </>
-                          ) : (
-                            <Box
-                              sx={{ display: "flex", flexDirection: "column" }}
-                            >
-                              <Box
-                                sx={{
-                                  width: "100%",
-                                  height: 80,
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                  background: "#f5f5f5",
-                                  cursor: "pointer",
-                                  borderRadius: 1,
-                                  border: "1px solid #e0e0e0",
-                                  position: "relative",
-                                  overflow: "hidden",
-                                }}
-                                onClick={() =>
-                                  handleFileClick(
-                                    fileUrl,
-                                    fileName || `file-${index + 1}`,
-                                    fileType
-                                  )
-                                }
-                              >
-                                <AttachFileIcon
-                                  sx={{ fontSize: 40, color: "#757575" }}
-                                />
-                                <Typography variant="caption" sx={{ mt: 0.5 }}>
-                                  Xem tài liệu
-                                </Typography>
-                                <Box
-                                  sx={{
-                                    position: "absolute",
-                                    bottom: 0,
-                                    left: 0,
-                                    width: "100%",
-                                    height: "4px",
-                                    background:
-                                      "linear-gradient(90deg, #757575 0%, #bdbdbd 100%)",
-                                  }}
-                                />
-                              </Box>
-                              <Box sx={{ width: "100%", overflow: "hidden" }}>
-                                <Typography
-                                  variant="caption"
-                                  display="block"
-                                  mt={0.5}
-                                  noWrap
-                                  sx={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    maxWidth: "100%",
-                                  }}
-                                  title={fileName || `File ${index + 1}`}
-                                >
-                                  {fileName || `File ${index + 1}`}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          )}
-
-                          {(description || notes) && (
-                            <Box
-                              sx={{
-                                borderTop: "1px dashed rgba(0, 0, 0, 0.12)",
-                                mt: 1,
-                                pt: 0.5,
-                                overflow: "hidden",
-                                flex: 1,
-                                maxHeight: 60, // Tăng maxHeight để hiển thị đủ nội dung
-                              }}
-                            >
-                              {description && (
-                                <Box
-                                  sx={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  }}
-                                >
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    component="span"
-                                    sx={{ fontWeight: "medium" }}
-                                  >
-                                    Mô tả:
-                                  </Typography>
-                                  <Typography
-                                    variant="caption"
-                                    component="span"
-                                    sx={{ ml: 0.5 }}
-                                    noWrap={false}
-                                    title={description}
-                                  >
-                                    {description}
-                                  </Typography>
-                                </Box>
-                              )}
-
-                              {notes && (
-                                <Box
-                                  sx={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  }}
-                                >
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    component="span"
-                                    sx={{ fontWeight: "medium" }}
-                                  >
-                                    Ghi chú:
-                                  </Typography>
-                                  <Typography
-                                    variant="caption"
-                                    component="span"
-                                    sx={{ ml: 0.5 }}
-                                    noWrap={false}
-                                    title={notes}
-                                  >
-                                    {notes}
-                                  </Typography>
-                                </Box>
-                              )}
-                            </Box>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Không có giấy tờ đặt hàng
-                </Typography>
-              )}
             </Box>
 
             <Box>
@@ -3001,7 +3785,6 @@ const OrderDetailPage: React.FC = () => {
           <Paper elevation={2} sx={{ p: 3 }}>
             <Box
               display="flex"
-              // justifyContent="space-between"
               alignItems="center"
               sx={{
                 p: 1.5,
@@ -3058,264 +3841,248 @@ const OrderDetailPage: React.FC = () => {
 
             {!tripLoading && !tripError && (
               <>
-                {/* Case 1: No trips exist */}
                 {(!tripData || tripData.length === 0) && (
-                  <>
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      Chưa có thông tin chuyến đi cho đơn hàng này
-                    </Alert>
-
-                    {orderDetails.orderFiles &&
-                    orderDetails.orderFiles.length > 0 &&
-                    contractFiles &&
-                    contractFiles.length > 0 ? (
-                      <Box display="flex" justifyContent="space-between">
-                        {user?.role === "Staff" && (
-                          <>
-                            <Box display="flex" justifyContent="center" mt={2}>
-                              <Button
-                                variant="outlined"
-                                color="primary"
-                                startIcon={<AddIcon />}
-                                onClick={handleAutoScheduleTrip}
-                                disabled={autoScheduleLoading}
-                              >
-                                {autoScheduleLoading
-                                  ? "Đang xếp chuyến..."
-                                  : "Hệ thống xếp chuyến"}
-                              </Button>
-                            </Box>
-
-                            <Box display="flex" justifyContent="center" mt={2}>
-                              <Button
-                                variant="outlined"
-                                color="primary"
-                                startIcon={<AddIcon />}
-                                onClick={handleOpenCreateTripDialog}
-                              >
-                                Tạo chuyến thủ công
-                              </Button>
-                            </Box>
-                          </>
-                        )}
-                      </Box>
-                    ) : (
-                      <Alert severity="warning" sx={{ mt: 2 }}>
-                        Cần có tài liệu đơn hàng và tài liệu hợp đồng để tạo
-                        chuyến đi
-                      </Alert>
-                    )}
-                  </>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Chưa có thông tin chuyến đi cho đơn hàng này
+                  </Alert>
                 )}
 
-                {/* Case 2: Trips exist */}
-                {tripData && tripData.length > 0 && (
-                  <>
-                    {/* Check if all trips are canceled to show create buttons */}
-                    {tripData.every((trip) => trip.status === "canceled") &&
-                      orderDetails.orderFiles &&
-                      orderDetails.orderFiles.length > 0 &&
-                      contractFiles &&
-                      contractFiles.length > 0 &&
-                      user?.role === "Staff" && (
-                        <Box
-                          display="flex"
-                          justifyContent="space-between"
-                          mb={2}
-                        >
-                          <Box display="flex" justifyContent="center" mt={2}>
-                            <Button
-                              variant="outlined"
-                              color="primary"
-                              startIcon={<AddIcon />}
-                              onClick={handleAutoScheduleTrip}
-                              disabled={autoScheduleLoading}
+                {tripData &&
+                  tripData.length > 0 &&
+                  (() => {
+                    const groupedTrips = groupTripsByContainer(tripData);
+
+                    return (
+                      <>
+                        {Object.entries(groupedTrips).map(
+                          ([containerNumber, containerTrips], groupIndex) => (
+                            <Accordion
+                              key={`trip-group-${containerNumber}-${groupIndex}`}
+                              defaultExpanded={groupIndex === 0}
+                              sx={{
+                                mb: 2,
+                                "&:before": { display: "none" },
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                              }}
                             >
-                              {autoScheduleLoading
-                                ? "Đang xếp chuyến..."
-                                : "Hệ thống xếp chuyến"}
-                            </Button>
-                          </Box>
-
-                          <Box display="flex" justifyContent="center" mt={2}>
-                            <Button
-                              variant="outlined"
-                              color="primary"
-                              startIcon={<AddIcon />}
-                              onClick={handleOpenCreateTripDialog}
-                            >
-                              Tạo chuyến thủ công
-                            </Button>
-                          </Box>
-                        </Box>
-                      )}
-
-                    {/* Display trips */}
-                    {tripData.map((trip, index) => (
-                      <Box
-                        key={trip.tripId || index}
-                        sx={{
-                          mb: index < tripData.length - 1 ? 3 : 0,
-                          pb: index < tripData.length - 1 ? 3 : 0,
-                          borderBottom:
-                            index < tripData.length - 1
-                              ? "1px dashed rgba(0, 0, 0, 0.12)"
-                              : "none",
-                        }}
-                      >
-                        {index > 0 && (
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight="medium"
-                            gutterBottom
-                            mt={2}
-                          >
-                            Chuyến đi {index + 1}
-                          </Typography>
-                        )}
-                        <Grid container spacing={2}>
-                          <Grid item xs={12}>
-                            <Box
-                              display="flex"
-                              justifyContent="space-between"
-                              alignItems="center"
-                              mb={1}
-                            >
-                              <Typography
-                                variant="subtitle2"
-                                color="text.secondary"
-                              >
-                                Trạng thái chuyến đi
-                              </Typography>
-                              <Chip
-                                size="small"
-                                label={getTripStatusDisplay(trip.status).label}
-                                color={
-                                  getTripStatusDisplay(trip.status).color as any
-                                }
-                              />
-                            </Box>
-                          </Grid>
-
-                          <Grid item xs={12} sm={6}>
-                            <Typography
-                              variant="subtitle2"
-                              color="text.secondary"
-                            >
-                              Mã chuyến đi
-                            </Typography>
-                            <Typography variant="body1" gutterBottom>
-                              {trip.tripId || "N/A"}
-                            </Typography>
-                          </Grid>
-
-                          {trip.driverId && (
-                            <Grid item xs={12} sm={6}>
-                              <Typography
-                                variant="subtitle2"
-                                color="text.secondary"
-                              >
-                                Mã tài xế
-                              </Typography>
-                              <Typography
-                                variant="body1"
-                                gutterBottom
-                                sx={{
-                                  color: "primary.main",
-                                  cursor: "pointer",
-                                  fontWeight: 500,
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  position: "relative",
-                                  transition: "all 0.3s ease",
-                                  "&:after": {
-                                    content: '""',
-                                    position: "absolute",
-                                    width: "0%",
-                                    height: "2px",
-                                    bottom: 0,
-                                    left: 0,
-                                    backgroundColor: "primary.dark",
-                                    transition: "width 0.3s ease",
-                                  },
-                                  "&:hover": {
-                                    color: "primary.dark",
-                                    "&:after": {
-                                      width: "100%",
-                                    },
-                                  },
-                                }}
-                                onClick={() =>
-                                  navigate(`${prefix}/drivers/${trip.driverId}`)
-                                }
-                              >
-                                <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} />{" "}
-                                {trip.driverName}
-                              </Typography>
-                            </Grid>
-                          )}
-
-                          <Grid item xs={12} sm={6}>
-                            <Typography
-                              variant="subtitle2"
-                              color="text.secondary"
-                            >
-                              Thời gian bắt đầu
-                            </Typography>
-                            <Typography variant="body1" gutterBottom>
-                              {formatDateTime(trip.startTime)}
-                            </Typography>
-                          </Grid>
-
-                          <Grid item xs={12} sm={6}>
-                            <Typography
-                              variant="subtitle2"
-                              color="text.secondary"
-                            >
-                              Thời gian kết thúc
-                            </Typography>
-                            <Typography variant="body1" gutterBottom>
-                              {formatDateTime(trip.endTime)}
-                            </Typography>
-                          </Grid>
-
-                          {trip.tripId && (
-                            <Grid item xs={12}>
-                              <Box mt={1}>
-                                <Button
-                                  variant="outlined"
-                                  size="small"
-                                  startIcon={<DirectionsIcon />}
-                                  onClick={() =>
-                                    navigate(`${prefix}/trips/${trip.tripId}`)
-                                  }
+                              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                <Box
+                                  display="flex"
+                                  width="100%"
+                                  justifyContent="space-between"
+                                  alignItems="center"
                                 >
-                                  Chi tiết chuyến đi
-                                </Button>
-                              </Box>
-                            </Grid>
-                          )}
-                        </Grid>
-                      </Box>
-                    ))}
-                  </>
-                )}
+                                  <Typography
+                                    variant="subtitle1"
+                                    fontWeight="medium"
+                                  >
+                                    Container {containerNumber}
+                                  </Typography>
+
+                                  {/* Hiển thị trạng thái chuyến nếu có chuyến đi hoạt động */}
+                                  {containerTrips.some(
+                                    (trip) =>
+                                      trip.status !== "canceled" &&
+                                      trip.status !== "not_started"
+                                  ) && (
+                                    <Chip
+                                      size="small"
+                                      label="Đang giao"
+                                      color="primary"
+                                      sx={{ ml: 1 }}
+                                    />
+                                  )}
+                                </Box>
+                              </AccordionSummary>
+
+                              <AccordionDetails sx={{ pt: 0 }}>
+                                {containerTrips.map((trip, tripIndex) => (
+                                  <Box
+                                    key={trip.tripId || `trip-${tripIndex}`}
+                                    sx={{
+                                      mb:
+                                        tripIndex < containerTrips.length - 1
+                                          ? 3
+                                          : 0,
+                                      pb:
+                                        tripIndex < containerTrips.length - 1
+                                          ? 3
+                                          : 0,
+                                      borderBottom:
+                                        tripIndex < containerTrips.length - 1
+                                          ? "1px dashed rgba(0, 0, 0, 0.12)"
+                                          : "none",
+                                    }}
+                                  >
+                                    {tripIndex > 0 && (
+                                      <Typography
+                                        variant="subtitle2"
+                                        fontWeight="medium"
+                                        gutterBottom
+                                        mt={2}
+                                      >
+                                        Chuyến đi {tripIndex + 1}
+                                      </Typography>
+                                    )}
+
+                                    <Grid container spacing={2}>
+                                      <Grid item xs={12}>
+                                        <Box
+                                          display="flex"
+                                          justifyContent="space-between"
+                                          alignItems="center"
+                                          mb={1}
+                                        >
+                                          <Typography
+                                            variant="subtitle2"
+                                            color="text.secondary"
+                                          >
+                                            Trạng thái chuyến đi
+                                          </Typography>
+                                          <Chip
+                                            size="small"
+                                            label={
+                                              getTripStatusDisplay(trip.status)
+                                                .label
+                                            }
+                                            color={
+                                              getTripStatusDisplay(trip.status)
+                                                .color as any
+                                            }
+                                          />
+                                        </Box>
+                                      </Grid>
+
+                                      <Grid item xs={12} sm={6}>
+                                        <Typography
+                                          variant="subtitle2"
+                                          color="text.secondary"
+                                        >
+                                          Mã chuyến đi
+                                        </Typography>
+                                        <Typography
+                                          variant="body1"
+                                          gutterBottom
+                                        >
+                                          {trip.tripId || "N/A"}
+                                        </Typography>
+                                      </Grid>
+
+                                      {trip.driverId && (
+                                        <Grid item xs={12} sm={6}>
+                                          <Typography
+                                            variant="subtitle2"
+                                            color="text.secondary"
+                                          >
+                                            Tài xế
+                                          </Typography>
+                                          <Typography
+                                            variant="body1"
+                                            gutterBottom
+                                            sx={{
+                                              color: "primary.main",
+                                              cursor: "pointer",
+                                              fontWeight: 500,
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              position: "relative",
+                                              transition: "all 0.3s ease",
+                                              "&:after": {
+                                                content: '""',
+                                                position: "absolute",
+                                                width: "0%",
+                                                height: "2px",
+                                                bottom: 0,
+                                                left: 0,
+                                                backgroundColor: "primary.dark",
+                                                transition: "width 0.3s ease",
+                                              },
+                                              "&:hover": {
+                                                color: "primary.dark",
+                                                "&:after": {
+                                                  width: "100%",
+                                                },
+                                              },
+                                            }}
+                                            onClick={() =>
+                                              navigate(
+                                                `${prefix}/drivers/${trip.driverId}`
+                                              )
+                                            }
+                                          >
+                                            <PersonIcon
+                                              sx={{ fontSize: 16, mr: 0.5 }}
+                                            />{" "}
+                                            {trip.driverName}
+                                          </Typography>
+                                        </Grid>
+                                      )}
+
+                                      <Grid item xs={12} sm={6}>
+                                        <Typography
+                                          variant="subtitle2"
+                                          color="text.secondary"
+                                        >
+                                          Thời gian bắt đầu
+                                        </Typography>
+                                        <Typography
+                                          variant="body1"
+                                          gutterBottom
+                                        >
+                                          {formatDateTime(trip.startTime)}
+                                        </Typography>
+                                      </Grid>
+
+                                      <Grid item xs={12} sm={6}>
+                                        <Typography
+                                          variant="subtitle2"
+                                          color="text.secondary"
+                                        >
+                                          Thời gian kết thúc
+                                        </Typography>
+                                        <Typography
+                                          variant="body1"
+                                          gutterBottom
+                                        >
+                                          {formatDateTime(trip.endTime)}
+                                        </Typography>
+                                      </Grid>
+
+                                      {trip.tripId && (
+                                        <Grid item xs={12}>
+                                          <Box mt={1}>
+                                            <Button
+                                              variant="outlined"
+                                              size="small"
+                                              startIcon={<DirectionsIcon />}
+                                              onClick={() =>
+                                                navigate(
+                                                  `${prefix}/trips/${trip.tripId}`
+                                                )
+                                              }
+                                            >
+                                              Chi tiết chuyến đi
+                                            </Button>
+                                          </Box>
+                                        </Grid>
+                                      )}
+                                    </Grid>
+                                  </Box>
+                                ))}
+                              </AccordionDetails>
+                            </Accordion>
+                          )
+                        )}
+                      </>
+                    );
+                  })()}
               </>
             )}
           </Paper>
         </Grid>
       </Grid>
 
-      {orderDetails && (
-        <AddContractFileModal
-          open={openAddContractModal}
-          onClose={handleCloseAddContractModal}
-          onSuccess={handleContractAdded}
-          customerId={orderDetails.customerId}
-          orderId={orderId || ""}
-        />
-      )}
-
+      {/* Đây là phần hiển thị form cập nhật Order Status (Ko còn dùng nữa - có thể cần dùng sau này) */}
       <Dialog
         open={statusUpdateOpen}
         onClose={handleStatusUpdateClose}
@@ -3363,6 +4130,7 @@ const OrderDetailPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Đây là phần hiển thị form cập nhật Order */}
       <Dialog
         open={openEditDialog}
         onClose={handleCloseEditDialog}
@@ -3406,64 +4174,23 @@ const OrderDetailPage: React.FC = () => {
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="Số container"
-                    {...register("containerNumber")}
-                    error={!!errors.containerNumber}
-                    helperText={errors.containerNumber?.message}
-                    margin="normal"
-                    required
-                    disabled={isSubmitting}
-                    inputProps={{
-                      style: { textTransform: "uppercase" },
-                    }}
-                    onChange={(e) => {
-                      const value = e.target.value.toUpperCase();
-                      const formatted = value.replace(/[^A-Z0-9]/g, "");
-                      setValue("containerNumber", formatted, {
-                        shouldValidate: true,
-                      });
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Giá (VNĐ)"
-                    type="number"
-                    {...register("price", { valueAsNumber: true })}
-                    error={!!errors.price}
-                    helperText={errors.price?.message}
-                    margin="normal"
-                    required
-                    disabled={isSubmitting}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  {orderDetails?.containerType ===
-                    ContainerType["Container Lạnh"] && (
-                    <TextField
-                      fullWidth
-                      label="Nhiệt độ (°C)"
-                      type="number"
-                      {...register("temperature", { valueAsNumber: true })}
-                      error={!!errors.temperature}
-                      helperText={errors.temperature?.message}
-                      margin="normal"
-                      required={
-                        orderDetails?.containerType ===
-                        ContainerType["Container Lạnh"]
-                      }
-                      disabled={isSubmitting}
-                    />
-                  )}
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
                     label="Người đặt hàng"
                     {...register("orderPlacer")}
                     error={!!errors.orderPlacer}
                     helperText={errors.orderPlacer?.message}
+                    margin="normal"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Tổng tiền (VNĐ)"
+                    type="number"
+                    {...register("totalAmount", { valueAsNumber: true })}
+                    error={!!errors.totalAmount}
+                    helperText={errors.totalAmount?.message}
                     margin="normal"
                     required
                     disabled={isSubmitting}
@@ -3482,7 +4209,7 @@ const OrderDetailPage: React.FC = () => {
                     disabled={isSubmitting}
                   />
                 </Grid>
-                {/* <Grid item xs={12}>
+                <Grid item xs={12} hidden>
                   <FormControlLabel
                     control={
                       <Switch
@@ -3494,161 +4221,11 @@ const OrderDetailPage: React.FC = () => {
                     label="Đã thanh toán"
                     disabled={isSubmitting}
                   />
-                </Grid> */}
-
-                <Grid item xs={12}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Quản lý tài liệu đơn hàng
-                  </Typography>
-                  <Divider sx={{ mb: 2 }} />
-
-                  {orderDetails?.orderFiles &&
-                  orderDetails.orderFiles.length > 0 ? (
-                    <Box mb={3}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Tài liệu hiện tại
-                      </Typography>
-                      <List>
-                        {orderDetails.orderFiles.map((fileObj, index) => {
-                          const fileUrl =
-                            typeof fileObj === "string"
-                              ? fileObj
-                              : fileObj.fileUrl;
-                          const fileName =
-                            typeof fileObj === "string"
-                              ? `Tài liệu ${index + 1}`
-                              : fileObj.fileName || `Tài liệu ${index + 1}`;
-
-                          return (
-                            <ListItem key={index} dense>
-                              <ListItemText
-                                primary={fileName}
-                                secondary={
-                                  filesToDelete.includes(fileUrl)
-                                    ? "Sẽ bị xóa"
-                                    : ""
-                                }
-                              />
-                              <ListItemSecondaryAction>
-                                <Checkbox
-                                  edge="end"
-                                  onChange={() => handleFileToggle(fileUrl)}
-                                  checked={filesToDelete.includes(fileUrl)}
-                                  color="error"
-                                  disabled={isSubmitting}
-                                />
-                                <IconButton
-                                  size="small"
-                                  href={fileUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <AttachFileIcon fontSize="small" />
-                                </IconButton>
-                              </ListItemSecondaryAction>
-                            </ListItem>
-                          );
-                        })}
-                      </List>
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      Không có tài liệu hiện tại
-                    </Typography>
-                  )}
-
-                  <Box mt={3}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Thêm tài liệu mới
-                    </Typography>
-                    <Button
-                      variant="outlined"
-                      component="label"
-                      startIcon={<AttachFileIcon />}
-                      sx={{ mb: 2 }}
-                      disabled={isSubmitting}
-                    >
-                      Chọn tệp
-                      <input
-                        type="file"
-                        hidden
-                        multiple
-                        onChange={handleNewFileChange}
-                        disabled={isSubmitting}
-                      />
-                    </Button>
-
-                    {newFiles.length > 0 && (
-                      <Paper variant="outlined" sx={{ p: 2, mt: 1 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Tệp đã chọn:
-                        </Typography>
-                        {newFiles.map((file, index) => (
-                          <Box
-                            key={index}
-                            sx={{
-                              mb: 3,
-                              p: 2,
-                              border: "1px solid rgba(0, 0, 0, 0.12)",
-                              borderRadius: 1,
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                mb: 2,
-                              }}
-                            >
-                              <Typography variant="body2">
-                                {file.name}
-                              </Typography>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleRemoveNewFile(index)}
-                                disabled={isSubmitting}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-
-                            <TextField
-                              label="Mô tả file"
-                              value={fileDescriptions[index] || ""}
-                              onChange={(e) =>
-                                handleFileDescriptionChange(
-                                  index,
-                                  e.target.value
-                                )
-                              }
-                              fullWidth
-                              margin="normal"
-                              size="small"
-                              disabled={isSubmitting}
-                            />
-
-                            <TextField
-                              label="Ghi chú file"
-                              value={fileNotes[index] || ""}
-                              onChange={(e) =>
-                                handleFileNoteChange(index, e.target.value)
-                              }
-                              fullWidth
-                              margin="normal"
-                              size="small"
-                              disabled={isSubmitting}
-                            />
-                          </Box>
-                        ))}
-                      </Paper>
-                    )}
-                  </Box>
                 </Grid>
+
+                {/* Rest of the form for file management */}
               </Grid>
 
-              {/* Buttons for submission and cancel */}
               <Box
                 sx={{
                   display: "flex",
@@ -3672,6 +4249,7 @@ const OrderDetailPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Đây là phần hiển thị form tạo Trip */}
       <Dialog
         open={openCreateTripDialog}
         onClose={handleCloseCreateTripDialog}
@@ -3679,7 +4257,16 @@ const OrderDetailPage: React.FC = () => {
           sx: { borderRadius: 2 },
         }}
       >
-        <DialogTitle>Tạo chuyến đi mới</DialogTitle>
+        <DialogTitle>
+          {orderDetailList && orderDetailList.length > 0
+            ? `Tạo chuyến đi cho Container ${
+                orderDetailList.find(
+                  (detail) =>
+                    detail.orderDetailId === createTripData.orderDetailId
+                )?.containerNumber || ""
+              }`
+            : "Tạo chuyến đi mới"}
+        </DialogTitle>
         <DialogContent sx={{ pt: 1, width: 500 }}>
           {createTripError && (
             <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
@@ -3690,9 +4277,9 @@ const OrderDetailPage: React.FC = () => {
           <TextField
             fullWidth
             margin="normal"
-            label="Mã đơn hàng"
+            label="Mã chi tiết đơn"
             name="orderId"
-            value={createTripData.orderId}
+            value={createTripData.orderDetailId}
             disabled
           />
 
@@ -3866,6 +4453,7 @@ const OrderDetailPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Đây là phần hiển thị form cập nhật thanh toán */}
       <Dialog
         open={paymentConfirmationOpen}
         onClose={() => setPaymentConfirmationOpen(false)}
@@ -3910,6 +4498,7 @@ const OrderDetailPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Đây là phần hiển thị xem file ảnh */}
       <Dialog
         open={imagePreview.open}
         onClose={closeImagePreview}
@@ -3965,6 +4554,7 @@ const OrderDetailPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Đây là phần hiển thị xem file */}
       <Dialog
         open={documentPreview.open}
         onClose={() => setDocumentPreview({ ...documentPreview, open: false })}
@@ -4021,17 +4611,6 @@ const OrderDetailPage: React.FC = () => {
           />
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          {/* <Button
-            component="a"
-            href={documentPreview.src}
-            target="_blank"
-            rel="noopener noreferrer"
-            startIcon={<OpenInNewIcon />}
-            variant="outlined"
-            download
-          >
-            Tải xuống
-          </Button> */}
           <Button
             onClick={() =>
               setDocumentPreview({ ...documentPreview, open: false })
@@ -4044,6 +4623,7 @@ const OrderDetailPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Đây là phần hiển thị form cancel Order */}
       <Dialog
         open={cancelOrderDialogOpen}
         onClose={handleCancelOrderDialogClose}
@@ -4074,6 +4654,7 @@ const OrderDetailPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Đây là phần hiển thị form xác nhận cancel Order */}
       <Dialog
         open={cancelFinalConfirmDialogOpen}
         onClose={handleCancelFinalConfirmClose}
@@ -4101,6 +4682,929 @@ const OrderDetailPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Đây là form nhập Create Order Detail */}
+      <Dialog
+        open={createOrderDetailOpen}
+        onClose={handleCreateOrderDetailClose}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: { borderRadius: 2, maxHeight: "90vh" },
+        }}
+      >
+        <DialogTitle>
+          Thêm container cho đơn hàng {orderDetails?.trackingCode}
+        </DialogTitle>
+        <DialogContent>
+          {createOrderDetailError && (
+            <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
+              {createOrderDetailError}
+            </Alert>
+          )}
+
+          <Box sx={{ pt: 2 }}>
+            <form onSubmit={handleSubmitOrderDetail(onSubmitCreateOrderDetail)}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Mã container"
+                    {...registerOrderDetail("containerNumber")}
+                    error={!!errorsOrderDetail.containerNumber}
+                    helperText={errorsOrderDetail.containerNumber?.message}
+                    margin="normal"
+                    required
+                    disabled={createOrderDetailLoading}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth margin="normal" required>
+                    <InputLabel id="container-type-label">
+                      Loại container
+                    </InputLabel>
+                    <Controller
+                      name="containerType"
+                      control={controlOrderDetail}
+                      render={({ field }) => (
+                        <Select
+                          labelId="container-type-label"
+                          label="Loại container"
+                          {...field}
+                          disabled={createOrderDetailLoading}
+                        >
+                          <MenuItem value={ContainerType["Container Khô"]}>
+                            Container Khô
+                          </MenuItem>
+                          <MenuItem value={ContainerType["Container Lạnh"]}>
+                            Container Lạnh
+                          </MenuItem>
+                        </Select>
+                      )}
+                    />
+                    {errorsOrderDetail.containerType && (
+                      <FormHelperText error>
+                        {errorsOrderDetail.containerType.message}
+                      </FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth margin="normal" required>
+                    <InputLabel id="container-size-label">
+                      Kích thước container
+                    </InputLabel>
+                    <Controller
+                      name="containerSize"
+                      control={controlOrderDetail}
+                      render={({ field }) => (
+                        <Select
+                          labelId="container-size-label"
+                          label="Kích thước container"
+                          {...field}
+                          disabled={createOrderDetailLoading}
+                        >
+                          <MenuItem value={ContainerSize["Container 20 FEET"]}>
+                            Container 20 FEET
+                          </MenuItem>
+                          <MenuItem value={ContainerSize["Container 40 FEET"]}>
+                            Container 40 FEET
+                          </MenuItem>
+                        </Select>
+                      )}
+                    />
+                    {errorsOrderDetail.containerSize && (
+                      <FormHelperText error>
+                        {errorsOrderDetail.containerSize.message}
+                      </FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    name="weight"
+                    control={controlOrderDetail}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        type="number"
+                        label="Khối lượng (tấn)"
+                        error={!!errorsOrderDetail.weight}
+                        helperText={errorsOrderDetail.weight?.message}
+                        margin="normal"
+                        required
+                        disabled={createOrderDetailLoading}
+                        onChange={(e) =>
+                          field.onChange(parseFloat(e.target.value))
+                        }
+                      />
+                    )}
+                  />
+                </Grid>
+
+                {watchContainerType === ContainerType["Container Lạnh"] && (
+                  <Grid item xs={12} md={6}>
+                    <Controller
+                      name="temperature"
+                      control={controlOrderDetail}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          type="number"
+                          label="Nhiệt độ (°C)"
+                          error={!!errorsOrderDetail.temperature}
+                          helperText={errorsOrderDetail.temperature?.message}
+                          margin="normal"
+                          disabled={createOrderDetailLoading}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value))
+                          }
+                          value={field.value === null ? "" : field.value}
+                        />
+                      )}
+                    />
+                  </Grid>
+                )}
+
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    name="distance"
+                    control={controlOrderDetail}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        type="number"
+                        label="Khoảng cách (km)"
+                        error={!!errorsOrderDetail.distance}
+                        helperText={errorsOrderDetail.distance?.message}
+                        margin="normal"
+                        required
+                        disabled={createOrderDetailLoading}
+                        onChange={(e) =>
+                          field.onChange(parseFloat(e.target.value))
+                        }
+                      />
+                    )}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Địa điểm lấy hàng"
+                    {...registerOrderDetail("pickUpLocation")}
+                    error={!!errorsOrderDetail.pickUpLocation}
+                    helperText={errorsOrderDetail.pickUpLocation?.message}
+                    margin="normal"
+                    required
+                    disabled={createOrderDetailLoading}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Địa điểm giao hàng"
+                    {...registerOrderDetail("deliveryLocation")}
+                    error={!!errorsOrderDetail.deliveryLocation}
+                    helperText={errorsOrderDetail.deliveryLocation?.message}
+                    margin="normal"
+                    required
+                    disabled={createOrderDetailLoading}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Địa điểm trả container"
+                    {...registerOrderDetail("conReturnLocation")}
+                    error={!!errorsOrderDetail.conReturnLocation}
+                    helperText={errorsOrderDetail.conReturnLocation?.message}
+                    margin="normal"
+                    required
+                    disabled={createOrderDetailLoading}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Thời gian hoàn thành (HH:MM)"
+                    placeholder="Ví dụ: 14:30"
+                    defaultValue="00:00"
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                    inputProps={{
+                      pattern: "[0-9]{2}:[0-9]{2}",
+                    }}
+                    onChange={(e) => {
+                      const timeValue = e.target.value;
+                      // Set the completionTime as a string in the form
+                      if (
+                        timeValue &&
+                        /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeValue)
+                      ) {
+                        setValueOrderDetail("completionTime", timeValue);
+                      }
+                    }}
+                    error={!!errorsOrderDetail.completionTime}
+                    helperText={
+                      errorsOrderDetail.completionTime?.message ||
+                      "Nhập theo định dạng HH:MM (ví dụ: 14:30)"
+                    }
+                    margin="normal"
+                    disabled={createOrderDetailLoading}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    name="pickUpDate"
+                    control={controlOrderDetail}
+                    render={({ field }) => (
+                      <DatePicker
+                        label="Ngày lấy hàng"
+                        value={dayjs(field.value)}
+                        onChange={(date) =>
+                          field.onChange(date ? date.toDate() : null)
+                        }
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            margin: "normal",
+                            error: !!errorsOrderDetail.pickUpDate,
+                            helperText: errorsOrderDetail.pickUpDate?.message,
+                            required: true,
+                            disabled: createOrderDetailLoading,
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    name="deliveryDate"
+                    control={controlOrderDetail}
+                    render={({ field }) => (
+                      <DatePicker
+                        label="Ngày giao hàng"
+                        value={dayjs(field.value)}
+                        onChange={(date) =>
+                          field.onChange(date ? date.toDate() : null)
+                        }
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            margin: "normal",
+                            error: !!errorsOrderDetail.deliveryDate,
+                            helperText: errorsOrderDetail.deliveryDate?.message,
+                            required: true,
+                            disabled: createOrderDetailLoading,
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+
+                {/* File upload section */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Tài liệu đính kèm
+                  </Typography>
+
+                  <Box sx={{ mb: 2 }}>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<AttachFileIcon />}
+                      disabled={createOrderDetailLoading}
+                    >
+                      Chọn tài liệu
+                      <input
+                        type="file"
+                        multiple
+                        onChange={handleNewOrderDetailFileChange}
+                        hidden
+                      />
+                    </Button>
+                  </Box>
+
+                  {newOrderDetailFiles.length > 0 && (
+                    <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Tài liệu đã chọn
+                      </Typography>
+                      <List dense>
+                        {newOrderDetailFiles.map((file, index) => (
+                          <ListItem
+                            key={`new-file-${index}`}
+                            secondaryAction={
+                              <IconButton
+                                edge="end"
+                                onClick={() =>
+                                  handleRemoveNewOrderDetailFile(index)
+                                }
+                                disabled={createOrderDetailLoading}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            }
+                          >
+                            <ListItemIcon>
+                              <AttachFileIcon />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={file.name}
+                              secondary={
+                                <Grid container spacing={2} sx={{ mt: 1 }}>
+                                  <Grid item xs={12} sm={6}>
+                                    <TextField
+                                      fullWidth
+                                      size="small"
+                                      label="Mô tả"
+                                      value={
+                                        newOrderDetailFileDescriptions[index] ||
+                                        ""
+                                      }
+                                      onChange={(e) =>
+                                        handleOrderDetailFileDescriptionChange(
+                                          index,
+                                          e.target.value
+                                        )
+                                      }
+                                      disabled={createOrderDetailLoading}
+                                    />
+                                  </Grid>
+                                  <Grid item xs={12} sm={6}>
+                                    <TextField
+                                      fullWidth
+                                      size="small"
+                                      label="Ghi chú"
+                                      value={
+                                        newOrderDetailFileNotes[index] || ""
+                                      }
+                                      onChange={(e) =>
+                                        handleOrderDetailFileNoteChange(
+                                          index,
+                                          e.target.value
+                                        )
+                                      }
+                                      disabled={createOrderDetailLoading}
+                                    />
+                                  </Grid>
+                                </Grid>
+                              }
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Paper>
+                  )}
+                </Grid>
+              </Grid>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  mt: 3,
+                  gap: 2,
+                }}
+              >
+                <Button
+                  onClick={handleCreateOrderDetailClose}
+                  disabled={createOrderDetailLoading}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  type="submit"
+                  disabled={createOrderDetailLoading}
+                >
+                  {createOrderDetailLoading
+                    ? "Đang xử lý..."
+                    : "Thêm container"}
+                </Button>
+              </Box>
+            </form>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/* Đây là form nhập Update Order Detail */}
+      <Dialog
+        open={editOrderDetailOpen}
+        onClose={handleEditOrderDetailClose}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: { borderRadius: 2, maxHeight: "90vh" },
+        }}
+      >
+        <DialogTitle>
+          Cập nhật Container {editingOrderDetail?.containerNumber}
+        </DialogTitle>
+        <DialogContent>
+          {editOrderDetailError && (
+            <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
+              {editOrderDetailError}
+            </Alert>
+          )}
+
+          <Box sx={{ pt: 2 }}>
+            <form
+              onSubmit={handleSubmitEditOrderDetail(onSubmitEditOrderDetail)}
+            >
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Mã container"
+                    {...registerEditOrderDetail("containerNumber")}
+                    error={!!errorsEditOrderDetail.containerNumber}
+                    helperText={errorsEditOrderDetail.containerNumber?.message}
+                    margin="normal"
+                    required
+                    disabled={editOrderDetailLoading}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth margin="normal" required>
+                    <InputLabel id="edit-container-type-label">
+                      Loại container
+                    </InputLabel>
+                    <Controller
+                      name="containerType"
+                      control={controlEditOrderDetail}
+                      render={({ field }) => (
+                        <Select
+                          labelId="edit-container-type-label"
+                          label="Loại container"
+                          {...field}
+                          disabled={editOrderDetailLoading}
+                        >
+                          <MenuItem value={ContainerType["Container Khô"]}>
+                            Container Khô
+                          </MenuItem>
+                          <MenuItem value={ContainerType["Container Lạnh"]}>
+                            Container Lạnh
+                          </MenuItem>
+                        </Select>
+                      )}
+                    />
+                    {errorsEditOrderDetail.containerType && (
+                      <FormHelperText error>
+                        {errorsEditOrderDetail.containerType.message}
+                      </FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth margin="normal" required>
+                    <InputLabel id="edit-container-size-label">
+                      Kích thước container
+                    </InputLabel>
+                    <Controller
+                      name="containerSize"
+                      control={controlEditOrderDetail}
+                      render={({ field }) => (
+                        <Select
+                          labelId="edit-container-size-label"
+                          label="Kích thước container"
+                          {...field}
+                          disabled={editOrderDetailLoading}
+                        >
+                          <MenuItem value={ContainerSize["Container 20 FEET"]}>
+                            Container 20 FEET
+                          </MenuItem>
+                          <MenuItem value={ContainerSize["Container 40 FEET"]}>
+                            Container 40 FEET
+                          </MenuItem>
+                        </Select>
+                      )}
+                    />
+                    {errorsEditOrderDetail.containerSize && (
+                      <FormHelperText error>
+                        {errorsEditOrderDetail.containerSize.message}
+                      </FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    name="weight"
+                    control={controlEditOrderDetail}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        type="number"
+                        label="Khối lượng (tấn)"
+                        error={!!errorsEditOrderDetail.weight}
+                        helperText={errorsEditOrderDetail.weight?.message}
+                        margin="normal"
+                        required
+                        disabled={editOrderDetailLoading}
+                        onChange={(e) =>
+                          field.onChange(parseFloat(e.target.value))
+                        }
+                      />
+                    )}
+                  />
+                </Grid>
+
+                {watchEditContainerType === ContainerType["Container Lạnh"] && (
+                  <Grid item xs={12} md={6}>
+                    <Controller
+                      name="temperature"
+                      control={controlEditOrderDetail}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          type="number"
+                          label="Nhiệt độ (°C)"
+                          error={!!errorsEditOrderDetail.temperature}
+                          helperText={
+                            errorsEditOrderDetail.temperature?.message
+                          }
+                          margin="normal"
+                          disabled={editOrderDetailLoading}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value))
+                          }
+                          value={field.value === null ? "" : field.value}
+                        />
+                      )}
+                    />
+                  </Grid>
+                )}
+
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    name="distance"
+                    control={controlEditOrderDetail}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        type="number"
+                        label="Khoảng cách (km)"
+                        error={!!errorsEditOrderDetail.distance}
+                        helperText={errorsEditOrderDetail.distance?.message}
+                        margin="normal"
+                        required
+                        disabled={editOrderDetailLoading}
+                        onChange={(e) =>
+                          field.onChange(parseFloat(e.target.value))
+                        }
+                      />
+                    )}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Địa điểm lấy hàng"
+                    {...registerEditOrderDetail("pickUpLocation")}
+                    error={!!errorsEditOrderDetail.pickUpLocation}
+                    helperText={errorsEditOrderDetail.pickUpLocation?.message}
+                    margin="normal"
+                    required
+                    disabled={editOrderDetailLoading}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Địa điểm giao hàng"
+                    {...registerEditOrderDetail("deliveryLocation")}
+                    error={!!errorsEditOrderDetail.deliveryLocation}
+                    helperText={errorsEditOrderDetail.deliveryLocation?.message}
+                    margin="normal"
+                    required
+                    disabled={editOrderDetailLoading}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Địa điểm trả container"
+                    {...registerEditOrderDetail("conReturnLocation")}
+                    error={!!errorsEditOrderDetail.conReturnLocation}
+                    helperText={
+                      errorsEditOrderDetail.conReturnLocation?.message
+                    }
+                    margin="normal"
+                    required
+                    disabled={editOrderDetailLoading}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Thời gian hoàn thành (HH:MM)"
+                    placeholder="Ví dụ: 14:30"
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                    inputProps={{
+                      pattern: "[0-9]{2}:[0-9]{2}",
+                    }}
+                    onChange={(e) => {
+                      const timeValue = e.target.value;
+                      if (
+                        timeValue &&
+                        /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeValue)
+                      ) {
+                        setValueEditOrderDetail("completionTime", timeValue);
+                      }
+                    }}
+                    error={!!errorsEditOrderDetail.completionTime}
+                    helperText={
+                      errorsEditOrderDetail.completionTime?.message ||
+                      "Nhập theo định dạng HH:MM (ví dụ: 14:30)"
+                    }
+                    margin="normal"
+                    disabled={editOrderDetailLoading}
+                    defaultValue={
+                      editingOrderDetail?.completionTime
+                        ? editingOrderDetail.completionTime
+                            .split(":")
+                            .slice(0, 2)
+                            .join(":")
+                        : ""
+                    }
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    name="pickUpDate"
+                    control={controlEditOrderDetail}
+                    render={({ field }) => (
+                      <DatePicker
+                        label="Ngày lấy hàng"
+                        value={dayjs(field.value)}
+                        onChange={(date) =>
+                          field.onChange(date ? date.toDate() : null)
+                        }
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            margin: "normal",
+                            error: !!errorsEditOrderDetail.pickUpDate,
+                            helperText:
+                              errorsEditOrderDetail.pickUpDate?.message,
+                            required: true,
+                            disabled: editOrderDetailLoading,
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    name="deliveryDate"
+                    control={controlEditOrderDetail}
+                    render={({ field }) => (
+                      <DatePicker
+                        label="Ngày giao hàng"
+                        value={dayjs(field.value)}
+                        onChange={(date) =>
+                          field.onChange(date ? date.toDate() : null)
+                        }
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            margin: "normal",
+                            error: !!errorsEditOrderDetail.deliveryDate,
+                            helperText:
+                              errorsEditOrderDetail.deliveryDate?.message,
+                            required: true,
+                            disabled: editOrderDetailLoading,
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+
+                {/* Existing files section */}
+                {editingOrderDetail?.files &&
+                  editingOrderDetail.files.length > 0 && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle1" gutterBottom>
+                        Tài liệu hiện có
+                      </Typography>
+
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns:
+                            "repeat(auto-fill, minmax(150px, 1fr))",
+                          gap: 2,
+                        }}
+                      >
+                        {editingOrderDetail.files.map((file, index) => {
+                          const fileUrl =
+                            typeof file === "string" ? file : file.fileUrl;
+                          const fileName =
+                            typeof file === "string"
+                              ? `Tài liệu ${index + 1}`
+                              : file.fileName;
+                          const isMarkedForRemoval =
+                            editOrderDetailFilesToRemove.includes(fileUrl);
+
+                          return (
+                            <Card
+                              key={`existing-file-${index}`}
+                              sx={{
+                                opacity: isMarkedForRemoval ? 0.5 : 1,
+                                position: "relative",
+                                border: isMarkedForRemoval
+                                  ? "1px dashed #f44336"
+                                  : undefined,
+                              }}
+                            >
+                              <CardContent sx={{ p: 1 }}>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    mb: 1,
+                                  }}
+                                >
+                                  <AttachFileIcon sx={{ mr: 1 }} />
+                                  <Typography variant="body2" noWrap>
+                                    {fileName}
+                                  </Typography>
+                                </Box>
+                              </CardContent>
+                              <CardActions>
+                                <Button
+                                  size="small"
+                                  color={
+                                    isMarkedForRemoval ? "primary" : "error"
+                                  }
+                                  onClick={() =>
+                                    handleToggleExistingFileRemoval(fileUrl)
+                                  }
+                                >
+                                  {isMarkedForRemoval ? "Giữ lại" : "Xóa"}
+                                </Button>
+                              </CardActions>
+                            </Card>
+                          );
+                        })}
+                      </Box>
+                    </Grid>
+                  )}
+
+                {/* New files section */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Thêm tài liệu mới
+                  </Typography>
+
+                  <Box sx={{ mb: 2 }}>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<AttachFileIcon />}
+                      disabled={editOrderDetailLoading}
+                    >
+                      Chọn tài liệu
+                      <input
+                        type="file"
+                        multiple
+                        onChange={handleEditOrderDetailFileChange}
+                        hidden
+                      />
+                    </Button>
+                  </Box>
+
+                  {editOrderDetailFiles.length > 0 && (
+                    <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Tài liệu đã chọn
+                      </Typography>
+                      <List dense>
+                        {editOrderDetailFiles.map((file, index) => (
+                          <ListItem
+                            key={`new-file-${index}`}
+                            secondaryAction={
+                              <IconButton
+                                edge="end"
+                                onClick={() =>
+                                  handleRemoveEditOrderDetailFile(index)
+                                }
+                                disabled={editOrderDetailLoading}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            }
+                          >
+                            <ListItemIcon>
+                              <AttachFileIcon />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={file.name}
+                              secondary={
+                                <Grid container spacing={2} sx={{ mt: 1 }}>
+                                  <Grid item xs={12} sm={6}>
+                                    <TextField
+                                      fullWidth
+                                      size="small"
+                                      label="Mô tả"
+                                      value={
+                                        editOrderDetailDescriptions[index] || ""
+                                      }
+                                      onChange={(e) =>
+                                        handleEditOrderDetailDescriptionChange(
+                                          index,
+                                          e.target.value
+                                        )
+                                      }
+                                      disabled={editOrderDetailLoading}
+                                    />
+                                  </Grid>
+                                  <Grid item xs={12} sm={6}>
+                                    <TextField
+                                      fullWidth
+                                      size="small"
+                                      label="Ghi chú"
+                                      value={editOrderDetailNotes[index] || ""}
+                                      onChange={(e) =>
+                                        handleEditOrderDetailNoteChange(
+                                          index,
+                                          e.target.value
+                                        )
+                                      }
+                                      disabled={editOrderDetailLoading}
+                                    />
+                                  </Grid>
+                                </Grid>
+                              }
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Paper>
+                  )}
+                </Grid>
+              </Grid>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  mt: 3,
+                  gap: 2,
+                }}
+              >
+                <Button
+                  onClick={handleEditOrderDetailClose}
+                  disabled={editOrderDetailLoading}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  type="submit"
+                  disabled={editOrderDetailLoading}
+                >
+                  {editOrderDetailLoading ? "Đang xử lý..." : "Cập nhật"}
+                </Button>
+              </Box>
+            </form>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/* Snack bar hiển thị thông báo */}
       <Snackbar
         open={loadingSnackbar.open}
         autoHideDuration={loadingSnackbar.autoHideDuration}

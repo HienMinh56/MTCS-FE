@@ -5,6 +5,7 @@ import {
   ContainerType,
   ContainerSize,
   IsPay,
+  OrderDetailDetail,
 } from "../types/order";
 import axiosInstance from "../utils/axiosConfig";
 import { ApiResponse } from "../types/api-types";
@@ -78,66 +79,110 @@ export const getOrderDetails = async (
   }
 };
 
+export const getOrderDetailDetail = async (orderId: string): Promise<OrderDetailDetail[]> => {
+  try {
+    // Using query parameter instead of path parameter
+    const response = await axiosInstance.get<ApiResponse<OrderDetailDetail[]>>(
+      `/api/OrderDetail`,
+      {
+        params: {
+          orderId: orderId,
+        },
+      }
+    );
+
+    // Check if the response is successful and return the entire array
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      console.log("Order details array received:", response.data);
+      return response.data; // Return the entire array instead of just the first item
+    }
+
+    // Return empty array instead of throwing error to make UI handling easier
+    console.warn("No order details found for orderId:", orderId);
+    return [];
+  } catch (error) {
+    console.error("Error fetching order details:", error);
+    throw error;
+  }
+};
+
 export const createOrder = async (orderData: {
   companyName: string;
-  temperature: number | null; // Made nullable for Container Khô
-  weight: number;
-  pickUpDate: string;
-  deliveryDate: string;
   note: string;
-  containerType: ContainerType; // Now using updated ContainerType enum values
-  containerSize: ContainerSize;
-  deliveryType: number;
-  pickUpLocation: string;
-  deliveryLocation: string;
-  conReturnLocation: string;
-  price: number;
+  totalAmount: number;
   contactPerson: string;
   contactPhone: string;
-  distance: number | null;
-  containerNumber: string;
-  completeTime: string | null; // Added completeTime
-  orderPlacer: string; // Fixed field name to match backend
-  description: string[] | null;
-  notes: string[] | null;
-  files: File[] | null;
+  orderPlacer: string;
 }) => {
-  console.log("===== ORDER API REQUEST =====");
-  console.log("Request URL:", "/api/order");
-  console.log("Request data:", orderData);
-
   try {
     // Create FormData object
     const formData = new FormData();
 
     // Add orderRequest data as individual form fields
+    formData.append("CompanyName", orderData.companyName);
+    formData.append("Note", orderData.note);
+    formData.append("TotalAmount", orderData.totalAmount.toString());
+    formData.append("ContactPerson", orderData.contactPerson);
+    formData.append("ContactPhone", orderData.contactPhone);
+    formData.append("OrderPlacer", orderData.orderPlacer);
+
+    // Log the actual form data entries
+    console.log("FormData entries:");
+    for (let pair of formData.entries()) {
+      console.log(pair[0] + ": " + pair[1]);
+    }
+
+    const response = await axiosInstance.post("/api/order", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    console.log("===== ORDER API RESPONSE =====");
+    console.log("Status:", response.status);
+    console.log("Response data:", response.data);
+
+    return response.data;
+  } catch (error) {
+    console.error("===== ORDER API ERROR =====");
+    console.error("Error:", error);
+    throw error;
+  }
+};
+
+export const createOrderDetail = async (orderData: {
+  orderId: string;
+  containerNumber: string;
+  containerType: ContainerType;
+  containerSize: ContainerSize;
+  weight: number;
+  temperature: number;
+  pickUpLocation: string;
+  deliveryLocation: string;
+  conReturnLocation: string;
+  completionTime: string;
+  distance: number;
+  pickUpDate: string;
+  deliveryDate: string;
+  description: string[] | null;
+  notes: string[] | null;
+  files: File[] | null;
+}) => {
+  try {
+    const formData = new FormData();
     Object.entries(orderData).forEach(([key, value]) => {
-      // Skip files, description, and notes arrays as they need special handling
       if (key !== "files" && key !== "descriptions" && key !== "notes") {
-        // Handle orderPlacer field correctly - map to OrderPlace as expected by the backend
-        if (key === "orderPlacer") {
           if (value !== null && value !== undefined) {
-            formData.append("OrderPlace", value.toString());
-          }
-        } else if (value !== null && value !== undefined) {
           formData.append(key, value.toString());
         }
       }
     });
 
-    // Check if we have files to upload
     if (orderData.files && orderData.files.length > 0) {
-      // Ensure descriptions and notes arrays have same length as files
       const descriptions = orderData.description || [];
       const notes = orderData.notes || [];
 
-      // Log the counts to help diagnose issues
-      console.log("Files count:", orderData.files.length);
-      console.log("Descriptions count:", descriptions.length);
-      console.log("Notes count:", notes.length);
-
-      // Add files to formData
-      orderData.files.forEach((file, index) => {
+      orderData.files.forEach((file) => {
         formData.append("files", file);
       });
 
@@ -167,19 +212,14 @@ export const createOrder = async (orderData: {
       );
     }
 
-    const response = await axiosInstance.post("/api/order", formData, {
+    const response = await axiosInstance.post("/api/OrderDetail", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
 
-    console.log("===== ORDER API RESPONSE =====");
-    console.log("Status:", response.status);
-    console.log("Response data:", response.data);
-
     return response.data;
   } catch (error) {
-    console.error("===== ORDER API ERROR =====");
     console.error("Error:", error);
     throw error;
   }
@@ -187,43 +227,92 @@ export const createOrder = async (orderData: {
 
 export const updateOrder = async (orderData: {
   orderId: string;
-  status: OrderStatus;
   note: string;
-  price: number;
+  totalAmount: number;
   contactPerson: string;
-  containerNumber: string;
   contactPhone: string;
   orderPlacer: string;
   isPay: IsPay;
-  temperature: number | null;
-  description: string[] | null;
-  notes: string[] | null;
-  filesToRemove: string[] | null;
-  filesToAdd: File[] | null;
 }) => {
-  console.log("===== ORDER API REQUEST =====");
-  console.log("Request URL:", `/api/order/update/${orderData.orderId}`);
-  console.log("Request data:", orderData);
-
   try {
     // Always use FormData for all scenarios to match backend [FromForm] attribute
     const formData = new FormData();
 
     // Add basic fields - using the exact case that the backend expects
     formData.append("orderId", orderData.orderId);
-    formData.append("status", orderData.status.toString());
     formData.append("Note", orderData.note || "");
-    formData.append("Price", orderData.price.toString());
+    formData.append("TotalAmount", orderData.totalAmount.toString());
     formData.append("ContactPerson", orderData.contactPerson || "");
-    formData.append("ContainerNumber", orderData.containerNumber || "");
     formData.append("ContactPhone", orderData.contactPhone || "");
-    formData.append("OrderPlacer", orderData.orderPlacer || ""); // Changed from OrderPlace to OrderPlacer to match backend
+    formData.append("OrderPlacer", orderData.orderPlacer || "");
     formData.append("IsPay", orderData.isPay.toString());
 
-    // Only add temperature if it's not null
-    if (orderData.temperature !== null) {
-      formData.append("Temperature", orderData.temperature.toString());
+    // Log form data entries for debugging
+    console.log("FormData entries:");
+    for (let pair of formData.entries()) {
+      console.log(
+        pair[0] +
+          ": " +
+          (pair[1] instanceof File
+            ? `File: ${(pair[1] as File).name}`
+            : pair[1])
+      );
     }
+
+    const response = await axiosInstance.put(
+      `/api/order/update/${orderData.orderId}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error:", error);
+    throw error;
+  }
+};
+
+export const updateOrderDetail = async (orderData: {
+  orderId: string;
+  containerNumber: string;
+  containerType: ContainerType;
+  containerSize: ContainerSize;
+  weight: number;
+  temperature: number;
+  pickUpLocation: string;
+  deliveryLocation: string;
+  conReturnLocation: string;
+  completionTime: string;
+  distance: number;
+  pickUpdate: string;
+  deliveryDate: string;
+  description: string[] | null;
+  notes: string[] | null;
+  filesToRemove: string[] | null;
+  filesToAdd: File[] | null;
+}) => {
+  try {
+    // Always use FormData for all scenarios to match backend [FromForm] attribute
+    const formData = new FormData();
+
+    // Add basic fields - using the exact case that the backend expects
+    formData.append("orderId", orderData.orderId);
+    formData.append("ContainerNumber", orderData.containerNumber);
+    formData.append("ContainerType", orderData.containerType.toString());
+    formData.append("ContainerSize", orderData.containerSize.toString());
+    formData.append("Weight", orderData.weight.toString());
+    formData.append("Temperature", orderData.temperature.toString());
+    formData.append("PickUpLocation", orderData.pickUpLocation || "");
+    formData.append("DeliveryLocation", orderData.deliveryLocation || "");
+    formData.append("ConReturnLocation", orderData.conReturnLocation || "");
+    formData.append("CompletionTime", orderData.completionTime || "");
+    formData.append("Distance", orderData.distance.toString());
+    formData.append("PickUpDate", orderData.pickUpdate || "");
+    formData.append("DeliveryDate", orderData.deliveryDate || "");
 
     // Only add description fields for new files
     if (
@@ -279,7 +368,7 @@ export const updateOrder = async (orderData: {
     }
 
     const response = await axiosInstance.put(
-      `/api/order/update/${orderData.orderId}`,
+      `/api/OrderDetail/${orderData.orderId}`,
       formData,
       {
         headers: {
@@ -288,13 +377,8 @@ export const updateOrder = async (orderData: {
       }
     );
 
-    console.log("===== ORDER API RESPONSE =====");
-    console.log("Status:", response.status);
-    console.log("Response data:", response.data);
-
     return response.data;
   } catch (error) {
-    console.error("===== ORDER API ERROR =====");
     console.error("Error:", error);
     throw error;
   }

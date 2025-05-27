@@ -68,8 +68,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             "http://schemas.microsoft.com/ws/2008/06/identity/claims/name"
           ] ||
           "Nhân viên";
-        console.log("Token decoded:", decoded);
-        console.log("FullName found:", fullName);
 
         if (userId && role) {
           return { id: userId, role, fullName };
@@ -134,8 +132,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               "http://schemas.microsoft.com/ws/2008/06/identity/claims/name"
             ] ||
             "Nhân viên";
-          console.log("Token refresh - decoded:", decoded);
-          console.log("Token refresh - FullName found:", fullName);
 
           if (userId && role) {
             setUser({ id: userId, role, fullName });

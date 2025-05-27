@@ -36,6 +36,7 @@ export interface incidentReports {
 export interface trip {
   tripId: string | null;
   orderId: string | null;
+  containerNumber: string;
   driverId: string | null;
   tractorId: string | null;
   trailerId: string | null;
@@ -51,16 +52,3 @@ export interface trip {
   inspectionLogs: null;
   tripStatusHistories: tripStatusHistory[] | null;
 }
-
-// export interface fuelReports {
-//   reportId: string,
-//   tripId: string,
-//   refuelAmount: number,
-//   fuelCost": 1000000,
-//           "location": "101 Đường Hàng Tre, Hồ Chí Minh",
-//           "reportTime": "2025-04-11T01:54:36.57",
-//           "reportBy": "Nguyễn Đức Linh",
-//           "licensePlate": null,
-//           "fuelReportFiles": [],
-//           "trip": null
-// }
