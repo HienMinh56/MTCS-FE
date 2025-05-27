@@ -1,4 +1,4 @@
-import { tripRelace, trip } from "../types/trip";
+import { tripRelace, trip, TripTimeTableResponse } from "../types/trip";
 import axiosInstance from "../utils/axiosConfig";
 
 export const createTripReplace = async (tripData: tripRelace) => {
@@ -46,9 +46,7 @@ export const createTripReplace = async (tripData: tripRelace) => {
 
 export const getAllTrip = async () => {
   try {
-    const response = await axiosInstance.get<trip[] | trip>(
-      "/api/trips"
-    );
+    const response = await axiosInstance.get<trip[] | trip>("/api/trips");
 
     // Check if response has a data property that's an array (typical API wrapper format)
     if (response.data && (response.data as any).data) {
@@ -66,7 +64,7 @@ export const getAllTrip = async () => {
     console.error("Error fetching trip:", error);
     throw error;
   }
-}
+};
 
 export const getTrip = async (orderId: string) => {
   try {
@@ -157,7 +155,7 @@ export const autoScheduleTrip = async (orderId: string | null) => {
 export const CancelTrip = async (data: { tripId: string; note: string }) => {
   try {
     const formData = new FormData();
-    
+
     formData.append("tripId", data.tripId);
     formData.append("note", data.note);
 
@@ -201,4 +199,23 @@ export const getTripForTable = async () => {
     console.error("Error fetching trip:", error);
     throw error;
   }
-}
+};
+
+export const getTripTimeTable = async (startOfWeek: Date, endOfWeek: Date) => {
+  try {
+    const response = await axiosInstance.get<TripTimeTableResponse>(
+      `/api/trips/time-table`,
+      {
+        params: {
+          startOfWeek: startOfWeek.toISOString(),
+          endOfWeek: endOfWeek.toISOString(),
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching trip time table:", error);
+    throw error;
+  }
+};

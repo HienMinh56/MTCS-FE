@@ -1,6 +1,6 @@
 export enum matchBy {
   System = 1,
-  Staff = 2
+  Staff = 2,
 }
 
 export interface tripRelace {
@@ -50,6 +50,29 @@ export interface trip {
   incidentReports: incidentReports[] | null;
   inspectionLogs: null;
   tripStatusHistories: tripStatusHistory[] | null;
+}
+
+export interface TripTimeTableItem {
+  tripId: string;
+  trackingCode: string;
+  pickUpLocation: string;
+  deliveryLocation: string;
+  conReturnLocation: string;
+  orderDetailId: string;
+  driverId: string;
+  driverName: string;
+  startTime: string;
+  endTime: string | null;
+  matchTime: string;
+  status: string;
+}
+
+export interface TripTimeTableResponse {
+  success: boolean;
+  data: TripTimeTableItem[];
+  message: string;
+  messageVN: string;
+  errors: null | any;
 }
 
 // export interface fuelReports {

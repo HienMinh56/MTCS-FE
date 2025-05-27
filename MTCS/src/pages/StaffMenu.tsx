@@ -30,6 +30,7 @@ import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
 import PersonIcon from "@mui/icons-material/Person";
 import StraightenIcon from "@mui/icons-material/Straighten";
 import RouteIcon from "@mui/icons-material/Route";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import OrderManagement from "../components/Order/OrderTable";
@@ -39,6 +40,7 @@ import Tractors from "./Tractors";
 import Trailers from "./Trailers";
 import Customers from "../components/Customers";
 import TripTable from "../components/Trip/TripTable";
+import TimeTable from "../components/Trip/TimeTable";
 import DeliveryStatusPage from "./DeliveryStatusPage";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
@@ -54,7 +56,7 @@ const StaffMenu: React.FC = () => {
   const theme = useTheme();
   const { user } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [activeTab, setActiveTab] = useState<string>("orders");
+  const [activeTab, setActiveTab] = useState<string>("time-table");
   const [drawerOpen, setDrawerOpen] = useState(true);
 
   const userId = localStorage.getItem("userId") || "staff-user";
@@ -97,6 +99,12 @@ const StaffMenu: React.FC = () => {
   };
 
   const menuItems = [
+    {
+      id: "time-table",
+      text: "Lịch trình",
+      icon: <CalendarMonthIcon />,
+      selected: activeTab === "time-table",
+    },
     {
       id: "orders",
       text: "Đơn hàng",
@@ -143,6 +151,8 @@ const StaffMenu: React.FC = () => {
 
   const renderActiveComponent = () => {
     switch (activeTab) {
+      case "time-table":
+        return <TimeTable />;
       case "orders":
         return <OrderManagement />;
       case "trips":
@@ -160,7 +170,7 @@ const StaffMenu: React.FC = () => {
       case "delivery-status":
         return <DeliveryStatusPage />;
       default:
-        return <OrderManagement />;
+        return <TimeTable />;
     }
   };
 
@@ -528,6 +538,7 @@ const StaffMenu: React.FC = () => {
           <Route path="/trailers" element={<Trailers />} />
           <Route path="/trailers/:trailerId" element={<Trailers />} />
           <Route path="/delivery-status" element={<DeliveryStatusPage />} />
+          <Route path="/time-table" element={<TimeTable />} />
         </Routes>
       </Box>
     </Box>
