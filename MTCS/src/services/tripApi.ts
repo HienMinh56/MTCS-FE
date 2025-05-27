@@ -66,10 +66,10 @@ export const getAllTrip = async () => {
   }
 };
 
-export const getTrip = async (orderId: string) => {
+export const getTrip = async (trackingCode: string) => {
   try {
     const response = await axiosInstance.get<trip[] | trip>(
-      `/api/trips?orderId=${orderId}`
+      `/api/trips?trackingCode=${trackingCode}`
     );
 
     // Check if response has a data property that's an array (typical API wrapper format)
@@ -104,7 +104,7 @@ export const getTripDetail = async (tripId: string) => {
 };
 
 export const manualCreateTrip = async (tripData: {
-  orderId: string;
+  orderDetailId: string;
   driverId: string;
   tractorId: string;
   TrailerId: string;
@@ -123,11 +123,11 @@ export const manualCreateTrip = async (tripData: {
   }
 };
 
-export const autoScheduleTrip = async (orderId: string | null) => {
+export const autoScheduleTrip = async (orderDetailId: string | null) => {
   try {
     const formData = new FormData();
-    if (orderId) {
-      formData.append("orderId", orderId);
+    if (orderDetailId) {
+      formData.append("orderDetailId", orderDetailId);
     }
 
     const response = await axiosInstance.post(

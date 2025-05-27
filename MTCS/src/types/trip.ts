@@ -36,6 +36,7 @@ export interface incidentReports {
 export interface trip {
   tripId: string | null;
   orderId: string | null;
+  containerNumber: string;
   driverId: string | null;
   tractorId: string | null;
   trailerId: string | null;
@@ -50,7 +51,6 @@ export interface trip {
   incidentReports: incidentReports[] | null;
   inspectionLogs: null;
   tripStatusHistories: tripStatusHistory[] | null;
-}
 
 export interface TripTimeTableItem {
   tripId: string;

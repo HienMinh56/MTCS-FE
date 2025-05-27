@@ -55,11 +55,10 @@ export interface Order {
   trackingCode: string;
   customerId: string;
   companyName: string;
-  deliveryDate: string;
+  createdDate: string;
   status: OrderStatus;
   deliveryType: DeliveryType;
-  price: number;
-  distance: number | null;
+  totalAmount: number;
   isPay: IsPay | null; // Add this field
 }
 
@@ -89,31 +88,17 @@ export interface OrderDetails {
     trackingCode: string;
     customerId: string;
     companyName: string;
-    temperature: number;
-    weight: string;
-    pickUpDate: string;
-    deliveryDate: string;
     status: OrderStatus;
     note: string;
     createdDate: string;
     createdBy: string | null;
     modifiedDate: string | null;
     modifiedBy: string | null;
-    containerType: ContainerType;
-    pickUpLocation: string;
-    deliveryLocation: string;
-    conReturnLocation: string;
-    deliveryType: DeliveryType;
-    price: number;
-    containerNumber: string;
     contactPerson: string;
     contactPhone: string;
     orderPlacer: string;
-    distance: number | null;
-    containerSize: ContainerSize;
-    orderFiles: [OrderFile["fileUrl"]] | null;
-    completionTime: string | null;
     isPay: IsPay | null;
+    totalAmount: number;
 }
 
 export interface OrderDetailsResponse {
@@ -121,4 +106,23 @@ export interface OrderDetailsResponse {
   data: OrderDetails;
   message: string;
   errors: string[] | null;
+}
+
+export interface OrderDetailDetail {
+  orderDetailId: string;
+  orderId: string;
+  containerNumber: string;
+  containerType: ContainerType;
+  completionTime: string;
+  containerSize: ContainerSize
+  weight: number;
+  temperature: number;
+  distance: number;
+  pickUpLocation: string;
+  deliveryLocation: string;
+  conReturnLocation: string;
+  pickUpDate: string;
+  deliveryDate: string;
+  status: OrderStatus;
+  files: [OrderFile["fileUrl"]] | null;
 }

@@ -60,6 +60,8 @@ export interface IncidentReports {
   type: number;
   vehicleType: number;
   status: string;
+  price: string;
+  isPay: number;
   resolutionDetails: string | null;
   handledBy: string | null;
   handledTime: string | null;

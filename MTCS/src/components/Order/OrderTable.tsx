@@ -1031,7 +1031,6 @@ const OrderManagement: React.FC = () => {
                   </TableCell>
                   <TableCell align="center">Loại vận chuyển</TableCell>
                   <TableCell align="center">Giá (VNĐ)</TableCell>
-                  <TableCell align="center">Khoảng cách</TableCell>
                   <TableCell align="center">Trạng thái</TableCell>
                   <TableCell align="center">Thanh toán</TableCell>
                 </TableRow>
@@ -1062,7 +1061,7 @@ const OrderManagement: React.FC = () => {
                       <TableCell align="center">{order.trackingCode}</TableCell>
                       <TableCell align="center">{order.companyName}</TableCell>
                       <TableCell align="center">
-                        {new Date(order.deliveryDate).toLocaleDateString(
+                        {new Date(order.createdDate).toLocaleDateString(
                           "vi-VN"
                         )}
                       </TableCell>
@@ -1070,10 +1069,7 @@ const OrderManagement: React.FC = () => {
                         {getDeliveryTypeDisplay(order.deliveryType)}
                       </TableCell>
                       <TableCell align="center">
-                        {new Intl.NumberFormat("vi-VN").format(order.price)}
-                      </TableCell>
-                      <TableCell align="center">
-                        {order.distance ? `${order.distance} km` : "N/A"}
+                        {new Intl.NumberFormat("vi-VN").format(order.totalAmount ? order.totalAmount : "N/A")}
                       </TableCell>
                       <TableCell align="center">
                         <Chip

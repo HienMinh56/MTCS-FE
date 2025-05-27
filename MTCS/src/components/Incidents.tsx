@@ -419,6 +419,28 @@ const IncidentDetailDialog = ({
                       </Typography>
                     </Box>
                   )}
+
+                  {incident.isPay && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Trạng thái thanh toán
+                      </Typography>
+                      <Typography variant="body1">
+                        {incident.isPay == 1 ? "Đã Thanh toán" : "Chưa thanh toán"}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {incident.price && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Chi phí sửa chữa
+                      </Typography>
+                      <Typography variant="body1">
+                        {incident.price + " VND"}
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
               </Grid>
             </Grid>
