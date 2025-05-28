@@ -277,17 +277,18 @@ const OrderDetailPage: React.FC = () => {
   const handleCreateOrderDetailClose = () => {
     setCreateOrderDetailOpen(false);
   };
-
+  const containerNumberPattern = /^[A-Z]{3}[URJZ]\d{6}\d{1}$/;
   const createOrderDetailSchema = zod.object({
     containerNumber: zod
       .string()
       .min(1, "Mã Container là bắt buộc")
-      .max(50, "Mã Container không được vượt quá 50 ký tự"),
+      .max(50, "Mã Container không được vượt quá 50 ký tự")
+      .regex(containerNumberPattern, 'Số container phải có định dạng XXX-U-YYYYYY-Z, trong đó XXX là mã công ty, U là ký hiệu loại hàng hóa, YYYYYY là mã số container, Z là số kiểm tra'),
     containerType: zod.nativeEnum(ContainerType),
     containerSize: zod.nativeEnum(ContainerSize),
     weight: zod
       .number()
-      .min(0, "Khối lượng không được âm")
+      .min(1, "Khối lượng không được dưới 1 tấn")
       .max(100, "Khối lượng không được vượt quá 100 tấn"),
     temperature: zod.number().nullable().optional(),
     pickUpLocation: zod.string().min(1, "Địa điểm lấy hàng là bắt buộc"),
@@ -295,7 +296,7 @@ const OrderDetailPage: React.FC = () => {
     conReturnLocation: zod
       .string()
       .min(1, "Địa điểm trả container là bắt buộc"),
-    completionTime: zod.string().nullable().optional(),
+    completionTime: zod.string(),
     distance: zod.number().min(0, "Khoảng cách không được âm"),
     pickUpDate: zod.date(),
     deliveryDate: zod.date(),
@@ -553,7 +554,8 @@ const OrderDetailPage: React.FC = () => {
     containerNumber: zod
       .string()
       .min(1, "Mã Container là bắt buộc")
-      .max(50, "Mã Container không được vượt quá 50 ký tự"),
+      .max(50, "Mã Container không được vượt quá 50 ký tự")
+      .regex(containerNumberPattern, 'Số container phải có định dạng XXX-U-YYYYYY-Z, trong đó XXX là mã công ty, U là ký hiệu loại hàng hóa, YYYYYY là mã số container, Z là số kiểm tra'),
     containerType: zod.nativeEnum(ContainerType),
     containerSize: zod.nativeEnum(ContainerSize),
     weight: zod
