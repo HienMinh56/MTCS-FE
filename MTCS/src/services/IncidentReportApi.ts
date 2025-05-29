@@ -153,3 +153,15 @@ export const getVehicleIncidentHistory = async (
     };
   }
 };
+
+export const toggleIsPay = async (reportId: string) => {
+  try {
+    const response = await axiosInstance.patch(
+      `/api/IncidentReport/${reportId}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching incident report with ID ${reportId}:`, error);
+    throw error;
+  }
+}

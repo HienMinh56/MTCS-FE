@@ -44,6 +44,7 @@ import {
   getAllIncidentReports,
   getIncidentReportById,
   IncidentReports,
+  toggleIsPay,
 } from "../services/IncidentReportApi";
 import ReplaceTripModal from "./ReplaceTripModal";
 import TableSortLabel from "@mui/material/TableSortLabel";
@@ -81,9 +82,36 @@ const IncidentDetailDialog = ({
 }) => {
   const [openReplaceTripModal, setOpenReplaceTripModal] = useState(false);
   const [createTripSuccess, setCreateTripSuccess] = useState(false);
-  const [createTripError, setCreateTripError] = useState(false); // Add error state
+  const [createTripError, setCreateTripError] = useState(false);
   const [tripReplaced, setTripReplaced] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false); // Add loading state for payment
+  const [paymentSuccess, setPaymentSuccess] = useState(false); // Add success state
   const navigate = useNavigate();
+
+  // Add function to handle payment toggle
+  const handleTogglePayment = async () => {
+    if (!incident) return;
+
+    try {
+      setPaymentLoading(true);
+      const response = await toggleIsPay(incident.reportId);
+
+      if (response.status === 1) {
+        setPaymentSuccess(true);
+        // Update the incident object locally to reflect the change
+        incident.isPay = incident.isPay === 1 ? 0 : 1;
+
+        // Show success message briefly
+        setTimeout(() => {
+          setPaymentSuccess(false);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Error toggling payment status:", error);
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
 
   if (!incident) return null;
 
@@ -391,6 +419,28 @@ const IncidentDetailDialog = ({
                       {incident.resolutionDetails}
                     </Typography>
                   </Box>
+
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Trạng thái thanh toán
+                    </Typography>
+                    <Typography variant="body1">
+                      {incident.isPay == 1
+                        ? "Đã Thanh toán"
+                        : "Chưa thanh toán"}
+                    </Typography>
+                  </Box>
+
+                  {incident.price != null && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Chi phí sửa chữa
+                      </Typography>
+                      <Typography variant="body1">
+                        {incident.price.toLocaleString("vi-VN") + " VND"}
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
               </Grid>
 
@@ -416,28 +466,6 @@ const IncidentDetailDialog = ({
                       </Typography>
                       <Typography variant="body1">
                         {new Date(incident.handledTime).toLocaleString()}
-                      </Typography>
-                    </Box>
-                  )}
-
-                  {incident.isPay && (
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Trạng thái thanh toán
-                      </Typography>
-                      <Typography variant="body1">
-                        {incident.isPay == 1 ? "Đã Thanh toán" : "Chưa thanh toán"}
-                      </Typography>
-                    </Box>
-                  )}
-
-                  {incident.price && (
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Chi phí sửa chữa
-                      </Typography>
-                      <Typography variant="body1">
-                        {incident.price + " VND"}
                       </Typography>
                     </Box>
                   )}
@@ -599,6 +627,32 @@ const IncidentDetailDialog = ({
         </Box>
       </DialogContent>
       <DialogActions>
+        {/* Show payment button only if incident is not paid */}
+        {incident.isPay === 0 && (
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleTogglePayment}
+            disabled={paymentLoading}
+            startIcon={
+              paymentLoading ? (
+                <CircularProgress size={20} />
+              ) : (
+                <CheckCircleIcon />
+              )
+            }
+          >
+            {paymentLoading ? "Đang xử lý..." : "Đã thanh toán"}
+          </Button>
+        )}
+
+        {/* Payment success message */}
+        {paymentSuccess && (
+          <Alert severity="success" sx={{ mr: 2 }}>
+            Đã cập nhật trạng thái thanh toán!
+          </Alert>
+        )}
+
         {/* Show button only if incident is not completed OR if incident cannot be repaired OR requires assistance */}
         {incident.status === "Handling" &&
           incident.type === 2 && ( // type === 1 và type === 3 không được tạo chuyến thay thế
