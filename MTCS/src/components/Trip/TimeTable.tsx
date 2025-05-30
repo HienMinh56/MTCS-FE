@@ -36,6 +36,7 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import PersonIcon from "@mui/icons-material/Person";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 
 const statusColors = {
   completed: "#4caf50",
@@ -49,6 +50,7 @@ const statusColors = {
   delivered: "#4caf50",
   returning: "#9c27b0",
   default: "#9e9e9e",
+  delaying: "#ff9800",
 };
 
 const TimeTable: React.FC = () => {
@@ -71,6 +73,14 @@ const TimeTable: React.FC = () => {
     weekEnd,
     "dd/MM/yyyy"
   )}`;
+
+  // Calculate weekly statistics
+  const weeklyStats = {
+    totalTrips: trips.length,
+    completedTrips: trips.filter((trip) => trip.status === "completed").length,
+    activeTrips: trips.filter((trip) => trip.status === "active").length,
+    pendingTrips: trips.filter((trip) => trip.status === "pending").length,
+  };
 
   const fetchTimeTable = async () => {
     try {
@@ -135,11 +145,18 @@ const TimeTable: React.FC = () => {
     fetchTimeTable();
   };
 
-  // Get trips for a specific day
+  // Get trips for a specific day and sort by start time
   const getTripsForDay = (date: Date) => {
-    return trips.filter((trip) => {
+    const dayTrips = trips.filter((trip) => {
       const tripDate = parseISO(trip.startTime);
       return isSameDay(tripDate, date);
+    });
+
+    // Sort trips by start time (earliest first)
+    return dayTrips.sort((a, b) => {
+      const timeA = parseISO(a.startTime);
+      const timeB = parseISO(b.startTime);
+      return timeA.getTime() - timeB.getTime();
     });
   };
 
@@ -161,6 +178,7 @@ const TimeTable: React.FC = () => {
       delivering: "Đang giao hàng",
       delivered: "Đã giao hàng",
       returning: "Đang trả container",
+      delaying: "Đang delay",
     };
     return statusMap[status] || status;
   };
@@ -178,6 +196,62 @@ const TimeTable: React.FC = () => {
   const formatDayLabel = (date: Date) => {
     return format(date, "E dd/MM", { locale: vi });
   };
+
+  const WeeklyStatsCard: React.FC = () => (
+    <Paper
+      elevation={1}
+      sx={{
+        p: 2,
+        mb: 2,
+        borderRadius: 1,
+        backgroundColor: "rgba(255, 255, 255, 0.9)",
+        border: "1px solid rgba(0, 0, 0, 0.1)",
+      }}
+    >
+      <Grid container spacing={2}>
+        <Grid item xs={3}>
+          <Box sx={{ textAlign: "center" }}>
+            <Typography variant="h6" fontWeight="bold" color="text.primary">
+              {weeklyStats.totalTrips}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Tổng
+            </Typography>
+          </Box>
+        </Grid>
+        <Grid item xs={3}>
+          <Box sx={{ textAlign: "center" }}>
+            <Typography variant="h6" fontWeight="bold" color="success.main">
+              {weeklyStats.completedTrips}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Hoàn thành
+            </Typography>
+          </Box>
+        </Grid>
+        <Grid item xs={3}>
+          <Box sx={{ textAlign: "center" }}>
+            <Typography variant="h6" fontWeight="bold" color="info.main">
+              {weeklyStats.activeTrips}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Đang chạy
+            </Typography>
+          </Box>
+        </Grid>
+        <Grid item xs={3}>
+          <Box sx={{ textAlign: "center" }}>
+            <Typography variant="h6" fontWeight="bold" color="warning.main">
+              {weeklyStats.pendingTrips}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Chờ xử lý
+            </Typography>
+          </Box>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
 
   const TripCard: React.FC<{ trip: TripTimeTableItem }> = ({ trip }) => {
     const [isHovered, setIsHovered] = useState(false);
@@ -381,7 +455,7 @@ const TimeTable: React.FC = () => {
                   lineHeight: 1.2,
                 }}
               >
-                #{trip.tripId}
+                {trip.tripId}
               </Typography>
 
               <Box
@@ -578,6 +652,9 @@ const TimeTable: React.FC = () => {
             </Box>
           </Box>
 
+          {/* Weekly Stats Card */}
+          <WeeklyStatsCard />
+
           {loading ? (
             <Box
               sx={{
@@ -611,7 +688,7 @@ const TimeTable: React.FC = () => {
               {error}
             </Alert>
           ) : (
-            <Box sx={{ flex: 1, overflow: "auto" }} ref={tripsRef}>
+            <Box sx={{ flex: 1 }} ref={tripsRef}>
               <Grid container spacing={1.8}>
                 {weekDays.map((day, index) => {
                   const dayTrips = getTripsForDay(day);
@@ -624,7 +701,6 @@ const TimeTable: React.FC = () => {
                         sx={{
                           p: 1.8,
                           height: "100%",
-                          minHeight: 320,
                           borderRadius: 2,
                           backgroundColor: isToday
                             ? "rgba(25, 118, 210, 0.05)"
@@ -634,7 +710,7 @@ const TimeTable: React.FC = () => {
                             : "1px solid transparent",
                           transition: "all 0.3s ease",
                           position: "relative",
-                          overflow: "hidden",
+                          overflow: "visible", // Changed from "hidden" to "visible"
                           "&:hover": {
                             boxShadow: "0 6px 20px rgba(0,0,0,0.1)",
                           },
@@ -695,7 +771,7 @@ const TimeTable: React.FC = () => {
                               display: "flex",
                               justifyContent: "center",
                               alignItems: "center",
-                              height: 220,
+                              height: 100, // Reduced height for empty state
                               flexDirection: "column",
                               color: "text.secondary",
                               opacity: 0.6,
@@ -705,11 +781,11 @@ const TimeTable: React.FC = () => {
                               sx={{ fontSize: 28, mb: 0.8, opacity: 0.3 }}
                             />
                             <Typography variant="body2" textAlign="center">
-                              Không có chuyến hàng
+                              Chưa có chuyến
                             </Typography>
                           </Box>
                         ) : (
-                          <Box sx={{ overflow: "auto", maxHeight: 250 }}>
+                          <Box>
                             <Typography
                               variant="caption"
                               color="primary"
