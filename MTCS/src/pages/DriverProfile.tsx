@@ -44,6 +44,7 @@ import EventIcon from "@mui/icons-material/Event";
 import WorkIcon from "@mui/icons-material/Work";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import VerifiedIcon from "@mui/icons-material/Verified";
+import BuildIcon from "@mui/icons-material/Build";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -218,7 +219,6 @@ const DriverProfile: React.FC = () => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("vi-VN");
   };
-
   const getStatusText = (status: DriverStatus): string => {
     switch (status) {
       case DriverStatus.Active:
@@ -227,6 +227,8 @@ const DriverProfile: React.FC = () => {
         return "Không hoạt động";
       case DriverStatus.OnDuty:
         return "Đang vận chuyển";
+      case DriverStatus.OnFixing:
+        return "Đang khắc phục sự cố";
       default:
         return "Không xác định";
     }
@@ -465,6 +467,8 @@ const DriverProfile: React.FC = () => {
                 ? theme.palette.success.main
                 : driver.status === DriverStatus.OnDuty
                 ? theme.palette.primary.main
+                : driver.status === DriverStatus.OnFixing
+                ? theme.palette.warning.main
                 : theme.palette.error.main
             }`,
           }}
@@ -508,7 +512,7 @@ const DriverProfile: React.FC = () => {
                   Tài xế • ID: {driverId}
                 </Typography>
               </Box>
-            </Box>
+            </Box>{" "}
             <Chip
               label={getStatusText(driver.status)}
               color={getDriverStatusColor(driver.status) as any}
@@ -517,6 +521,8 @@ const DriverProfile: React.FC = () => {
                   <VerifiedIcon />
                 ) : driver.status === DriverStatus.OnDuty ? (
                   <LocalShippingIcon />
+                ) : driver.status === DriverStatus.OnFixing ? (
+                  <BuildIcon />
                 ) : (
                   <CloseIcon />
                 )

@@ -24,6 +24,8 @@ import BuildIcon from "@mui/icons-material/Build";
 import EventIcon from "@mui/icons-material/Event";
 import DoNotDisturbIcon from "@mui/icons-material/DoNotDisturb";
 import AddIcon from "@mui/icons-material/Add";
+import EngineeringIcon from "@mui/icons-material/Engineering";
+import GavelIcon from "@mui/icons-material/Gavel";
 import { TrailerStatus } from "../types/trailer";
 import TrailerCreate from "../components/Trailer/TrailerCreate";
 import TrailerFilter from "../components/Trailer/TrailerFilter";
@@ -42,14 +44,18 @@ const Trailers = () => {
   const [summary, setSummary] = useState({
     total: 0,
     active: 0,
-    maintenance: 0,
-    repair: 0,
+    onDuty: 0,
+    inactive: 0,
+    onfixing: 0,
+    detained: 0,
   });
   const [totalSummary, setTotalSummary] = useState({
     total: 0,
     active: 0,
     onDuty: 0,
     inactive: 0,
+    onfixing: 0,
+    detained: 0,
   });
   const [openCreate, setOpenCreate] = useState(false);
   const [openFilter, setOpenFilter] = useState(false);
@@ -78,12 +84,16 @@ const Trailers = () => {
     active: number;
     maintenance: number;
     repair: number;
+    onfixing?: number;
+    detained?: number;
   }) => {
     setSummary({
       total: newSummary.total,
       active: newSummary.active,
-      maintenance: newSummary.maintenance,
-      repair: newSummary.repair,
+      onDuty: newSummary.repair,
+      inactive: newSummary.maintenance,
+      onfixing: newSummary.onfixing || 0,
+      detained: newSummary.detained || 0,
     });
   };
 
@@ -98,7 +108,10 @@ const Trailers = () => {
   };
 
   const handleCardClick = (status?: TrailerStatus) => {
-    if (status === undefined || (filterOptions.status === status && hasActiveFilters)) {
+    if (
+      status === undefined ||
+      (filterOptions.status === status && hasActiveFilters)
+    ) {
       setFilterOptions({});
       setHasActiveFilters(false);
     } else {
@@ -125,15 +138,40 @@ const Trailers = () => {
       const totalResponse = await getTrailers(1, 1);
       const activeResponse = await getTrailers(1, 1, "", TrailerStatus.Active);
       const onDutyResponse = await getTrailers(1, 1, "", TrailerStatus.OnDuty);
-      const inactiveResponse = await getTrailers(1, 1, "", TrailerStatus.Inactive);
+      const inactiveResponse = await getTrailers(
+        1,
+        1,
+        "",
+        TrailerStatus.Inactive
+      );
+      const onfixingResponse = await getTrailers(
+        1,
+        1,
+        "",
+        TrailerStatus.Onfixing
+      );
+      const detainedResponse = await getTrailers(
+        1,
+        1,
+        "",
+        TrailerStatus.Detained
+      );
 
-      if (totalResponse.success && activeResponse.success && 
-          onDutyResponse.success && inactiveResponse.success) {
+      if (
+        totalResponse.success &&
+        activeResponse.success &&
+        onDutyResponse.success &&
+        inactiveResponse.success &&
+        onfixingResponse.success &&
+        detainedResponse.success
+      ) {
         setTotalSummary({
           total: totalResponse.data.allCount || 0,
           active: activeResponse.data.trailers.totalCount || 0,
           onDuty: onDutyResponse.data.trailers.totalCount || 0,
           inactive: inactiveResponse.data.trailers.totalCount || 0,
+          onfixing: onfixingResponse.data.trailers.totalCount || 0,
+          detained: detainedResponse.data.trailers.totalCount || 0,
         });
       }
     } catch (error) {
@@ -152,19 +190,20 @@ const Trailers = () => {
       sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}
     >
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={6} sm={6} md={3}>
+        {/* Total card */}
+        <Grid item xs={6} sm={6} md={2}>
           <Card
             elevation={1}
-            sx={{ 
-              borderRadius: 2, 
-              height: "100%", 
+            sx={{
+              borderRadius: 2,
+              height: "100%",
               cursor: "pointer",
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: !hasActiveFilters ? '3px solid #1976d2' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom: !hasActiveFilters ? "3px solid #1976d2" : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              }
+              },
             }}
             onClick={() => handleCardClick()}
           >
@@ -176,13 +215,15 @@ const Trailers = () => {
                   justifyContent: "space-between",
                 }}
               >
-                <Box>
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                   <Typography
                     color="text.secondary"
                     variant="body2"
                     gutterBottom
+                    noWrap
+                    sx={{ maxWidth: "100%" }}
                   >
-                    Tổng số rơ mooc
+                    Tổng rơ-móoc
                   </Typography>
                   <Typography variant="h5" component="div">
                     {totalSummary.total}
@@ -193,6 +234,8 @@ const Trailers = () => {
                     backgroundColor: "rgba(25, 118, 210, 0.08)",
                     p: 1,
                     borderRadius: "50%",
+                    flexShrink: 0,
+                    ml: 1,
                   }}
                 >
                   <DirectionsCarFilledIcon color="primary" />
@@ -201,19 +244,24 @@ const Trailers = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={6} md={3}>
+
+        {/* Active card */}
+        <Grid item xs={6} sm={6} md={2}>
           <Card
             elevation={1}
-            sx={{ 
-              borderRadius: 2, 
-              height: "100%", 
+            sx={{
+              borderRadius: 2,
+              height: "100%",
               cursor: "pointer",
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: filterOptions.status === TrailerStatus.Active ? '3px solid #4caf50' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom:
+                filterOptions.status === TrailerStatus.Active
+                  ? "3px solid #4caf50"
+                  : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              }
+              },
             }}
             onClick={() => handleCardClick(TrailerStatus.Active)}
           >
@@ -225,11 +273,13 @@ const Trailers = () => {
                   justifyContent: "space-between",
                 }}
               >
-                <Box>
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                   <Typography
                     color="text.secondary"
                     variant="body2"
                     gutterBottom
+                    noWrap
+                    sx={{ maxWidth: "100%" }}
                   >
                     Đang hoạt động
                   </Typography>
@@ -242,6 +292,8 @@ const Trailers = () => {
                     backgroundColor: "rgba(76, 175, 80, 0.08)",
                     p: 1,
                     borderRadius: "50%",
+                    flexShrink: 0,
+                    ml: 1,
                   }}
                 >
                   <DirectionsCarFilledIcon color="success" />
@@ -250,19 +302,24 @@ const Trailers = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={6} md={3}>
+
+        {/* OnDuty card */}
+        <Grid item xs={6} sm={6} md={2}>
           <Card
             elevation={1}
-            sx={{ 
-              borderRadius: 2, 
-              height: "100%", 
+            sx={{
+              borderRadius: 2,
+              height: "100%",
               cursor: "pointer",
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: filterOptions.status === TrailerStatus.OnDuty ? '3px solid #1976d2' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom:
+                filterOptions.status === TrailerStatus.OnDuty
+                  ? "3px solid #1976d2"
+                  : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              }
+              },
             }}
             onClick={() => handleCardClick(TrailerStatus.OnDuty)}
           >
@@ -274,11 +331,13 @@ const Trailers = () => {
                   justifyContent: "space-between",
                 }}
               >
-                <Box>
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                   <Typography
                     color="text.secondary"
                     variant="body2"
                     gutterBottom
+                    noWrap
+                    sx={{ maxWidth: "100%" }}
                   >
                     Đang vận chuyển
                   </Typography>
@@ -291,6 +350,8 @@ const Trailers = () => {
                     backgroundColor: "rgba(25, 118, 210, 0.08)",
                     p: 1,
                     borderRadius: "50%",
+                    flexShrink: 0,
+                    ml: 1,
                   }}
                 >
                   <DirectionsCarFilledIcon color="primary" />
@@ -299,19 +360,140 @@ const Trailers = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={6} md={3}>
+
+        {/* Onfixing card */}
+        <Grid item xs={6} sm={6} md={2}>
           <Card
             elevation={1}
-            sx={{ 
-              borderRadius: 2, 
-              height: "100%", 
+            sx={{
+              borderRadius: 2,
+              height: "100%",
               cursor: "pointer",
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              borderBottom: filterOptions.status === TrailerStatus.Inactive ? '3px solid #f44336' : 'none',
-              '&:hover': {
-                transform: 'translateY(-3px)',
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom:
+                filterOptions.status === TrailerStatus.Onfixing
+                  ? "3px solid #ff9800"
+                  : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
                 boxShadow: 3,
-              }
+              },
+            }}
+            onClick={() => handleCardClick(TrailerStatus.Onfixing)}
+          >
+            <CardContent sx={{ py: 1.5, px: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <Typography
+                    color="text.secondary"
+                    variant="body2"
+                    gutterBottom
+                    noWrap
+                    sx={{ maxWidth: "100%" }}
+                  >
+                    Đang sửa chữa
+                  </Typography>
+                  <Typography variant="h5" component="div">
+                    {totalSummary.onfixing}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    backgroundColor: "rgba(255, 152, 0, 0.08)",
+                    p: 1,
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    ml: 1,
+                  }}
+                >
+                  <EngineeringIcon color="warning" />
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Detained card */}
+        <Grid item xs={6} sm={6} md={2}>
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
+              height: "100%",
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom:
+                filterOptions.status === TrailerStatus.Detained
+                  ? "3px solid #9c27b0"
+                  : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
+                boxShadow: 3,
+              },
+            }}
+            onClick={() => handleCardClick(TrailerStatus.Detained)}
+          >
+            <CardContent sx={{ py: 1.5, px: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <Typography
+                    color="text.secondary"
+                    variant="body2"
+                    gutterBottom
+                    noWrap
+                    sx={{ maxWidth: "100%" }}
+                  >
+                    Đang tạm giữ
+                  </Typography>
+                  <Typography variant="h5" component="div">
+                    {totalSummary.detained}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    backgroundColor: "rgba(156, 39, 176, 0.08)",
+                    p: 1,
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    ml: 1,
+                  }}
+                >
+                  <GavelIcon color="secondary" />
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Inactive card */}
+        <Grid item xs={6} sm={6} md={2}>
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
+              height: "100%",
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom:
+                filterOptions.status === TrailerStatus.Inactive
+                  ? "3px solid #f44336"
+                  : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
+                boxShadow: 3,
+              },
             }}
             onClick={() => handleCardClick(TrailerStatus.Inactive)}
           >
@@ -323,11 +505,13 @@ const Trailers = () => {
                   justifyContent: "space-between",
                 }}
               >
-                <Box>
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                   <Typography
                     color="text.secondary"
                     variant="body2"
                     gutterBottom
+                    noWrap
+                    sx={{ maxWidth: "100%" }}
                   >
                     Không hoạt động
                   </Typography>
@@ -340,6 +524,8 @@ const Trailers = () => {
                     backgroundColor: "rgba(244, 67, 54, 0.08)",
                     p: 1,
                     borderRadius: "50%",
+                    flexShrink: 0,
+                    ml: 1,
                   }}
                 >
                   <DoNotDisturbIcon color="error" />

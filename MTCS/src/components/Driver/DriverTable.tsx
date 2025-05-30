@@ -206,7 +206,6 @@ const DriverTable: React.FC<DriverTableProps> = ({
   const handleDriverClick = (driverId: string) => {
     navigate(`${prefix}/drivers/${driverId}`);
   };
-
   // Render status chip based on driver status
   const renderStatusChip = (status: DriverStatus) => {
     const statusText = getDriverStatusText(status);
@@ -217,6 +216,10 @@ const DriverTable: React.FC<DriverTableProps> = ({
         return <Chip label="Không hoạt động" color="error" size="small" />;
       case "on_duty":
         return <Chip label="Đang vận chuyển" color="primary" size="small" />;
+      case "on_fixing":
+        return (
+          <Chip label="Đang khắc phục sự cố" color="warning" size="small" />
+        );
       default:
         return <Chip label="Không xác định" size="small" />;
     }

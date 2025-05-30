@@ -2,6 +2,8 @@ export enum TrailerStatus {
   Active = "Active",
   Inactive = "Inactive",
   OnDuty = "OnDuty",
+  Onfixing = "Onfixing", // New status
+  Detained = "Detained", // New status
 }
 
 export interface Trailer {
@@ -35,6 +37,10 @@ export interface TrailerResponse {
     };
     allCount: number;
     activeCount: number;
+    inactiveCount: number;
+    onDutyCount: number;
+    onfixingCount: number;
+    detainedCount: number;
     maintenanceDueCount: number;
     registrationExpiryDueCount: number;
   };

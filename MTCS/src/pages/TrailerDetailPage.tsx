@@ -63,6 +63,8 @@ import AirportShuttleIcon from "@mui/icons-material/AirportShuttle";
 import EditIcon from "@mui/icons-material/Edit";
 import HistoryIcon from "@mui/icons-material/History";
 import BugReportIcon from "@mui/icons-material/BugReport";
+import EngineeringIcon from "@mui/icons-material/Engineering";
+import GavelIcon from "@mui/icons-material/Gavel";
 import {
   getTrailerDetails,
   deactivateTrailer,
@@ -530,6 +532,26 @@ const TrailerDetailPage = () => {
   };
 
   const handleEditClick = () => {
+    // Add additional check to ensure we can't edit trailers with special statuses
+    if (
+      details &&
+      (details.status === TrailerStatus.OnDuty ||
+        details.status === TrailerStatus.Onfixing ||
+        details.status === TrailerStatus.Detained)
+    ) {
+      setAlert({
+        open: true,
+        message: `Không thể sửa thông tin rơ-moóc đang ở trạng thái ${
+          details.status === TrailerStatus.OnDuty
+            ? "vận chuyển"
+            : details.status === TrailerStatus.Onfixing
+            ? "sửa chữa"
+            : "tạm giữ"
+        }`,
+        severity: "error",
+      });
+      return;
+    }
     setUpdateDialogOpen(true);
   };
 
@@ -622,6 +644,10 @@ const TrailerDetailPage = () => {
                     ? theme.palette.success.main
                     : details.status === TrailerStatus.OnDuty
                     ? theme.palette.primary.main
+                    : details.status === TrailerStatus.Onfixing
+                    ? theme.palette.warning.main
+                    : details.status === TrailerStatus.Detained
+                    ? theme.palette.secondary.main
                     : theme.palette.error.main
                 }`,
               }}
@@ -642,6 +668,10 @@ const TrailerDetailPage = () => {
                           ? "success.main"
                           : details.status === TrailerStatus.OnDuty
                           ? "primary.main"
+                          : details.status === TrailerStatus.Onfixing
+                          ? "warning.main"
+                          : details.status === TrailerStatus.Detained
+                          ? "secondary.main"
                           : "error.main",
                       width: 60,
                       height: 60,
@@ -672,6 +702,10 @@ const TrailerDetailPage = () => {
                       ? "Đang hoạt động"
                       : details.status === TrailerStatus.OnDuty
                       ? "Đang vận chuyển"
+                      : details.status === TrailerStatus.Onfixing
+                      ? "Đang sửa chữa"
+                      : details.status === TrailerStatus.Detained
+                      ? "Đang bị giữ"
                       : "Không hoạt động"
                   }
                   color={
@@ -679,6 +713,10 @@ const TrailerDetailPage = () => {
                       ? "success"
                       : details.status === TrailerStatus.OnDuty
                       ? "primary"
+                      : details.status === TrailerStatus.Onfixing
+                      ? "warning"
+                      : details.status === TrailerStatus.Detained
+                      ? "secondary"
                       : "error"
                   }
                   icon={
@@ -686,6 +724,10 @@ const TrailerDetailPage = () => {
                       <VerifiedIcon />
                     ) : details.status === TrailerStatus.OnDuty ? (
                       <LocalShippingIcon />
+                    ) : details.status === TrailerStatus.Onfixing ? (
+                      <EngineeringIcon />
+                    ) : details.status === TrailerStatus.Detained ? (
+                      <GavelIcon />
                     ) : (
                       <WarningIcon />
                     )
@@ -1006,7 +1048,11 @@ const TrailerDetailPage = () => {
                     onClick={handleEditClick}
                     size={isMobile ? "small" : "medium"}
                     sx={{ px: 3, py: 1 }}
-                    disabled={details.status === TrailerStatus.OnDuty}
+                    disabled={
+                      details.status === TrailerStatus.OnDuty ||
+                      details.status === TrailerStatus.Onfixing ||
+                      details.status === TrailerStatus.Detained
+                    }
                   >
                     Chỉnh sửa thông tin
                   </Button>
@@ -1032,6 +1078,28 @@ const TrailerDetailPage = () => {
                       sx={{ px: 3, py: 1 }}
                     >
                       Đang vận chuyển
+                    </Button>
+                  ) : details.status === TrailerStatus.Onfixing ? (
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      disabled
+                      startIcon={<EngineeringIcon />}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ px: 3, py: 1 }}
+                    >
+                      Đang sửa chữa
+                    </Button>
+                  ) : details.status === TrailerStatus.Detained ? (
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      disabled
+                      startIcon={<GavelIcon />}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ px: 3, py: 1 }}
+                    >
+                      Đang bị giữ
                     </Button>
                   ) : (
                     <Button

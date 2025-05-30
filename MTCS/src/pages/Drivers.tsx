@@ -6,7 +6,6 @@ import {
   TextField,
   Button,
   InputAdornment,
-  IconButton,
   Grid,
   Card,
   CardContent,
@@ -18,6 +17,7 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import PersonIcon from "@mui/icons-material/Person";
 import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
 import DoNotDisturbIcon from "@mui/icons-material/DoNotDisturb";
+import BuildIcon from "@mui/icons-material/Build";
 import AddIcon from "@mui/icons-material/Add";
 import DriverTable from "../components/Driver/DriverTable";
 import DriverFilter from "../components/Driver/DriverFilter";
@@ -48,6 +48,7 @@ const Drivers = () => {
     active: 0,
     onTrip: 0,
     inactive: 0,
+    onFixing: 0,
   });
   const [openCreate, setOpenCreate] = useState(false);
   const [openFilter, setOpenFilter] = useState(false);
@@ -101,7 +102,6 @@ const Drivers = () => {
     refreshTable();
     fetchTotalSummary();
   };
-
   const fetchTotalSummary = async () => {
     setLoadingTotalSummary(true);
     try {
@@ -124,17 +124,24 @@ const Drivers = () => {
         status: DriverStatus.Inactive,
       });
 
+      const onFixingResponse = await getDriverList({
+        pageSize: 1,
+        status: DriverStatus.OnFixing,
+      });
+
       if (
         totalResponse.success &&
         activeResponse.success &&
         onDutyResponse.success &&
-        inactiveResponse.success
+        inactiveResponse.success &&
+        onFixingResponse.success
       ) {
         setTotalSummary({
           total: totalResponse.data?.totalCount || 0,
           active: activeResponse.data?.totalCount || 0,
           onTrip: onDutyResponse.data?.totalCount || 0,
           inactive: inactiveResponse.data?.totalCount || 0,
+          onFixing: onFixingResponse.data?.totalCount || 0,
         });
       }
     } catch (error) {
@@ -152,8 +159,9 @@ const Drivers = () => {
     <Box
       sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}
     >
+      {" "}
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={3} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card
             elevation={1}
             sx={{
@@ -199,10 +207,10 @@ const Drivers = () => {
                   <PersonIcon color="primary" />
                 </Box>
               </Box>
-            </CardContent>
+            </CardContent>{" "}
           </Card>
         </Grid>
-        <Grid item xs={12} sm={3} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card
             elevation={1}
             sx={{
@@ -251,10 +259,10 @@ const Drivers = () => {
                   <PersonIcon color="success" />
                 </Box>
               </Box>
-            </CardContent>
+            </CardContent>{" "}
           </Card>
         </Grid>
-        <Grid item xs={12} sm={3} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card
             elevation={1}
             sx={{
@@ -303,10 +311,10 @@ const Drivers = () => {
                   <DirectionsCarIcon color="primary" />
                 </Box>
               </Box>
-            </CardContent>
+            </CardContent>{" "}
           </Card>
         </Grid>
-        <Grid item xs={12} sm={3} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card
             elevation={1}
             sx={{
@@ -354,12 +362,63 @@ const Drivers = () => {
                 >
                   <DoNotDisturbIcon color="error" />
                 </Box>
+              </Box>{" "}
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <Card
+            elevation={1}
+            sx={{
+              borderRadius: 2,
+              height: "100%",
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              borderBottom:
+                filterOptions.status === DriverStatus.OnFixing
+                  ? "3px solid #ff9800"
+                  : "none",
+              "&:hover": {
+                transform: "translateY(-3px)",
+                boxShadow: 3,
+              },
+            }}
+            onClick={() => handleCardClick(DriverStatus.OnFixing)}
+          >
+            <CardContent sx={{ py: 1.5, px: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Box>
+                  <Typography
+                    color="text.secondary"
+                    variant="body2"
+                    gutterBottom
+                  >
+                    Đang khắc phục sự cố
+                  </Typography>
+                  <Typography variant="h5" component="div">
+                    {totalSummary.onFixing}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    backgroundColor: "rgba(255, 152, 0, 0.08)", // Orange background
+                    p: 1,
+                    borderRadius: "50%",
+                  }}
+                >
+                  <BuildIcon color="warning" />
+                </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
-
       <Paper
         elevation={1}
         sx={{

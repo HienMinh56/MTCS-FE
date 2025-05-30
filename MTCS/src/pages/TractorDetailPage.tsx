@@ -54,6 +54,8 @@ import VerifiedIcon from "@mui/icons-material/Verified";
 import EditIcon from "@mui/icons-material/Edit";
 import DirectionsIcon from "@mui/icons-material/Directions";
 import HistoryIcon from "@mui/icons-material/History";
+import EngineeringIcon from "@mui/icons-material/Engineering";
+import GavelIcon from "@mui/icons-material/Gavel";
 import TractorUpdate from "../components/Tractor/TractorUpdate";
 import TractorUseHistoryTable from "../components/Tractor/TractorUseHistoryTable";
 import TractorIncidentHistoryTable from "../components/Tractor/TractorIncidentHistoryTable";
@@ -608,6 +610,10 @@ const TractorDetailPage = () => {
                     ? theme.palette.success.main
                     : details.status === TractorStatus.OnDuty
                     ? theme.palette.primary.main
+                    : details.status === TractorStatus.Onfixing
+                    ? theme.palette.warning.main
+                    : details.status === TractorStatus.Detained
+                    ? theme.palette.secondary.main
                     : theme.palette.error.main
                 }`,
               }}
@@ -628,6 +634,10 @@ const TractorDetailPage = () => {
                           ? "success.main"
                           : details.status === TractorStatus.OnDuty
                           ? "primary.main"
+                          : details.status === TractorStatus.Onfixing
+                          ? "warning.main"
+                          : details.status === TractorStatus.Detained
+                          ? "secondary.main"
                           : "error.main",
                       width: 60,
                       height: 60,
@@ -658,6 +668,10 @@ const TractorDetailPage = () => {
                       ? "Đang hoạt động"
                       : details.status === TractorStatus.OnDuty
                       ? "Đang vận chuyển"
+                      : details.status === TractorStatus.Onfixing
+                      ? "Đang sửa chữa"
+                      : details.status === TractorStatus.Detained
+                      ? "Đang bị giữ"
                       : "Không hoạt động"
                   }
                   color={
@@ -665,6 +679,10 @@ const TractorDetailPage = () => {
                       ? "success"
                       : details.status === TractorStatus.OnDuty
                       ? "primary"
+                      : details.status === TractorStatus.Onfixing
+                      ? "warning"
+                      : details.status === TractorStatus.Detained
+                      ? "secondary"
                       : "error"
                   }
                   icon={
@@ -672,6 +690,10 @@ const TractorDetailPage = () => {
                       <VerifiedIcon />
                     ) : details.status === TractorStatus.OnDuty ? (
                       <DirectionsIcon />
+                    ) : details.status === TractorStatus.Onfixing ? (
+                      <EngineeringIcon />
+                    ) : details.status === TractorStatus.Detained ? (
+                      <GavelIcon />
                     ) : (
                       <WarningIcon />
                     )
@@ -996,7 +1018,11 @@ const TractorDetailPage = () => {
                       onClick={handleEditClick}
                       size={isMobile ? "small" : "medium"}
                       sx={{ px: 3, py: 1 }}
-                      disabled={details.status === TractorStatus.OnDuty}
+                      disabled={
+                        details.status === TractorStatus.OnDuty ||
+                        details.status === TractorStatus.Onfixing ||
+                        details.status === TractorStatus.Detained
+                      }
                     >
                       Chỉnh sửa thông tin
                     </Button>
@@ -1022,6 +1048,28 @@ const TractorDetailPage = () => {
                         sx={{ px: 3, py: 1 }}
                       >
                         Đang vận chuyển
+                      </Button>
+                    ) : details.status === TractorStatus.Onfixing ? (
+                      <Button
+                        variant="contained"
+                        color="warning"
+                        disabled
+                        startIcon={<EngineeringIcon />}
+                        size={isMobile ? "small" : "medium"}
+                        sx={{ px: 3, py: 1 }}
+                      >
+                        Đang sửa chữa
+                      </Button>
+                    ) : details.status === TractorStatus.Detained ? (
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        disabled
+                        startIcon={<GavelIcon />}
+                        size={isMobile ? "small" : "medium"}
+                        sx={{ px: 3, py: 1 }}
+                      >
+                        Đang bị giữ
                       </Button>
                     ) : (
                       <Button

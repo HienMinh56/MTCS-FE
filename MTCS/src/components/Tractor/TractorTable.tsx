@@ -184,6 +184,10 @@ const TractorTable: React.FC<TractorTableProps> = ({
         return <Chip label="Không hoạt động" color="error" size="small" />;
       case TractorStatus.OnDuty:
         return <Chip label="Đang vận chuyển" color="primary" size="small" />;
+      case TractorStatus.Onfixing:
+        return <Chip label="Đang sửa chữa" color="warning" size="small" />;
+      case TractorStatus.Detained:
+        return <Chip label="Đang bị giữ" color="secondary" size="small" />;
       default:
         return <Chip label="Không xác định" size="small" />;
     }

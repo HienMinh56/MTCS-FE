@@ -60,6 +60,7 @@ export enum DriverStatus {
   Inactive = 0,
   Active = 1,
   OnDuty = 2,
+  OnFixing = 3,
 }
 
 export interface PaginatedData<T> {
@@ -87,6 +88,8 @@ export const getDriverStatusText = (status: DriverStatus): string => {
       return "active";
     case DriverStatus.OnDuty:
       return "on_duty";
+    case DriverStatus.OnFixing:
+      return "on_fixing";
     default:
       return "unknown";
   }
@@ -100,6 +103,8 @@ export const getDriverStatusVietnamese = (status: DriverStatus): string => {
       return "Không hoạt động";
     case DriverStatus.OnDuty:
       return "Đang vận chuyển";
+    case DriverStatus.OnFixing:
+      return "Đang khắc phục sự cố";
     default:
       return "Không xác định";
   }
@@ -115,6 +120,8 @@ export const getDriverStatusColor = (
       return "error";
     case DriverStatus.OnDuty:
       return "primary"; // Changed from warning to primary (blue)
+    case DriverStatus.OnFixing:
+      return "warning"; // Orange/yellow for fixing status
     default:
       return "default";
   }

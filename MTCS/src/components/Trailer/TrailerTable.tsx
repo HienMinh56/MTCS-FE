@@ -33,8 +33,11 @@ interface TrailerTableProps {
     active: number;
     maintenance: number;
     repair: number;
+    onfixing?: number;
+    detained?: number;
   }) => void;
   refreshTrigger?: number;
+  isAdmin?: boolean;
 }
 
 const TrailerTable: React.FC<TrailerTableProps> = ({
@@ -93,14 +96,27 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
 
         setTotalCount(filteredCount);
 
-        // Cập nhật các số liệu tóm tắt
-        // repair (cần đăng kiểm) sẽ được hiển thị là onDuty (đang vận chuyển)
-        // maintenance (cần bảo dưỡng) sẽ được hiển thị là inactive (không hoạt động)
+        // Count each status from the items if API doesn't provide these counts
+        let onfixingCount = result.data.onfixingCount;
+        let detainedCount = result.data.detainedCount;
+
+        if (onfixingCount === undefined || detainedCount === undefined) {
+          // Manual counting if API doesn't provide the counts
+          onfixingCount = filteredItems.filter(
+            (item) => item.status === TrailerStatus.Onfixing
+          ).length;
+          detainedCount = filteredItems.filter(
+            (item) => item.status === TrailerStatus.Detained
+          ).length;
+        }
+
         onUpdateSummary({
           total: result.data.allCount,
           active: result.data.activeCount,
           maintenance: result.data.inactiveCount || 0,
           repair: result.data.onDutyCount || 0,
+          onfixing: onfixingCount,
+          detained: detainedCount,
         });
       } else {
         setTrailers([]);
@@ -189,6 +205,10 @@ const TrailerTable: React.FC<TrailerTableProps> = ({
         return <Chip label="Đang vận chuyển" color="primary" size="small" />;
       case TrailerStatus.Inactive:
         return <Chip label="Không hoạt động" color="error" size="small" />;
+      case TrailerStatus.Onfixing:
+        return <Chip label="Đang sửa chữa" color="warning" size="small" />;
+      case TrailerStatus.Detained:
+        return <Chip label="Đang bị giữ" color="secondary" size="small" />;
       default:
         return <Chip label="Không xác định" size="small" />;
     }
