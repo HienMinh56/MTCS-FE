@@ -277,17 +277,21 @@ const OrderDetailPage: React.FC = () => {
   const handleCreateOrderDetailClose = () => {
     setCreateOrderDetailOpen(false);
   };
-
+  const containerNumberPattern = /^[A-Z]{3}[URJZ]\d{6}\d{1}$/;
   const createOrderDetailSchema = zod.object({
     containerNumber: zod
       .string()
       .min(1, "Mã Container là bắt buộc")
-      .max(50, "Mã Container không được vượt quá 50 ký tự"),
+      .max(50, "Mã Container không được vượt quá 50 ký tự")
+      .regex(
+        containerNumberPattern,
+        "Số container phải có định dạng XXX-U-YYYYYY-Z, trong đó XXX là mã công ty, U là ký hiệu loại hàng hóa, YYYYYY là mã số container, Z là số kiểm tra"
+      ),
     containerType: zod.nativeEnum(ContainerType),
     containerSize: zod.nativeEnum(ContainerSize),
     weight: zod
       .number()
-      .min(0, "Khối lượng không được âm")
+      .min(1, "Khối lượng không được dưới 1 tấn")
       .max(100, "Khối lượng không được vượt quá 100 tấn"),
     temperature: zod.number().nullable().optional(),
     pickUpLocation: zod.string().min(1, "Địa điểm lấy hàng là bắt buộc"),
@@ -295,7 +299,15 @@ const OrderDetailPage: React.FC = () => {
     conReturnLocation: zod
       .string()
       .min(1, "Địa điểm trả container là bắt buộc"),
-    completionTime: zod.string().nullable().optional(),
+    completionTime: zod
+  .string()
+  .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Thời gian phải có định dạng HH:MM (ví dụ: 00:15)")
+  .refine((time) => {
+    // Convert time to minutes for comparison
+    const [hours, minutes] = time.split(":");
+    const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
+    return totalMinutes >= 15; // Minimum 15 minutes
+  }, "Thời gian hoàn thành tối thiểu là 00:15"),
     distance: zod.number().min(0, "Khoảng cách không được âm"),
     pickUpDate: zod.date(),
     deliveryDate: zod.date(),
@@ -553,7 +565,11 @@ const OrderDetailPage: React.FC = () => {
     containerNumber: zod
       .string()
       .min(1, "Mã Container là bắt buộc")
-      .max(50, "Mã Container không được vượt quá 50 ký tự"),
+      .max(50, "Mã Container không được vượt quá 50 ký tự")
+      .regex(
+        containerNumberPattern,
+        "Số container phải có định dạng XXX-U-YYYYYY-Z, trong đó XXX là mã công ty, U là ký hiệu loại hàng hóa, YYYYYY là mã số container, Z là số kiểm tra"
+      ),
     containerType: zod.nativeEnum(ContainerType),
     containerSize: zod.nativeEnum(ContainerSize),
     weight: zod
@@ -566,7 +582,15 @@ const OrderDetailPage: React.FC = () => {
     conReturnLocation: zod
       .string()
       .min(1, "Địa điểm trả container là bắt buộc"),
-    completionTime: zod.string().nullable().optional(),
+    completionTime: zod
+  .string()
+  .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Thời gian phải có định dạng HH:MM (ví dụ: 00:15)")
+  .refine((time) => {
+    // Convert time to minutes for comparison
+    const [hours, minutes] = time.split(":");
+    const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
+    return totalMinutes >= 15; // Minimum 15 minutes
+  }, "Thời gian hoàn thành tối thiểu là 00:15"),
     distance: zod.number().min(0, "Khoảng cách không được âm"),
     pickUpDate: zod.date(),
     deliveryDate: zod.date(),
@@ -1586,7 +1610,10 @@ const OrderDetailPage: React.FC = () => {
     // Kiểm tra trong dữ liệu trips của container cụ thể
     const containerSpecificTrips = containerTrips[orderDetailId] || [];
     const hasActiveInContainerTrips = containerSpecificTrips.some(
-      (trip) => trip.status !== "not_started" && trip.status !== "canceled"
+      (trip) =>
+        trip.status !== "not_started" &&
+        trip.status !== "canceled" &&
+        trip.status !== "completed"
     );
 
     // Kiểm tra trong dữ liệu trips toàn cục
@@ -1595,7 +1622,8 @@ const OrderDetailPage: React.FC = () => {
           (trip) =>
             trip.containerNumber === containerNum &&
             trip.status !== "not_started" &&
-            trip.status !== "canceled"
+            trip.status !== "canceled" &&
+            trip.status !== "completed"
         )
       : false;
 
@@ -1614,15 +1642,14 @@ const OrderDetailPage: React.FC = () => {
     // Kiểm tra trong dữ liệu trips của container cụ thể
     const containerSpecificTrips = containerTrips[orderDetailId] || [];
     const hasCompletedInContainerTrips = containerSpecificTrips.some(
-      (trip) => trip.status == "completed"
+      (trip) => trip.status === "completed"
     );
 
     // Kiểm tra trong dữ liệu trips toàn cục
     const hasCompletedInGlobalTrips = tripData
       ? tripData.some(
           (trip) =>
-            trip.containerNumber === containerNum &&
-            trip.status == "completedcompleted"
+            trip.containerNumber === containerNum && trip.status === "completed"
         )
       : false;
 
@@ -2395,7 +2422,7 @@ const OrderDetailPage: React.FC = () => {
                             {hasCompletedTrips(detail.orderDetailId) && (
                               <Chip
                                 size="small"
-                                label="Đa hóa"
+                                label="Đã giao"
                                 color="success"
                                 sx={{ ml: 1 }}
                               />
@@ -3883,7 +3910,8 @@ const OrderDetailPage: React.FC = () => {
                                   {containerTrips.some(
                                     (trip) =>
                                       trip.status !== "canceled" &&
-                                      trip.status !== "not_started"
+                                      trip.status !== "not_started" &&
+                                      trip.status !== "completed"
                                   ) && (
                                     <Chip
                                       size="small"
@@ -3892,6 +3920,19 @@ const OrderDetailPage: React.FC = () => {
                                       sx={{ ml: 1 }}
                                     />
                                   )}
+
+                                  {/* Show "Đã giao" when all trips are completed */}
+                                  {containerTrips.length > 0 &&
+                                    containerTrips.every(
+                                      (trip) => trip.status === "completed"
+                                    ) && (
+                                      <Chip
+                                        size="small"
+                                        label="Đã giao"
+                                        color="success"
+                                        sx={{ ml: 1 }}
+                                      />
+                                    )}
                                 </Box>
                               </AccordionSummary>
 
