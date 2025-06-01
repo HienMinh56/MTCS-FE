@@ -498,7 +498,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
         >
           <Tab label="Tổng Quan Doanh Thu" />
           <Tab label="Doanh Thu Theo Khách Hàng" />
-          <Tab label="Tài Chính Chuyến Đi" />
+          <Tab label="Chi Phí Mỗi Chuyến" />
           <Tab label="Hiệu Suất Chuyến Đi" />
         </Tabs>
 
@@ -524,7 +524,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
               <Grid container spacing={3}>
                 {revenueData && (
                   <>
-                    <Grid item xs={12} md={4}>
+                    <Grid item xs={12} md={3}>
                       <AdminStatCard
                         title="Tổng Doanh Thu"
                         value={`${revenueData.totalRevenue.toLocaleString(
@@ -532,24 +532,40 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ onBackClick }) => {
                         )} ₫`}
                         icon={<AttachMoney />}
                         color="success"
+                        isRevenue={true}
                       />
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid item xs={12} md={3}>
                       <AdminStatCard
-                        title="Tổng Đơn Hàng"
-                        value={revenueData.completedOrders.toString()}
-                        icon={<LocalShipping />}
-                        color="primary"
+                        title="Chi phí phát sinh"
+                        value={`${revenueData.totalExpenses.toLocaleString(
+                          "vi-VN"
+                        )} ₫`}
+                        icon={<AttachMoney />}
+                        color="error"
+                        isRevenue={true}
                       />
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid item xs={12} md={3}>
                       <AdminStatCard
-                        title="Doanh Thu TB/Đơn"
-                        value={`${revenueData.averageRevenuePerOrder.toLocaleString(
+                        title="Chi Phí xử lý Sự Cố"
+                        value={`${revenueData.totalIncidentCosts.toLocaleString(
+                          "vi-VN"
+                        )} ₫`}
+                        icon={<AttachMoney />}
+                        color="warning"
+                        isRevenue={true}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <AdminStatCard
+                        title="Doanh Thu Ròng"
+                        value={`${revenueData.netRevenue.toLocaleString(
                           "vi-VN"
                         )} ₫`}
                         icon={<TrendingUp />}
-                        color="warning"
+                        color="primary"
+                        isRevenue={true}
                       />
                     </Grid>
                     <Grid item xs={12}>

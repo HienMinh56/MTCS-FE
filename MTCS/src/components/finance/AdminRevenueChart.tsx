@@ -9,6 +9,9 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import {
   Box,
@@ -38,6 +41,8 @@ import {
   InfoOutlined,
   Download,
   CalendarMonth,
+  MoneyOff,
+  Warning,
 } from "@mui/icons-material";
 import {
   AdminRevenueAnalytics,
@@ -379,8 +384,288 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
         unpaidOrders: item.unpaidOrders,
         completedOrders: item.completedOrders,
         averageRevenuePerOrder: item.averageRevenuePerOrder,
+        totalExpenses: item.totalExpenses,
+        // Use actual paid/unpaid expense data from the main data object for current period
+        // or calculate from periodic data breakdown if available
+        paidExpenses: (() => {
+          // For current period, use the main data object
+          if (item.periodLabel === data.periodicData?.[0]?.periodLabel) {
+            return data.paidExpenses || 0;
+          }
+          // For other periods, calculate from breakdown if available
+          if (
+            item.paidExpenseBreakdown &&
+            Object.keys(item.paidExpenseBreakdown).length > 0
+          ) {
+            return Object.values(item.paidExpenseBreakdown).reduce(
+              (sum, amount) => sum + amount,
+              0
+            );
+          }
+          return 0;
+        })(),
+        unpaidExpenses: (() => {
+          // For current period, use the main data object
+          if (item.periodLabel === data.periodicData?.[0]?.periodLabel) {
+            return data.unpaidExpenses || 0;
+          }
+          // For other periods, calculate from breakdown if available
+          if (
+            item.unpaidExpenseBreakdown &&
+            Object.keys(item.unpaidExpenseBreakdown).length > 0
+          ) {
+            return Object.values(item.unpaidExpenseBreakdown).reduce(
+              (sum, amount) => sum + amount,
+              0
+            );
+          }
+          return 0;
+        })(),
+        totalIncidentCosts: item.totalIncidentCosts,
+        // Use actual paid/unpaid incident cost data
+        paidIncidentCosts: (() => {
+          // For current period, use the main data object
+          if (item.periodLabel === data.periodicData?.[0]?.periodLabel) {
+            return data.paidIncidentCosts || 0;
+          }
+          // For other periods, calculate from breakdown if available
+          if (
+            item.paidIncidentCostBreakdown &&
+            Object.keys(item.paidIncidentCostBreakdown).length > 0
+          ) {
+            return Object.values(item.paidIncidentCostBreakdown).reduce(
+              (sum, amount) => sum + amount,
+              0
+            );
+          }
+          return 0;
+        })(),
+        unpaidIncidentCosts: (() => {
+          // For current period, use the main data object
+          if (item.periodLabel === data.periodicData?.[0]?.periodLabel) {
+            return data.unpaidIncidentCosts || 0;
+          }
+          // For other periods, calculate from breakdown if available
+          if (
+            item.unpaidIncidentCostBreakdown &&
+            Object.keys(item.unpaidIncidentCostBreakdown).length > 0
+          ) {
+            return Object.values(item.unpaidIncidentCostBreakdown).reduce(
+              (sum, amount) => sum + amount,
+              0
+            );
+          }
+          return 0;
+        })(),
+        netRevenue: item.netRevenue,
       }))
-    : monthlyData;
+    : monthlyData.map((item) => ({
+        ...item,
+        totalExpenses: 0,
+        paidExpenses: 0,
+        unpaidExpenses: 0,
+        totalIncidentCosts: 0,
+        paidIncidentCosts: 0,
+        unpaidIncidentCosts: 0,
+        netRevenue: item.revenue,
+      }));
+
+  const getIncidentTypeLabel = (type: string): string => {
+    switch (type) {
+      case "1":
+        return "Sửa chữa tại chỗ";
+      case "2":
+        return "Thay thế xe kéo/rơ moóc";
+      case "3":
+        return "Không thể tiếp tục";
+      default:
+        return `Loại ${type}`;
+    }
+  };
+
+  const renderExpenseBreakdownChart = () => {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={chartDataToUse}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke={alpha(theme.palette.divider, 0.7)}
+          />
+          <XAxis
+            dataKey={shouldUsePeriodicData ? "period" : "month"}
+            tick={{
+              fill: theme.palette.text.secondary,
+              fontSize: 12,
+            }}
+            axisLine={{ stroke: theme.palette.divider }}
+            tickLine={false}
+          />
+          <YAxis
+            tickFormatter={formatYAxisTick}
+            tick={{
+              fill: theme.palette.text.secondary,
+              fontSize: 12,
+            }}
+            axisLine={{ stroke: theme.palette.divider }}
+            tickLine={false}
+          />
+          <RechartsTooltip
+            formatter={(value: number, name: string) => [
+              formatCurrency(value),
+              name,
+            ]}
+            labelFormatter={(label) => {
+              const item = chartDataToUse.find(
+                (item) => item.period === label || item.month === label
+              );
+              return item && shouldUsePeriodicData ? item.periodFull : label;
+            }}
+          />
+          <Legend
+            iconType="circle"
+            iconSize={10}
+            formatter={(value) => (
+              <Typography
+                variant="caption"
+                sx={{
+                  color: theme.palette.text.primary,
+                  fontWeight: 500,
+                }}
+              >
+                {value}
+              </Typography>
+            )}
+          />
+          <Bar
+            dataKey="paidExpenses"
+            name="Chi phí đã thanh toán"
+            fill={theme.palette.success.main}
+            barSize={
+              shouldUsePeriodicData && chartDataToUse.length > 12 ? 16 : 32
+            }
+            radius={[4, 4, 0, 0]}
+          />
+          <Bar
+            dataKey="unpaidExpenses"
+            name="Chi phí chưa thanh toán"
+            fill={theme.palette.warning.main}
+            barSize={
+              shouldUsePeriodicData && chartDataToUse.length > 12 ? 16 : 32
+            }
+            radius={[4, 4, 0, 0]}
+          />
+          <Line
+            type="monotone"
+            dataKey="totalExpenses"
+            name="Tổng chi phí"
+            stroke={theme.palette.error.main}
+            strokeWidth={3}
+            dot={{
+              r: shouldUsePeriodicData && chartDataToUse.length > 12 ? 3 : 6,
+              strokeWidth: 2,
+              fill: "#fff",
+            }}
+            activeDot={{
+              r: shouldUsePeriodicData && chartDataToUse.length > 12 ? 5 : 8,
+            }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    );
+  };
+
+  const renderIncidentCostBreakdownChart = () => {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={chartDataToUse}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke={alpha(theme.palette.divider, 0.7)}
+          />
+          <XAxis
+            dataKey={shouldUsePeriodicData ? "period" : "month"}
+            tick={{
+              fill: theme.palette.text.secondary,
+              fontSize: 12,
+            }}
+            axisLine={{ stroke: theme.palette.divider }}
+            tickLine={false}
+          />
+          <YAxis
+            tickFormatter={formatYAxisTick}
+            tick={{
+              fill: theme.palette.text.secondary,
+              fontSize: 12,
+            }}
+            axisLine={{ stroke: theme.palette.divider }}
+            tickLine={false}
+          />
+          <RechartsTooltip
+            formatter={(value: number, name: string) => [
+              formatCurrency(value),
+              name,
+            ]}
+            labelFormatter={(label) => {
+              const item = chartDataToUse.find(
+                (item) => item.period === label || item.month === label
+              );
+              return item && shouldUsePeriodicData ? item.periodFull : label;
+            }}
+          />
+          <Legend
+            iconType="circle"
+            iconSize={10}
+            formatter={(value) => (
+              <Typography
+                variant="caption"
+                sx={{
+                  color: theme.palette.text.primary,
+                  fontWeight: 500,
+                }}
+              >
+                {value}
+              </Typography>
+            )}
+          />
+          <Bar
+            dataKey="paidIncidentCosts"
+            name="Chi phí sự cố đã thanh toán"
+            fill={theme.palette.success.main}
+            barSize={
+              shouldUsePeriodicData && chartDataToUse.length > 12 ? 16 : 32
+            }
+            radius={[4, 4, 0, 0]}
+          />
+          <Bar
+            dataKey="unpaidIncidentCosts"
+            name="Chi phí sự cố chưa thanh toán"
+            fill={theme.palette.warning.main}
+            barSize={
+              shouldUsePeriodicData && chartDataToUse.length > 12 ? 16 : 32
+            }
+            radius={[4, 4, 0, 0]}
+          />
+          <Line
+            type="monotone"
+            dataKey="totalIncidentCosts"
+            name="Tổng chi phí sự cố"
+            stroke={theme.palette.error.main}
+            strokeWidth={3}
+            dot={{
+              r: shouldUsePeriodicData && chartDataToUse.length > 12 ? 3 : 6,
+              strokeWidth: 2,
+              fill: "#fff",
+            }}
+            activeDot={{
+              r: shouldUsePeriodicData && chartDataToUse.length > 12 ? 5 : 8,
+            }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    );
+  };
 
   return (
     <Card
@@ -498,7 +783,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
       </Box>
 
       {/* Payment status section */}
-      <Box sx={{ px: 3, pt: 2.5 }}>
+      <Box sx={{ px: 3, pt: 2.5, pb: 2.5 }}>
         <Box
           sx={{
             display: "flex",
@@ -681,7 +966,451 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
         </Grid>
       </Box>
 
-      <Divider sx={{ mt: 3, mb: 0 }} />
+      <Divider sx={{ mx: 0, my: 0 }} />
+
+      {/* Expense and Incident Cost Details Section */}
+      <Box
+        sx={{
+          px: 3,
+          py: 3,
+          backgroundColor: alpha(theme.palette.grey[50], 0.3),
+        }}
+      >
+        <Typography
+          variant="h5"
+          fontWeight="bold"
+          sx={{ mb: 3, textAlign: "center" }}
+        >
+          Chi tiết chi phí và sự cố
+        </Typography>
+
+        <Grid container spacing={4}>
+          {/* Expense Breakdown Details */}
+          <Grid item xs={12} lg={6}>
+            <Box
+              sx={{
+                backgroundColor: "#ffffff",
+                borderRadius: 2,
+                p: 3,
+                border: `1px solid ${alpha(theme.palette.grey[300], 0.3)}`,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+              }}
+            >
+              <Typography
+                variant="subtitle1"
+                fontWeight="bold"
+                sx={{ mb: 2, color: "error.main" }}
+              >
+                Chi phí phát sinh
+              </Typography>
+
+              {data.expenseBreakdown &&
+              Object.keys(data.expenseBreakdown).length > 0 ? (
+                <Box>
+                  <Grid container spacing={1}>
+                    {Object.entries(data.expenseBreakdown).map(
+                      ([type, amount]) => (
+                        <Grid item xs={12} key={type}>
+                          <Paper
+                            elevation={0}
+                            sx={{
+                              p: 1.5,
+                              border: `1px solid ${alpha(
+                                theme.palette.grey[300],
+                                0.5
+                              )}`,
+                              borderRadius: 1,
+                              backgroundColor: alpha(
+                                theme.palette.error.main,
+                                0.02
+                              ),
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <Typography variant="body2" fontWeight="medium">
+                                {type}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                color="error.main"
+                                fontWeight="600"
+                              >
+                                {formatCurrency(amount)}
+                              </Typography>
+                            </Box>
+                          </Paper>
+                        </Grid>
+                      )
+                    )}
+                  </Grid>
+
+                  {/* Paid/Unpaid Expense Breakdown */}
+                  <Box sx={{ mt: 2.5 }}>
+                    <Grid container spacing={1}>
+                      {data.paidExpenseBreakdown &&
+                        Object.keys(data.paidExpenseBreakdown).length > 0 && (
+                          <Grid item xs={12}>
+                            <Typography
+                              variant="caption"
+                              color="success.main"
+                              fontWeight="medium"
+                              sx={{ fontSize: "1rem" }}
+                            >
+                              Chi phí phát sinh đã thanh toán:
+                            </Typography>
+                            {Object.entries(data.paidExpenseBreakdown).map(
+                              ([type, amount]) =>
+                                amount > 0 && (
+                                  <Box
+                                    key={`paid-${type}`}
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      py: 0.5,
+                                      pl: 1,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ fontSize: "0.9rem" }}
+                                    >
+                                      {type}
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      color="success.main"
+                                      sx={{ fontSize: "0.9rem" }}
+                                    >
+                                      {formatCurrency(amount)}
+                                    </Typography>
+                                  </Box>
+                                )
+                            )}
+                          </Grid>
+                        )}
+
+                      {data.unpaidExpenseBreakdown &&
+                        Object.keys(data.unpaidExpenseBreakdown).length > 0 && (
+                          <Grid item xs={12}>
+                            <Typography
+                              variant="caption"
+                              color="warning.main"
+                              fontWeight="medium"
+                              sx={{ fontSize: "0.9rem" }}
+                            >
+                              Chi phí chưa thanh toán:
+                            </Typography>
+                            {Object.entries(data.unpaidExpenseBreakdown).map(
+                              ([type, amount]) =>
+                                amount > 0 && (
+                                  <Box
+                                    key={`unpaid-${type}`}
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      py: 0.5,
+                                      pl: 1,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ fontSize: "0.9rem" }}
+                                    >
+                                      {type}
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      color="warning.main"
+                                      sx={{ fontSize: "0.9rem" }}
+                                    >
+                                      {formatCurrency(amount)}
+                                    </Typography>
+                                  </Box>
+                                )
+                            )}
+                          </Grid>
+                        )}
+                    </Grid>
+                  </Box>
+
+                  {/* Total Expenses at Bottom */}
+                  <Divider sx={{ my: 2 }} />
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      p: 1.5,
+                      backgroundColor: alpha(theme.palette.error.main, 0.05),
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      fontWeight="bold"
+                      color="error.main"
+                    >
+                      Tổng chi phí phát sinh:
+                    </Typography>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight="bold"
+                      color="error.main"
+                    >
+                      {formatCurrency(data.totalExpenses)}
+                    </Typography>
+                  </Box>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    p: 4,
+                    textAlign: "center",
+                    backgroundColor: alpha(theme.palette.grey[100], 0.5),
+                    borderRadius: 1,
+                  }}
+                >
+                  <MoneyOff
+                    sx={{ fontSize: 48, color: "text.secondary", mb: 1 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    Không có chi phí phát sinh trong kỳ này
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Grid>
+
+          {/* Incident Cost Breakdown Details */}
+          <Grid item xs={12} lg={6}>
+            <Box
+              sx={{
+                backgroundColor: "#ffffff",
+                borderRadius: 2,
+                p: 3,
+                border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+              }}
+            >
+              <Typography
+                variant="subtitle1"
+                fontWeight="bold"
+                sx={{ mb: 2, color: "warning.main" }}
+              >
+                Chi phí xử lý sự cố
+              </Typography>
+
+              {data.incidentCostBreakdown &&
+              Object.keys(data.incidentCostBreakdown).length > 0 &&
+              Object.values(data.incidentCostBreakdown).some(
+                (amount) => amount > 0
+              ) ? (
+                <Box>
+                  <Grid container spacing={1}>
+                    {Object.entries(data.incidentCostBreakdown).map(
+                      ([type, amount]) =>
+                        amount > 0 && (
+                          <Grid item xs={12} key={type}>
+                            <Paper
+                              elevation={0}
+                              sx={{
+                                p: 1.5,
+                                border: `1px solid ${alpha(
+                                  theme.palette.warning.main,
+                                  0.3
+                                )}`,
+                                borderRadius: 1,
+                                backgroundColor: alpha(
+                                  theme.palette.warning.main,
+                                  0.02
+                                ),
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <Box>
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight="medium"
+                                  >
+                                    {getIncidentTypeLabel(type)}
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    Loại {type}
+                                  </Typography>
+                                </Box>
+                                <Typography
+                                  variant="body2"
+                                  color="warning.main"
+                                  fontWeight="600"
+                                >
+                                  {formatCurrency(amount)}
+                                </Typography>
+                              </Box>
+                            </Paper>
+                          </Grid>
+                        )
+                    )}
+                  </Grid>
+
+                  {/* Paid/Unpaid Incident Cost Breakdown */}
+                  <Box sx={{ mt: 2.5 }}>
+                    <Grid container spacing={1}>
+                      {data.paidIncidentCostBreakdown &&
+                        Object.keys(data.paidIncidentCostBreakdown).length >
+                          0 && (
+                          <Grid item xs={12}>
+                            <Typography
+                              variant="caption"
+                              color="success.main"
+                              fontWeight="medium"
+                              sx={{ fontSize: "1rem" }}
+                            >
+                              Chi phí sự cố đã thanh toán:
+                            </Typography>
+                            {Object.entries(data.paidIncidentCostBreakdown).map(
+                              ([type, amount]) =>
+                                amount > 0 && (
+                                  <Box
+                                    key={`paid-incident-${type}`}
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      py: 0.5,
+                                      pl: 1,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ fontSize: "0.9rem" }}
+                                    >
+                                      {getIncidentTypeLabel(type)}
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      color="success.main"
+                                      sx={{ fontSize: "0.9rem" }}
+                                    >
+                                      {formatCurrency(amount)}
+                                    </Typography>
+                                  </Box>
+                                )
+                            )}
+                          </Grid>
+                        )}
+
+                      {data.unpaidIncidentCostBreakdown &&
+                        Object.keys(data.unpaidIncidentCostBreakdown).length >
+                          0 && (
+                          <Grid item xs={12}>
+                            <Typography
+                              variant="caption"
+                              color="warning.main"
+                              fontWeight="medium"
+                              sx={{ fontSize: "0.9rem" }}
+                            >
+                              Chi phí sự cố chưa thanh toán:
+                            </Typography>
+                            {Object.entries(
+                              data.unpaidIncidentCostBreakdown
+                            ).map(
+                              ([type, amount]) =>
+                                amount > 0 && (
+                                  <Box
+                                    key={`unpaid-incident-${type}`}
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      py: 0.5,
+                                      pl: 1,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ fontSize: "0.9rem" }}
+                                    >
+                                      {getIncidentTypeLabel(type)}
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      color="warning.main"
+                                      sx={{ fontSize: "0.9rem" }}
+                                    >
+                                      {formatCurrency(amount)}
+                                    </Typography>
+                                  </Box>
+                                )
+                            )}
+                          </Grid>
+                        )}
+                    </Grid>
+                  </Box>
+
+                  {/* Total Incident Costs at Bottom */}
+                  <Divider sx={{ my: 2 }} />
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      p: 1.5,
+                      backgroundColor: alpha(theme.palette.warning.main, 0.05),
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      fontWeight="bold"
+                      color="warning.main"
+                    >
+                      Tổng chi phí sự cố:
+                    </Typography>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight="bold"
+                      color="warning.main"
+                    >
+                      {formatCurrency(data.totalIncidentCosts)}
+                    </Typography>
+                  </Box>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    p: 4,
+                    textAlign: "center",
+                    backgroundColor: alpha(theme.palette.grey[100], 0.5),
+                    borderRadius: 1,
+                  }}
+                >
+                  <Warning
+                    sx={{ fontSize: 48, color: "text.secondary", mb: 1 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    Không có chi phí sự cố trong kỳ này
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
+
+      <Divider sx={{ mt: 0, mb: 0 }} />
 
       {/* Chart tabs */}
       <Box sx={{ px: 2, pt: 1 }}>
@@ -694,6 +1423,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
             "& .MuiTab-root": {
               minHeight: "42px",
               py: 0.5,
+              fontSize: "0.875rem",
             },
             "& .Mui-selected": {
               fontWeight: 600,
@@ -702,6 +1432,8 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
         >
           <Tab label="Doanh thu theo thời gian" />
           <Tab label="So sánh loại đơn" />
+          <Tab label="Chi phí phát sinh" />
+          <Tab label="Chi phí sự cố" />
         </Tabs>
       </Box>
 
@@ -765,7 +1497,8 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                         if (
                           name === "Doanh thu đã thu" ||
                           name === "Doanh thu chưa thu" ||
-                          name === "Tổng doanh thu"
+                          name === "Tổng doanh thu" ||
+                          name === "Doanh thu ròng"
                         ) {
                           return [formatCurrency(value), name];
                         }
@@ -820,8 +1553,8 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                     />
                     <Line
                       type="monotone"
-                      dataKey="totalRevenue"
-                      name="Tổng doanh thu"
+                      dataKey="netRevenue"
+                      name="Doanh thu ròng"
                       stroke={theme.palette.primary.main}
                       strokeWidth={3}
                       dot={{
@@ -841,7 +1574,7 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                     />
                   </ComposedChart>
                 </ResponsiveContainer>
-              ) : (
+              ) : chartTab === 1 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartDataToUse}>
                     <CartesianGrid
@@ -938,6 +1671,20 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
                     />
                   </ComposedChart>
                 </ResponsiveContainer>
+              ) : chartTab === 2 ? (
+                <Box sx={{ width: "100%", height: "100%" }}>
+                  <Typography variant="h6" sx={{ mb: 2, textAlign: "center" }}>
+                    Phí phát sinh theo thời gian
+                  </Typography>
+                  {renderExpenseBreakdownChart()}
+                </Box>
+              ) : (
+                <Box sx={{ width: "100%", height: "100%" }}>
+                  <Typography variant="h6" sx={{ mb: 2, textAlign: "center" }}>
+                    Phí sự cố theo thời gian
+                  </Typography>
+                  {renderIncidentCostBreakdownChart()}
+                </Box>
               )}
             </Box>
           </Fade>

@@ -65,6 +65,22 @@ const AdminCustomerRevenueTable: React.FC<AdminCustomerRevenueTableProps> = ({
     onPageChange(1, newPageSize);
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("vi-VN").format(value) + " ₫";
+  };
+
+  const getPaymentStatusColor = (paidOrders: number, unpaidOrders: number) => {
+    if (unpaidOrders === 0) return "success";
+    if (paidOrders === 0) return "error";
+    return "warning";
+  };
+
+  const getPaymentStatusText = (paidOrders: number, unpaidOrders: number) => {
+    if (unpaidOrders === 0) return "Thanh toán đủ";
+    if (paidOrders === 0) return "Chưa thanh toán";
+    return "Một phần";
+  };
+
   return (
     <Card
       elevation={0}
@@ -146,24 +162,94 @@ const AdminCustomerRevenueTable: React.FC<AdminCustomerRevenueTableProps> = ({
                     py: 2,
                     textAlign: "left",
                     paddingLeft: 3,
+                    minWidth: 200,
                   }}
                 >
                   Tên Công Ty
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, py: 2, textAlign: "center" }}>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    py: 2,
+                    textAlign: "center",
+                    minWidth: 120,
+                  }}
+                >
                   Tổng Doanh Thu
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, py: 2, textAlign: "center" }}>
-                  Số Đơn Hoàn Thành
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    py: 2,
+                    textAlign: "center",
+                    minWidth: 100,
+                  }}
+                >
+                  CP Phát sinh
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, py: 2, textAlign: "center" }}>
-                  Doanh Thu TB/Đơn
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    py: 2,
+                    textAlign: "center",
+                    minWidth: 100,
+                  }}
+                >
+                  CP Sự Cố
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    py: 2,
+                    textAlign: "center",
+                    minWidth: 120,
+                  }}
+                >
+                  Doanh Thu Ròng
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    py: 2,
+                    textAlign: "center",
+                    minWidth: 80,
+                  }}
+                >
+                  Số Đơn
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    py: 2,
+                    textAlign: "center",
+                    minWidth: 120,
+                  }}
+                >
+                  Trạng Thái TT
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    py: 2,
+                    textAlign: "center",
+                    minWidth: 120,
+                  }}
+                >
+                  DT TB/Đơn
                 </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {data.items?.map((customer, index) => {
                 const isTopThree = index < 3;
+                const paymentStatusColor = getPaymentStatusColor(
+                  customer.paidOrders,
+                  customer.unpaidOrders
+                );
+                const paymentStatusText = getPaymentStatusText(
+                  customer.paidOrders,
+                  customer.unpaidOrders
+                );
 
                 return (
                   <TableRow
@@ -211,25 +297,110 @@ const AdminCustomerRevenueTable: React.FC<AdminCustomerRevenueTableProps> = ({
                         </Typography>
                       </Stack>
                     </TableCell>
+
                     <TableCell sx={{ py: 2, textAlign: "center" }}>
                       <Typography
                         fontWeight={isTopThree ? 600 : 500}
                         color={isTopThree ? "primary.main" : "inherit"}
+                        variant="body2"
                       >
-                        {customer.totalRevenue.toLocaleString()}
+                        {formatCurrency(customer.totalRevenue)}
                       </Typography>
                     </TableCell>
+
                     <TableCell sx={{ py: 2, textAlign: "center" }}>
-                      {customer.completedOrders}
+                      <Typography
+                        variant="body2"
+                        color={
+                          customer.totalExpenses > 0
+                            ? "error.main"
+                            : "text.secondary"
+                        }
+                        fontWeight={customer.totalExpenses > 0 ? 600 : 400}
+                      >
+                        {customer.totalExpenses > 0
+                          ? formatCurrency(customer.totalExpenses)
+                          : "-"}
+                      </Typography>
                     </TableCell>
+
+                    <TableCell sx={{ py: 2, textAlign: "center" }}>
+                      <Typography
+                        variant="body2"
+                        color={
+                          customer.totalIncidentCosts > 0
+                            ? "warning.main"
+                            : "text.secondary"
+                        }
+                        fontWeight={customer.totalIncidentCosts > 0 ? 600 : 400}
+                      >
+                        {customer.totalIncidentCosts > 0
+                          ? formatCurrency(customer.totalIncidentCosts)
+                          : "-"}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell sx={{ py: 2, textAlign: "center" }}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        color={
+                          customer.netRevenue > 0
+                            ? "success.main"
+                            : customer.netRevenue < 0
+                            ? "error.main"
+                            : "text.secondary"
+                        }
+                      >
+                        {customer.netRevenue !== 0
+                          ? formatCurrency(customer.netRevenue)
+                          : "-"}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell sx={{ py: 2, textAlign: "center" }}>
+                      <Typography variant="body2" fontWeight={500}>
+                        {customer.completedOrders}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell sx={{ py: 2, textAlign: "center" }}>
+                      <Stack
+                        direction="column"
+                        spacing={0.5}
+                        alignItems="center"
+                      >
+                        <Chip
+                          label={paymentStatusText}
+                          size="small"
+                          color={paymentStatusColor}
+                          sx={{
+                            fontSize: "0.7rem",
+                            fontWeight: 600,
+                            minWidth: 80,
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          {customer.paidOrders}/{customer.completedOrders}
+                        </Typography>
+                      </Stack>
+                    </TableCell>
+
                     <TableCell sx={{ py: 2, textAlign: "center" }}>
                       <Box display="flex" justifyContent="center">
                         <Chip
-                          label={`${customer.averageRevenuePerOrder.toLocaleString()}`}
+                          label={
+                            customer.averageRevenuePerOrder > 0
+                              ? formatCurrency(customer.averageRevenuePerOrder)
+                              : "-"
+                          }
                           size="small"
                           color={isTopThree ? "primary" : "default"}
                           variant={isTopThree ? "filled" : "outlined"}
-                          sx={{ fontWeight: 600 }}
+                          sx={{
+                            fontWeight: 600,
+                            minWidth: 100,
+                          }}
                         />
                       </Box>
                     </TableCell>

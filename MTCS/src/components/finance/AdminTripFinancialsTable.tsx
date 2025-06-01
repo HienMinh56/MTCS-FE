@@ -13,8 +13,25 @@ import {
   alpha,
   Card,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Divider,
+  Chip,
+  Grid,
+  Paper,
 } from "@mui/material";
-import { LocalGasStation, AttachMoney } from "@mui/icons-material";
+import {
+  LocalGasStation,
+  AttachMoney,
+  Warning,
+  MoneyOff,
+  Close,
+  TrendingUp,
+  TrendingDown,
+} from "@mui/icons-material";
 import { AdminTripFinancial } from "../../types/admin-finance";
 
 interface AdminTripFinancialsTableProps {
@@ -29,6 +46,40 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [selectedTrip, setSelectedTrip] = useState<AdminTripFinancial | null>(
+    null
+  );
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const formatCurrency = (value: number | undefined | null) => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return "0 ₫";
+    }
+    return new Intl.NumberFormat("vi-VN").format(value) + " ₫";
+  };
+
+  const handleTripClick = (trip: AdminTripFinancial) => {
+    setSelectedTrip(trip);
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSelectedTrip(null);
+  };
+
+  const getIncidentTypeLabel = (type: string): string => {
+    switch (type) {
+      case "Incident-Type-1":
+        return "Sửa chữa tại chỗ";
+      case "Incident-Type-2":
+        return "Thay thế xe kéo/rơ moóc";
+      case "Incident-Type-3":
+        return "Không thể tiếp tục";
+      default:
+        return type;
+    }
+  };
 
   const handleChangePage = (
     _event: React.MouseEvent<HTMLButtonElement> | null,
@@ -100,35 +151,71 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
         <Table>
           <TableHead>
             <TableRow className="bg-gray-50">
-              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
+              <TableCell
+                align="center"
+                sx={{ fontWeight: 600, py: 2, minWidth: 100 }}
+              >
                 Mã Chuyến
               </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
+              <TableCell
+                align="center"
+                sx={{ fontWeight: 600, py: 2, minWidth: 120 }}
+              >
                 Mã Đơn Hàng
               </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
+              <TableCell
+                align="center"
+                sx={{ fontWeight: 600, py: 2, minWidth: 150 }}
+              >
                 Khách Hàng
               </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
+              <TableCell
+                align="center"
+                sx={{ fontWeight: 600, py: 2, minWidth: 100 }}
+              >
                 Doanh Thu
               </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
-                Chi Phí Nhiên Liệu
+              <TableCell
+                align="center"
+                sx={{ fontWeight: 600, py: 2, minWidth: 100 }}
+              >
+                CP Phát Sinh
               </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
-                Chênh lệch
+              <TableCell
+                align="center"
+                sx={{ fontWeight: 600, py: 2, minWidth: 100 }}
+              >
+                CP Sự Cố
+              </TableCell>
+              <TableCell
+                align="center"
+                sx={{ fontWeight: 600, py: 2, minWidth: 100 }}
+              >
+                Lợi Nhuận
+              </TableCell>
+              <TableCell
+                align="center"
+                sx={{ fontWeight: 600, py: 2, minWidth: 80 }}
+              >
+                % LN
               </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {displayedRows.map((trip) => {
-              const isProfit = trip.profitMargin > 0;
+              const revenue = trip.revenue || 0;
+              const totalExpenses = trip.totalExpenses || 0;
+              const incidentCost = trip.incidentCost || 0;
+              const profitMargin = trip.profitMargin || 0;
+              const profitMarginPercentage = trip.profitMarginPercentage || 0;
+              const isProfit = profitMargin > 0;
 
               return (
                 <TableRow
                   key={trip.tripId}
                   hover
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => handleTripClick(trip)}
                 >
                   <TableCell
                     align="center"
@@ -136,17 +223,21 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
                     className="border-l-4"
                     style={{ borderLeftColor: theme.palette.primary.main }}
                   >
-                    {trip.tripCode || trip.tripId}
+                    {trip.tripId || "-"}
                   </TableCell>
                   <TableCell align="center" sx={{ py: 2 }}>
-                    {trip.trackingCode}
+                    <Typography variant="body2" fontWeight={500}>
+                      {trip.trackingCode || "-"}
+                    </Typography>
                   </TableCell>
                   <TableCell align="center" sx={{ py: 2 }}>
-                    {trip.customerName}
+                    <Typography variant="body2" sx={{ maxWidth: 150 }}>
+                      {trip.customerName || "-"}
+                    </Typography>
                   </TableCell>
                   <TableCell align="center" sx={{ py: 2 }}>
-                    <Typography className="font-medium">
-                      {trip.revenue.toLocaleString()}
+                    <Typography className="font-medium" variant="body2">
+                      {formatCurrency(revenue)}
                     </Typography>
                   </TableCell>
                   <TableCell align="center" sx={{ py: 2 }}>
@@ -158,22 +249,67 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
                         gap: 0.5,
                       }}
                     >
-                      <LocalGasStation fontSize="small" color="error" />
-                      <Typography className="font-medium">
-                        {trip.fuelCost.toLocaleString()}
-                      </Typography>
+                      {totalExpenses > 0 ? (
+                        <>
+                          <MoneyOff fontSize="small" color="error" />
+                          <Typography
+                            className="font-medium"
+                            variant="body2"
+                            color="error.main"
+                          >
+                            {formatCurrency(totalExpenses)}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          -
+                        </Typography>
+                      )}
                     </Box>
                   </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: 600, py: 2 }}
-                    color={isProfit ? "success" : "error"}
-                  >
+                  <TableCell align="center" sx={{ py: 2 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 0.5,
+                      }}
+                    >
+                      {incidentCost > 0 ? (
+                        <>
+                          <Warning fontSize="small" color="warning" />
+                          <Typography
+                            className="font-medium"
+                            variant="body2"
+                            color="warning.main"
+                          >
+                            {formatCurrency(incidentCost)}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          -
+                        </Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600, py: 2 }}>
                     <Typography
                       className="font-semibold"
+                      variant="body2"
                       color={isProfit ? "success.main" : "error.main"}
                     >
-                      {trip.profitMargin.toLocaleString()}
+                      {formatCurrency(profitMargin)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center" sx={{ py: 2 }}>
+                    <Typography
+                      variant="body2"
+                      fontWeight={600}
+                      color={isProfit ? "success.main" : "error.main"}
+                    >
+                      {profitMarginPercentage.toFixed(1)}%
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -199,6 +335,327 @@ const AdminTripFinancialsTable: React.FC<AdminTripFinancialsTableProps> = ({
           className="border-t border-gray-100"
         />
       </Box>
+
+      {/* Expense Breakdown Modal */}
+      <Dialog
+        open={modalOpen}
+        onClose={handleCloseModal}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxHeight: "80vh",
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Typography variant="h6" fontWeight="bold">
+              Chi Tiết Tài Chính Chuyến
+            </Typography>
+            <Button
+              onClick={handleCloseModal}
+              sx={{ minWidth: "auto", p: 1 }}
+              color="inherit"
+            >
+              <Close />
+            </Button>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent>
+          {selectedTrip && (
+            <Box>
+              {/* Trip Info */}
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  border: `1px solid ${theme.palette.grey[200]}`,
+                  borderRadius: 2,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.02),
+                }}
+              >
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Mã chuyến
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      fontWeight={600}
+                      color="primary.main"
+                    >
+                      {selectedTrip.tripId}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Mã đơn hàng
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {selectedTrip.trackingCode}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="body2" color="text.secondary">
+                      Khách hàng
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {selectedTrip.customerName}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Financial Summary */}
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      textAlign: "center",
+                      border: `1px solid ${alpha(
+                        theme.palette.success.main,
+                        0.2
+                      )}`,
+                      backgroundColor: alpha(theme.palette.success.main, 0.02),
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
+                      Doanh thu
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      fontWeight="bold"
+                      color="success.main"
+                    >
+                      {formatCurrency(selectedTrip.revenue)}
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      textAlign: "center",
+                      border: `1px solid ${alpha(
+                        theme.palette.error.main,
+                        0.2
+                      )}`,
+                      backgroundColor: alpha(theme.palette.error.main, 0.02),
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
+                      CP Phát Sinh
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      fontWeight="bold"
+                      color="error.main"
+                    >
+                      {formatCurrency(selectedTrip.totalExpenses)}
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      textAlign: "center",
+                      border: `1px solid ${alpha(
+                        theme.palette.warning.main,
+                        0.2
+                      )}`,
+                      backgroundColor: alpha(theme.palette.warning.main, 0.02),
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
+                      CP Sự Cố
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      fontWeight="bold"
+                      color="warning.main"
+                    >
+                      {formatCurrency(selectedTrip.incidentCost)}
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      textAlign: "center",
+                      border: `1px solid ${alpha(
+                        selectedTrip.profitMargin > 0
+                          ? theme.palette.success.main
+                          : theme.palette.error.main,
+                        0.2
+                      )}`,
+                      backgroundColor: alpha(
+                        selectedTrip.profitMargin > 0
+                          ? theme.palette.success.main
+                          : theme.palette.error.main,
+                        0.02
+                      ),
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
+                      Lợi nhuận
+                    </Typography>
+                    <Stack direction="column" alignItems="center" spacing={0.5}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 0.5,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {selectedTrip.profitMargin > 0 ? (
+                          <TrendingUp fontSize="small" color="success" />
+                        ) : (
+                          <TrendingDown fontSize="small" color="error" />
+                        )}
+                        <Typography
+                          variant="body1"
+                          fontWeight="bold"
+                          color={
+                            selectedTrip.profitMargin > 0
+                              ? "success.main"
+                              : "error.main"
+                          }
+                          sx={{
+                            fontSize: "0.95rem",
+                            lineHeight: 1.2,
+                            textAlign: "center",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {formatCurrency(selectedTrip.profitMargin)}
+                        </Typography>
+                      </Box>
+                      <Typography
+                        variant="caption"
+                        color={
+                          selectedTrip.profitMargin > 0
+                            ? "success.main"
+                            : "error.main"
+                        }
+                        fontWeight={600}
+                      >
+                        {selectedTrip.profitMarginPercentage.toFixed(1)}%
+                      </Typography>
+                    </Stack>
+                  </Paper>
+                </Grid>
+              </Grid>
+
+              {/* Expense Breakdown */}
+              {selectedTrip.expenseBreakdown &&
+                Object.keys(selectedTrip.expenseBreakdown).length > 0 && (
+                  <Box>
+                    <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+                      Chi Tiết Chi Phí
+                    </Typography>
+                    <Grid container spacing={2}>
+                      {Object.entries(selectedTrip.expenseBreakdown).map(
+                        ([type, amount]) => (
+                          <Grid item xs={12} sm={6} key={type}>
+                            <Paper
+                              elevation={0}
+                              sx={{
+                                p: 2,
+                                border: `1px solid ${theme.palette.grey[200]}`,
+                                borderRadius: 1,
+                                backgroundColor: type.includes("Incident")
+                                  ? alpha(theme.palette.warning.main, 0.02)
+                                  : alpha(theme.palette.error.main, 0.02),
+                              }}
+                            >
+                              <Box
+                                display="flex"
+                                justifyContent="space-between"
+                                alignItems="center"
+                              >
+                                <Box>
+                                  <Typography variant="body2" fontWeight={500}>
+                                    {type.includes("Incident")
+                                      ? getIncidentTypeLabel(type)
+                                      : type}
+                                  </Typography>
+                                  <Chip
+                                    label={
+                                      type.includes("Incident")
+                                        ? "Sự cố"
+                                        : "Phí phát sinh"
+                                    }
+                                    size="small"
+                                    color={
+                                      type.includes("Incident")
+                                        ? "warning"
+                                        : "error"
+                                    }
+                                    sx={{ mt: 0.5, fontSize: "0.7rem" }}
+                                  />
+                                </Box>
+                                <Typography
+                                  variant="body1"
+                                  fontWeight="bold"
+                                  color={
+                                    type.includes("Incident")
+                                      ? "warning.main"
+                                      : "error.main"
+                                  }
+                                >
+                                  {formatCurrency(amount)}
+                                </Typography>
+                              </Box>
+                            </Paper>
+                          </Grid>
+                        )
+                      )}
+                    </Grid>
+                  </Box>
+                )}
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleCloseModal} variant="outlined" color="primary">
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };

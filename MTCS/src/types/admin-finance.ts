@@ -14,23 +14,45 @@ export interface PeriodicRevenueItem {
   startDate: string;
   endDate: string;
   totalRevenue: number;
+  totalExpenses: number;
+  totalIncidentCosts: number;
+  netRevenue: number;
   completedOrders: number;
   averageRevenuePerOrder: number;
+  averageNetRevenuePerOrder: number;
   paidRevenue: number;
   unpaidRevenue: number;
   paidOrders: number;
   unpaidOrders: number;
+  expenseBreakdown: Record<string, number>;
+  incidentCostBreakdown: Record<string, number>;
 }
 
 export interface AdminRevenueAnalytics {
   totalRevenue: number;
+  totalExpenses: number;
+  totalIncidentCosts: number;
+  netRevenue: number;
   completedOrders: number;
   averageRevenuePerOrder: number;
+  averageNetRevenuePerOrder: number;
   period: string;
   paidRevenue: number;
+  paidExpenses: number;
+  paidIncidentCosts: number;
+  paidNetRevenue: number;
   unpaidRevenue: number;
+  unpaidExpenses: number;
+  unpaidIncidentCosts: number;
+  unpaidNetRevenue: number;
   paidOrders: number;
   unpaidOrders: number;
+  expenseBreakdown: Record<string, number>;
+  incidentCostBreakdown: Record<string, number>;
+  paidExpenseBreakdown: Record<string, number>;
+  paidIncidentCostBreakdown: Record<string, number>;
+  unpaidExpenseBreakdown: Record<string, number>;
+  unpaidIncidentCostBreakdown: Record<string, number>;
   paidOrdersList?: OrderSummary[];
   unpaidOrdersList?: OrderSummary[];
   periodicData?: PeriodicRevenueItem[];
