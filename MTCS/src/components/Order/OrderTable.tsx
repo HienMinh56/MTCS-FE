@@ -1029,7 +1029,7 @@ const OrderManagement: React.FC = () => {
                       Ngày giao hàng
                     </TableSortLabel>
                   </TableCell>
-                  <TableCell align="center">Loại vận chuyển</TableCell>
+                  <TableCell align="center">Số lượng đơn</TableCell>
                   <TableCell align="center">Giá (VNĐ)</TableCell>
                   <TableCell align="center">Trạng thái</TableCell>
                   <TableCell align="center">Thanh toán</TableCell>
@@ -1066,7 +1066,7 @@ const OrderManagement: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell align="center">
-                        {getDeliveryTypeDisplay(order.deliveryType)}
+                        {order.quanlity}
                       </TableCell>
                       <TableCell align="center">
                         {new Intl.NumberFormat("vi-VN").format(order.totalAmount ? order.totalAmount : "N/A")}
