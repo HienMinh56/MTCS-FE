@@ -300,14 +300,17 @@ const OrderDetailPage: React.FC = () => {
       .string()
       .min(1, "Địa điểm trả container là bắt buộc"),
     completionTime: zod
-  .string()
-  .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Thời gian phải có định dạng HH:MM (ví dụ: 00:15)")
-  .refine((time) => {
-    // Convert time to minutes for comparison
-    const [hours, minutes] = time.split(":");
-    const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
-    return totalMinutes >= 15; // Minimum 15 minutes
-  }, "Thời gian hoàn thành tối thiểu là 00:15"),
+      .string()
+      .regex(
+        /^([01]\d|2[0-3]):([0-5]\d)$/,
+        "Thời gian phải có định dạng HH:MM (ví dụ: 00:15)"
+      )
+      .refine((time) => {
+        // Convert time to minutes for comparison
+        const [hours, minutes] = time.split(":");
+        const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
+        return totalMinutes >= 15; // Minimum 15 minutes
+      }, "Thời gian hoàn thành tối thiểu là 00:15"),
     distance: zod.number().min(0, "Khoảng cách không được âm"),
     pickUpDate: zod.date(),
     deliveryDate: zod.date(),
@@ -583,14 +586,17 @@ const OrderDetailPage: React.FC = () => {
       .string()
       .min(1, "Địa điểm trả container là bắt buộc"),
     completionTime: zod
-  .string()
-  .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Thời gian phải có định dạng HH:MM (ví dụ: 00:15)")
-  .refine((time) => {
-    // Convert time to minutes for comparison
-    const [hours, minutes] = time.split(":");
-    const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
-    return totalMinutes >= 15; // Minimum 15 minutes
-  }, "Thời gian hoàn thành tối thiểu là 00:15"),
+      .string()
+      .regex(
+        /^([01]\d|2[0-3]):([0-5]\d)$/,
+        "Thời gian phải có định dạng HH:MM (ví dụ: 00:15)"
+      )
+      .refine((time) => {
+        // Convert time to minutes for comparison
+        const [hours, minutes] = time.split(":");
+        const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
+        return totalMinutes >= 15; // Minimum 15 minutes
+      }, "Thời gian hoàn thành tối thiểu là 00:15"),
     distance: zod.number().min(0, "Khoảng cách không được âm"),
     pickUpDate: zod.date(),
     deliveryDate: zod.date(),
@@ -1611,7 +1617,7 @@ const OrderDetailPage: React.FC = () => {
     const containerSpecificTrips = containerTrips[orderDetailId] || [];
     const hasActiveInContainerTrips = containerSpecificTrips.some(
       (trip) =>
-        trip.status !== "not_started" &&
+        // trip.status !== "not_started" &&
         trip.status !== "canceled" &&
         trip.status !== "completed"
     );
@@ -1621,11 +1627,12 @@ const OrderDetailPage: React.FC = () => {
       ? tripData.some(
           (trip) =>
             trip.containerNumber === containerNum &&
-            trip.status !== "not_started" &&
+            // trip.status !== "not_started" &&
             trip.status !== "canceled" &&
             trip.status !== "completed"
         )
       : false;
+
 
     return hasActiveInContainerTrips || hasActiveInGlobalTrips;
   };
@@ -2322,12 +2329,21 @@ const OrderDetailPage: React.FC = () => {
                   </Typography>
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Ghi chú
                   </Typography>
                   <Typography variant="body1" gutterBottom>
                     {orderDetails.note || "Không có ghi chú"}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Số lượng đơn
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {orderDetails.quanlity || "Số lượng đơn"}
                   </Typography>
                 </Grid>
               </Grid>
@@ -3125,7 +3141,7 @@ const OrderDetailPage: React.FC = () => {
                             </Grid>
 
                             {user?.role === "Staff" &&
-                              orderDetails.status === OrderStatus.Pending && (
+                              detail.status === OrderStatus.Pending && (
                                 <Grid item xs={12}>
                                   <Divider sx={{ mt: 1, mb: 2 }} />
                                   <Typography variant="subtitle2" gutterBottom>
@@ -3137,7 +3153,7 @@ const OrderDetailPage: React.FC = () => {
                                       Container này đang có chuyến vận chuyển
                                     </Alert>
                                   ) : (
-                                    <>
+                                    <>                                    
                                       {detail.files &&
                                       detail.files.length > 0 &&
                                       contractFiles &&
