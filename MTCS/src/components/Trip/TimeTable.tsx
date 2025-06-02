@@ -14,6 +14,15 @@ import {
   Chip,
   Fade,
   Zoom,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
 } from "@mui/material";
 import {
   format,
@@ -51,14 +60,25 @@ const statusColors = {
   returning: "#9c27b0",
   default: "#9e9e9e",
   delaying: "#ff9800",
+  not_started: "#9e9e9e",
 };
 
 const TimeTable: React.FC = () => {
   const theme = useTheme();
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [trips, setTrips] = useState<TripTimeTableItem[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState({
+    totalTrips: 0,
+    completedTrips: 0,
+    activeTrips: 0,
+    pendingTrips: 0,
+    canceledTrips: 0,
+    notStartedTrips: 0,
+  });
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [notStartedModalOpen, setNotStartedModalOpen] =
+    useState<boolean>(false);
   const tripsRef = useRef<HTMLDivElement>(null);
 
   // Get start and end of current week
@@ -74,29 +94,46 @@ const TimeTable: React.FC = () => {
     "dd/MM/yyyy"
   )}`;
 
-  // Calculate weekly statistics
-  const weeklyStats = {
-    totalTrips: trips.length,
-    completedTrips: trips.filter((trip) => trip.status === "completed").length,
-    activeTrips: trips.filter((trip) => trip.status === "active").length,
-    pendingTrips: trips.filter((trip) => trip.status === "pending").length,
-  };
-
   const fetchTimeTable = async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await getTripTimeTable(weekStart, weekEnd);
       if (response.success) {
-        setTrips(response.data || []);
+        setTrips(response.data?.trips || []);
+        // Use API counts instead of calculating on frontend
+        setWeeklyStats({
+          totalTrips: response.data?.totalCount || 0,
+          completedTrips: response.data?.completedCount || 0,
+          activeTrips: response.data?.deliveringCount || 0,
+          pendingTrips: response.data?.delayingCount || 0,
+          canceledTrips: response.data?.canceledCount || 0,
+          notStartedTrips: response.data?.notStartedCount || 0,
+        });
       } else {
         setError(response.message || "Failed to load time table");
         setTrips([]);
+        setWeeklyStats({
+          totalTrips: 0,
+          completedTrips: 0,
+          activeTrips: 0,
+          pendingTrips: 0,
+          canceledTrips: 0,
+          notStartedTrips: 0,
+        });
       }
     } catch (err) {
       setError("Error loading time table data. Please try again later.");
       console.error("Error fetching time table:", err);
       setTrips([]);
+      setWeeklyStats({
+        totalTrips: 0,
+        completedTrips: 0,
+        activeTrips: 0,
+        pendingTrips: 0,
+        canceledTrips: 0,
+        notStartedTrips: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -179,6 +216,7 @@ const TimeTable: React.FC = () => {
       delivered: "Đã giao hàng",
       returning: "Đang trả container",
       delaying: "Đang delay",
+      not_started: "Chưa bắt đầu",
     };
     return statusMap[status] || status;
   };
@@ -209,7 +247,7 @@ const TimeTable: React.FC = () => {
       }}
     >
       <Grid container spacing={2}>
-        <Grid item xs={3}>
+        <Grid item xs={2}>
           <Box sx={{ textAlign: "center" }}>
             <Typography variant="h6" fontWeight="bold" color="text.primary">
               {weeklyStats.totalTrips}
@@ -219,7 +257,7 @@ const TimeTable: React.FC = () => {
             </Typography>
           </Box>
         </Grid>
-        <Grid item xs={3}>
+        <Grid item xs={2}>
           <Box sx={{ textAlign: "center" }}>
             <Typography variant="h6" fontWeight="bold" color="success.main">
               {weeklyStats.completedTrips}
@@ -229,17 +267,17 @@ const TimeTable: React.FC = () => {
             </Typography>
           </Box>
         </Grid>
-        <Grid item xs={3}>
+        <Grid item xs={2}>
           <Box sx={{ textAlign: "center" }}>
             <Typography variant="h6" fontWeight="bold" color="info.main">
               {weeklyStats.activeTrips}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Đang chạy
+              Đang giao
             </Typography>
           </Box>
         </Grid>
-        <Grid item xs={3}>
+        <Grid item xs={2}>
           <Box sx={{ textAlign: "center" }}>
             <Typography variant="h6" fontWeight="bold" color="warning.main">
               {weeklyStats.pendingTrips}
@@ -249,9 +287,172 @@ const TimeTable: React.FC = () => {
             </Typography>
           </Box>
         </Grid>
+        <Grid item xs={2}>
+          <Box sx={{ textAlign: "center" }}>
+            <Typography variant="h6" fontWeight="bold" color="error.main">
+              {weeklyStats.canceledTrips}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Đã hủy
+            </Typography>
+          </Box>
+        </Grid>
+        <Grid item xs={2}>
+          <Box
+            sx={{
+              textAlign: "center",
+              cursor: "pointer",
+              p: 1,
+              borderRadius: 1,
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(0,0,0,0.05)",
+                transform: "scale(1.02)",
+              },
+            }}
+            onClick={() => setNotStartedModalOpen(true)}
+          >
+            <Typography variant="h6" fontWeight="bold" color="text.secondary">
+              {weeklyStats.notStartedTrips}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Chưa bắt đầu
+            </Typography>
+          </Box>
+        </Grid>
       </Grid>
     </Paper>
   );
+
+  const NotStartedTripsModal: React.FC = () => {
+    const notStartedTrips = trips.filter(
+      (trip) => trip.status === "not_started"
+    );
+
+    return (
+      <Dialog
+        open={notStartedModalOpen}
+        onClose={() => setNotStartedModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: "80vh",
+          },
+        }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <LocalShippingIcon sx={{ mr: 1, color: "text.secondary" }} />
+            <Typography variant="h6" fontWeight="bold">
+              Danh sách chuyến chưa bắt đầu ({notStartedTrips.length})
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          {notStartedTrips.length === 0 ? (
+            <Box sx={{ p: 3, textAlign: "center" }}>
+              <Typography variant="body1" color="text.secondary">
+                Không có chuyến nào chưa bắt đầu
+              </Typography>
+            </Box>
+          ) : (
+            <List sx={{ width: "100%" }}>
+              {notStartedTrips.map((trip, index) => (
+                <React.Fragment key={trip.tripId}>
+                  <ListItem alignItems="flex-start" sx={{ px: 3, py: 2 }}>
+                    <ListItemText
+                      primary={
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            mb: 1,
+                          }}
+                        >
+                          <Typography
+                            variant="subtitle1"
+                            fontWeight="bold"
+                            color="primary"
+                          >
+                            {trip.tripId}
+                          </Typography>
+                          <Chip
+                            label={getStatusText(trip.status)}
+                            size="small"
+                            sx={{
+                              backgroundColor: getStatusColor(trip.status),
+                              color: "white",
+                              fontWeight: "bold",
+                              fontSize: "0.7rem",
+                            }}
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Box sx={{ mt: 1 }}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 0.5 }}
+                          >
+                            <strong>Mã theo dõi:</strong> {trip.orderDetailId}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 0.5 }}
+                          >
+                            <strong>Tài xế:</strong> {trip.driverName}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 0.5 }}
+                          >
+                            <strong>Lấy hàng:</strong> {trip.pickUpLocation}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 0.5 }}
+                          >
+                            <strong>Giao hàng:</strong> {trip.deliveryLocation}
+                          </Typography>
+                          {trip.conReturnLocation && (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ mb: 0.5 }}
+                            >
+                              <strong>Trả container:</strong>{" "}
+                              {trip.conReturnLocation}
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                  {index < notStartedTrips.length - 1 && <Divider />}
+                </React.Fragment>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setNotStartedModalOpen(false)}
+            variant="contained"
+            sx={{ borderRadius: 1 }}
+          >
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
 
   const TripCard: React.FC<{ trip: TripTimeTableItem }> = ({ trip }) => {
     const [isHovered, setIsHovered] = useState(false);
@@ -283,7 +484,7 @@ const TimeTable: React.FC = () => {
         <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <Typography variant="caption" fontWeight="bold">
-              Mã theo dõi: {trip.trackingCode}
+              Mã theo dõi: {trip.orderDetailId}
             </Typography>
           </Box>
 
@@ -332,7 +533,7 @@ const TimeTable: React.FC = () => {
           >
             <Box sx={{ display: "flex", alignItems: "center", mb: 0.3 }}>
               <AccessTimeIcon
-                sx={{ mr: 1, color: "info.main", fontSize: 14 }}
+                sx={{ mr: 1, color: "success.main", fontSize: 14 }}
               />
               <Typography variant="caption">
                 <strong>Bắt đầu:</strong> {formatTime(trip.startTime)}
@@ -340,18 +541,10 @@ const TimeTable: React.FC = () => {
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", mb: 0.3 }}>
               <AccessTimeIcon
-                sx={{ mr: 1, color: "info.main", fontSize: 14 }}
+                sx={{ mr: 1, color: "error.main", fontSize: 14 }}
               />
               <Typography variant="caption">
                 <strong>Kết thúc:</strong> {formatTime(trip.endTime)}
-              </Typography>
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <AccessTimeIcon
-                sx={{ mr: 1, color: "secondary.main", fontSize: 14 }}
-              />
-              <Typography variant="caption">
-                <strong>Ghép đôi:</strong> {formatTime(trip.matchTime)}
               </Typography>
             </Box>
           </Box>
@@ -560,7 +753,7 @@ const TimeTable: React.FC = () => {
                   mb: 0.2,
                 }}
               >
-                Lịch Trình Chuyến Hàng
+                Lịch Trình Giao Hàng
               </Typography>
             </Box>
 
@@ -817,6 +1010,9 @@ const TimeTable: React.FC = () => {
           )}
         </Box>
       </Paper>
+
+      {/* Not Started Trips Modal */}
+      <NotStartedTripsModal />
     </Box>
   );
 };

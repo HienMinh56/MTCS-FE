@@ -203,12 +203,20 @@ export const getTripForTable = async () => {
 
 export const getTripTimeTable = async (startOfWeek: Date, endOfWeek: Date) => {
   try {
+    // Format dates as local date strings to avoid timezone conversion
+    const formatDateForAPI = (date: Date) => {
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const day = date.getDate().toString().padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
     const response = await axiosInstance.get<TripTimeTableResponse>(
       `/api/trips/time-table`,
       {
         params: {
-          startOfWeek: startOfWeek.toISOString(),
-          endOfWeek: endOfWeek.toISOString(),
+          startOfWeek: formatDateForAPI(startOfWeek),
+          endOfWeek: formatDateForAPI(endOfWeek),
         },
       }
     );
