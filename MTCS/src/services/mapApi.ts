@@ -83,7 +83,7 @@ export const getGeocode = async (
   placeId: string
 ): Promise<Coordinates | null> => {
   try {
-    const response = await axios.get(`${GOONG_API_BASE_URL}/Geocode`, {
+    const response = await axios.get(`${GOONG_API_BASE_URL}/geocode`, {
       params: {
         place_id: placeId,
         api_key: GOONG_API_KEY,
@@ -109,7 +109,7 @@ export const getGeocodeByAddress = async (
   address: string
 ): Promise<Coordinates | null> => {
   try {
-    const response = await axios.get(`${GOONG_API_BASE_URL}/Geocode`, {
+    const response = await axios.get(`${GOONG_API_BASE_URL}/geocode`, {
       params: {
         address,
         api_key: GOONG_API_KEY,
