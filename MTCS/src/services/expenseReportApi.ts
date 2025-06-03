@@ -54,3 +54,18 @@ export const getExpenseReportDetails = async (
     throw error;
   }
 };
+
+export const toggleExpensePaymentStatus = async (
+  reportId: string
+): Promise<any> => {
+  try {
+    const response = await axiosInstance.patch<BusinessResult<any>>(
+      `/api/ExpenseReport/${reportId}/toggle-is-pay`
+    );
+
+    return response.data;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};

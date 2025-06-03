@@ -58,19 +58,27 @@ export interface TripTimeTableItem {
   trackingCode: string;
   pickUpLocation: string;
   deliveryLocation: string;
+  deliveryDate: string;
   conReturnLocation: string;
   orderDetailId: string;
   driverId: string;
   driverName: string;
-  startTime: string;
+  startTime: string | null;
   endTime: string | null;
-  matchTime: string;
   status: string;
 }
 
 export interface TripTimeTableResponse {
   success: boolean;
-  data: TripTimeTableItem[];
+  data: {
+    trips: TripTimeTableItem[];
+    totalCount: number;
+    completedCount: number;
+    deliveringCount: number;
+    delayingCount: number;
+    canceledCount: number;
+    notStartedCount: number;
+  };
   message: string;
   messageVN: string;
   errors: null | any;

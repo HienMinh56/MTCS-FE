@@ -104,7 +104,7 @@ const TimeTable: React.FC<TimeTableProps> = ({ renderToggle }) => {
       const response = await getTripTimeTable(weekStart, weekEnd);
       if (response.success) {
         setTrips(response.data?.trips || []);
-        // Use API counts instead of calculating on frontend
+        // Use API counts from the new structure
         setWeeklyStats({
           totalTrips: response.data?.totalCount || 0,
           completedTrips: response.data?.completedCount || 0,
@@ -185,18 +185,26 @@ const TimeTable: React.FC<TimeTableProps> = ({ renderToggle }) => {
     fetchTimeTable();
   };
 
-  // Get trips for a specific day and sort by start time
+  // Get trips for a specific day based on delivery date and sort by start time
   const getTripsForDay = (date: Date) => {
     const dayTrips = trips.filter((trip) => {
-      const tripDate = parseISO(trip.startTime);
-      return isSameDay(tripDate, date);
+      const deliveryDate = parseISO(trip.deliveryDate);
+      return isSameDay(deliveryDate, date);
     });
 
-    // Sort trips by start time (earliest first)
+    // Sort trips by start time (earliest first), handle null start times
     return dayTrips.sort((a, b) => {
-      const timeA = parseISO(a.startTime);
-      const timeB = parseISO(b.startTime);
-      return timeA.getTime() - timeB.getTime();
+      // If both have start times, sort by start time
+      if (a.startTime && b.startTime) {
+        const timeA = parseISO(a.startTime);
+        const timeB = parseISO(b.startTime);
+        return timeA.getTime() - timeB.getTime();
+      }
+      // If only one has start time, prioritize the one with start time
+      if (a.startTime && !b.startTime) return -1;
+      if (!a.startTime && b.startTime) return 1;
+      // If neither has start time, sort by trip ID for consistent ordering
+      return a.tripId.localeCompare(b.tripId);
     });
   };
 
@@ -230,7 +238,7 @@ const TimeTable: React.FC<TimeTableProps> = ({ renderToggle }) => {
       const date = parseISO(dateTimeString);
       return format(date, "HH:mm", { locale: vi });
     } catch (error) {
-      return "Invalid time";
+      return "Chưa xác định";
     }
   };
 
@@ -690,7 +698,9 @@ const TimeTable: React.FC<TimeTableProps> = ({ renderToggle }) => {
                 fontWeight: "medium",
               }}
             >
-              Bắt đầu: {formatTime(trip.startTime)}
+              {trip.startTime
+                ? `Bắt đầu: ${formatTime(trip.startTime)}`
+                : "Chưa bắt đầu"}
             </Typography>
           </CardContent>
         </Card>

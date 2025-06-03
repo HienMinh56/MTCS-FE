@@ -22,7 +22,6 @@ import {
   Search as SearchIcon,
   FilterList as FilterListIcon,
   Refresh as RefreshIcon,
-  AccountBalanceWallet as WalletIcon,
   Payment as PaymentIcon,
   MoneyOff as UnpaidIcon,
   Assessment as ReportIcon,
@@ -44,16 +43,11 @@ const ExpenseReportsPage: React.FC = () => {
   const [openFilters, setOpenFilters] = useState(false);
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
   // Summary statistics
   const [summary, setSummary] = useState({
     total: 0,
     paid: 0,
     unpaid: 0,
-    fuel: 0,
-    toll: 0,
-    carWash: 0,
-    other: 0,
   });
 
   const handleFilterChange = (field: keyof FilterParams, value: string) => {
@@ -98,27 +92,23 @@ const ExpenseReportsPage: React.FC = () => {
   const refreshTable = () => {
     setRefreshTrigger((prev) => prev + 1);
   };
-
-  const handleCardClick = (type?: string) => {
-    if (type === undefined || hasActiveFilters) {
+  const handleCardClick = () => {
+    if (hasActiveFilters) {
       setFilters({});
       setHasActiveFilters(false);
-    } else {
-      const newFilters = { reportTypeId: type };
-      setFilters(newFilters);
-      setHasActiveFilters(true);
+      setRefreshTrigger((prev) => prev + 1);
     }
-    setRefreshTrigger((prev) => prev + 1);
   };
 
   return (
     <Box
       sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}
     >
+      {" "}
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         {/* Total card */}
-        <Grid item xs={6} sm={6} md={2}>
+        <Grid item xs={12} sm={4} md={4}>
           <Card
             elevation={1}
             sx={{
@@ -134,16 +124,16 @@ const ExpenseReportsPage: React.FC = () => {
             }}
             onClick={() => handleCardClick()}
           >
-            <CardContent sx={{ textAlign: "center", py: 1.5 }}>
-              <ReportIcon sx={{ fontSize: 32, color: "#1976d2", mb: 1 }} />
+            <CardContent sx={{ textAlign: "center", py: 2 }}>
+              <ReportIcon sx={{ fontSize: 40, color: "#1976d2", mb: 1 }} />
               <Typography
-                variant="h6"
+                variant="h5"
                 component="div"
                 sx={{ fontWeight: "bold" }}
               >
                 {summary.total}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body1" color="text.secondary">
                 Tổng báo cáo
               </Typography>
             </CardContent>
@@ -151,7 +141,7 @@ const ExpenseReportsPage: React.FC = () => {
         </Grid>
 
         {/* Paid card */}
-        <Grid item xs={6} sm={6} md={2}>
+        <Grid item xs={12} sm={4} md={4}>
           <Card
             elevation={1}
             sx={{
@@ -172,16 +162,16 @@ const ExpenseReportsPage: React.FC = () => {
               setRefreshTrigger((prev) => prev + 1);
             }}
           >
-            <CardContent sx={{ textAlign: "center", py: 1.5 }}>
-              <PaymentIcon sx={{ fontSize: 32, color: "#4caf50", mb: 1 }} />
+            <CardContent sx={{ textAlign: "center", py: 2 }}>
+              <PaymentIcon sx={{ fontSize: 40, color: "#4caf50", mb: 1 }} />
               <Typography
-                variant="h6"
+                variant="h5"
                 component="div"
                 sx={{ fontWeight: "bold" }}
               >
                 {summary.paid}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body1" color="text.secondary">
                 Đã thanh toán
               </Typography>
             </CardContent>
@@ -189,7 +179,7 @@ const ExpenseReportsPage: React.FC = () => {
         </Grid>
 
         {/* Unpaid card */}
-        <Grid item xs={6} sm={6} md={2}>
+        <Grid item xs={12} sm={4} md={4}>
           <Card
             elevation={1}
             sx={{
@@ -210,127 +200,22 @@ const ExpenseReportsPage: React.FC = () => {
               setRefreshTrigger((prev) => prev + 1);
             }}
           >
-            <CardContent sx={{ textAlign: "center", py: 1.5 }}>
-              <UnpaidIcon sx={{ fontSize: 32, color: "#f44336", mb: 1 }} />
+            <CardContent sx={{ textAlign: "center", py: 2 }}>
+              <UnpaidIcon sx={{ fontSize: 40, color: "#f44336", mb: 1 }} />
               <Typography
-                variant="h6"
+                variant="h5"
                 component="div"
                 sx={{ fontWeight: "bold" }}
               >
                 {summary.unpaid}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body1" color="text.secondary">
                 Chưa thanh toán
               </Typography>
             </CardContent>
           </Card>
         </Grid>
-
-        {/* Fuel card */}
-        <Grid item xs={6} sm={6} md={2}>
-          <Card
-            elevation={1}
-            sx={{
-              borderRadius: 2,
-              height: "100%",
-              cursor: "pointer",
-              transition: "transform 0.2s, box-shadow 0.2s",
-              borderBottom:
-                filters.reportTypeId === "fuel_report"
-                  ? "3px solid #ff9800"
-                  : "none",
-              "&:hover": {
-                transform: "translateY(-3px)",
-                boxShadow: 3,
-              },
-            }}
-            onClick={() => handleCardClick("fuel_report")}
-          >
-            <CardContent sx={{ textAlign: "center", py: 1.5 }}>
-              <WalletIcon sx={{ fontSize: 32, color: "#ff9800", mb: 1 }} />
-              <Typography
-                variant="h6"
-                component="div"
-                sx={{ fontWeight: "bold" }}
-              >
-                {summary.fuel}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Xăng dầu
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Toll card */}
-        <Grid item xs={6} sm={6} md={2}>
-          <Card
-            elevation={1}
-            sx={{
-              borderRadius: 2,
-              height: "100%",
-              cursor: "pointer",
-              transition: "transform 0.2s, box-shadow 0.2s",
-              borderBottom:
-                filters.reportTypeId === "toll" ? "3px solid #9c27b0" : "none",
-              "&:hover": {
-                transform: "translateY(-3px)",
-                boxShadow: 3,
-              },
-            }}
-            onClick={() => handleCardClick("toll")}
-          >
-            <CardContent sx={{ textAlign: "center", py: 1.5 }}>
-              <WalletIcon sx={{ fontSize: 32, color: "#9c27b0", mb: 1 }} />
-              <Typography
-                variant="h6"
-                component="div"
-                sx={{ fontWeight: "bold" }}
-              >
-                {summary.toll}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Phí cầu đường
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Other card */}
-        <Grid item xs={6} sm={6} md={2}>
-          <Card
-            elevation={1}
-            sx={{
-              borderRadius: 2,
-              height: "100%",
-              cursor: "pointer",
-              transition: "transform 0.2s, box-shadow 0.2s",
-              borderBottom:
-                filters.reportTypeId === "other" ? "3px solid #607d8b" : "none",
-              "&:hover": {
-                transform: "translateY(-3px)",
-                boxShadow: 3,
-              },
-            }}
-            onClick={() => handleCardClick("other")}
-          >
-            <CardContent sx={{ textAlign: "center", py: 1.5 }}>
-              <WalletIcon sx={{ fontSize: 32, color: "#607d8b", mb: 1 }} />
-              <Typography
-                variant="h6"
-                component="div"
-                sx={{ fontWeight: "bold" }}
-              >
-                {summary.other}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Khác
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
       </Grid>
-
       <Paper
         elevation={1}
         sx={{

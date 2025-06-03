@@ -172,9 +172,8 @@ const DriverTimeTable: React.FC<DriverTimeTableProps> = ({
 
   const getTripsForDay = (driver: DriverTimeTableItem, date: Date) => {
     return driver.driverSchedule.filter((trip) => {
-      if (!trip.startTime) return false;
-      const tripDate = parseISO(trip.startTime);
-      return isSameDay(tripDate, date);
+      const deliveryDate = parseISO(trip.deliveryDate);
+      return isSameDay(deliveryDate, date);
     });
   };
 
@@ -384,6 +383,41 @@ const DriverTimeTable: React.FC<DriverTimeTableProps> = ({
                           <strong>Dự kiến hoàn thành:</strong>{" "}
                           {trip.estimatedCompletionTime}
                         </Typography>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mb: 0.5 }}
+                        >
+                          <strong>Ngày giao hàng:</strong> {trip.deliveryDate}
+                        </Typography>
+                        {trip.startTime && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 0.5 }}
+                          >
+                            <strong>Bắt đầu:</strong>{" "}
+                            {format(
+                              parseISO(trip.startTime),
+                              "HH:mm dd/MM/yyyy",
+                              { locale: vi }
+                            )}
+                          </Typography>
+                        )}
+                        {trip.endTime && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 0.5 }}
+                          >
+                            <strong>Kết thúc:</strong>{" "}
+                            {format(
+                              parseISO(trip.endTime),
+                              "HH:mm dd/MM/yyyy",
+                              { locale: vi }
+                            )}
+                          </Typography>
+                        )}
                       </Box>
                     }
                   />

@@ -11,12 +11,22 @@ import {
   Box,
   IconButton,
   CircularProgress,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { getExpenseReportsList } from "../../services/expenseReportApi";
+import {
+  getExpenseReportsList,
+  toggleExpensePaymentStatus,
+} from "../../services/expenseReportApi";
 import { ExpenseReport } from "../../types/expenseReport";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import PaymentIcon from "@mui/icons-material/Payment";
 import { useAuth } from "../../contexts/AuthContext";
 
 interface FilterParams {
@@ -56,6 +66,12 @@ const ExpenseReportTable: React.FC<ExpenseReportTableProps> = ({
   const [expenseReports, setExpenseReports] = useState<ExpenseReport[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    reportId: string;
+    currentStatus: number;
+  }>({ open: false, reportId: "", currentStatus: 0 });
+  const [toggleLoading, setToggleLoading] = useState<string | null>(null);
   const prevRefreshTriggerRef = useRef(refreshTrigger);
   const isInitialMountRef = useRef(true);
   const isPageChangeRef = useRef(false);
@@ -225,6 +241,47 @@ const ExpenseReportTable: React.FC<ExpenseReportTableProps> = ({
     navigate(`${prefix}/expense-reports/${reportId}`);
   };
 
+  const handleTogglePayment = (reportId: string, currentStatus: number) => {
+    setConfirmDialog({
+      open: true,
+      reportId,
+      currentStatus,
+    });
+  };
+
+  const handleConfirmToggle = async () => {
+    const { reportId } = confirmDialog;
+    setToggleLoading(reportId);
+
+    try {
+      await toggleExpensePaymentStatus(reportId);
+
+      // Refresh the data after successful toggle
+      shouldFetchDataRef.current = true;
+      await fetchExpenseReports();
+
+      setConfirmDialog({ open: false, reportId: "", currentStatus: 0 });
+    } catch (error) {
+      console.error("Error toggling payment status:", error);
+      // You might want to show an error message to the user here
+    } finally {
+      setToggleLoading(null);
+    }
+  };
+
+  const handleCancelToggle = () => {
+    setConfirmDialog({ open: false, reportId: "", currentStatus: 0 });
+  };
+
+  const handlePaymentButtonClick = (
+    event: React.MouseEvent,
+    reportId: string,
+    currentStatus: number
+  ) => {
+    event.stopPropagation(); // Prevent row click when clicking the button
+    handleTogglePayment(reportId, currentStatus);
+  };
+
   const from = (page - 1) * rowsPerPage + 1;
   const to = Math.min(page * rowsPerPage, totalCount);
   const hasNextPage = page < Math.ceil(totalCount / rowsPerPage);
@@ -265,6 +322,7 @@ const ExpenseReportTable: React.FC<ExpenseReportTableProps> = ({
             sx={{ minWidth: 650 }}
             aria-label="expense reports table"
           >
+            {" "}
             <TableHead>
               <TableRow>
                 <TableCell align="center">Mã báo cáo</TableCell>
@@ -275,12 +333,14 @@ const ExpenseReportTable: React.FC<ExpenseReportTableProps> = ({
                 <TableCell align="center">Địa điểm</TableCell>
                 <TableCell align="center">Thời gian</TableCell>
                 <TableCell align="center">Trạng thái</TableCell>
+                <TableCell align="center">Thao tác</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
+              {" "}
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={9} align="center">
                     <Box
                       sx={{ display: "flex", justifyContent: "center", p: 2 }}
                     >
@@ -337,15 +397,43 @@ const ExpenseReportTable: React.FC<ExpenseReportTableProps> = ({
                       <Typography variant="body2">
                         {formatDate(report.reportTime)}
                       </Typography>
-                    </TableCell>
+                    </TableCell>{" "}
                     <TableCell align="center">
                       {getPaymentStatusChip(report.isPay)}
+                    </TableCell>{" "}
+                    <TableCell align="center">
+                      {report.isPay === 0 ? (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<PaymentIcon />}
+                          onClick={(event) =>
+                            handlePaymentButtonClick(
+                              event,
+                              report.reportId,
+                              report.isPay
+                            )
+                          }
+                          disabled={toggleLoading === report.reportId}
+                          sx={{ minWidth: "120px" }}
+                        >
+                          {toggleLoading === report.reportId ? (
+                            <CircularProgress size={16} />
+                          ) : (
+                            "Xác nhận đã thanh toán"
+                          )}
+                        </Button>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          -
+                        </Typography>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={9} align="center">
                     <Typography variant="body2" color="text.secondary" py={3}>
                       Không có dữ liệu
                     </Typography>
@@ -387,6 +475,42 @@ const ExpenseReportTable: React.FC<ExpenseReportTableProps> = ({
           </Box>
         </Box>
       </Box>
+      <Dialog
+        open={confirmDialog.open}
+        onClose={handleCancelToggle}
+        aria-labelledby="confirm-toggle-title"
+        aria-describedby="confirm-toggle-description"
+      >
+        <DialogTitle id="confirm-toggle-title">
+          Xác nhận thay đổi trạng thái thanh toán
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="confirm-toggle-description">
+            Bạn có chắc chắn xác nhận thanh toán cho chi phí này?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleCancelToggle}
+            color="primary"
+            disabled={toggleLoading !== null}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleConfirmToggle}
+            color="secondary"
+            variant="contained"
+            disabled={toggleLoading !== null}
+          >
+            {toggleLoading === confirmDialog.reportId ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              "Xác nhận"
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

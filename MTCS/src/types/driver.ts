@@ -139,6 +139,7 @@ export interface DriverTripSchedule {
   endTime: string | null;
   status: string;
   estimatedCompletionTime: string;
+  deliveryDate: string;
 }
 
 export interface DailyWorkingTime {
