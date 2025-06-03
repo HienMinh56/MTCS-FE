@@ -480,9 +480,12 @@ const OrderDetailPage: React.FC = () => {
     setEditOrderDetailFiles([]);
     setEditOrderDetailDescriptions([]);
     setEditOrderDetailNotes([]);
-    setEditOrderDetailFilesToRemove([]);
-
-    // Reset form with current values
+    setEditOrderDetailFilesToRemove([]);    // Reset form with current values
+    // Format the completion time correctly (take just the HH:MM part)
+    const formattedCompletionTime = detail.completionTime ? 
+      detail.completionTime.split(":").slice(0, 2).join(":") : 
+      "";
+      
     resetEditOrderDetail({
       containerNumber: detail.containerNumber,
       containerType: detail.containerType,
@@ -492,7 +495,7 @@ const OrderDetailPage: React.FC = () => {
       pickUpLocation: detail.pickUpLocation,
       deliveryLocation: detail.deliveryLocation,
       conReturnLocation: detail.conReturnLocation,
-      completionTime: detail.completionTime || null,
+      completionTime: formattedCompletionTime,
       distance: detail.distance,
       pickUpDate: new Date(detail.pickUpDate),
       deliveryDate: new Date(detail.deliveryDate),
@@ -5388,40 +5391,31 @@ const OrderDetailPage: React.FC = () => {
                 </Grid>
 
                 <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Thời gian hoàn thành (HH:MM)"
-                    placeholder="Ví dụ: 14:30"
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                    inputProps={{
-                      pattern: "[0-9]{2}:[0-9]{2}",
-                    }}
-                    onChange={(e) => {
-                      const timeValue = e.target.value;
-                      if (
-                        timeValue &&
-                        /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeValue)
-                      ) {
-                        setValueEditOrderDetail("completionTime", timeValue);
-                      }
-                    }}
-                    error={!!errorsEditOrderDetail.completionTime}
-                    helperText={
-                      errorsEditOrderDetail.completionTime?.message ||
-                      "Nhập theo định dạng HH:MM (ví dụ: 14:30)"
-                    }
-                    margin="normal"
-                    disabled={editOrderDetailLoading}
-                    defaultValue={
-                      editingOrderDetail?.completionTime
-                        ? editingOrderDetail.completionTime
-                            .split(":")
-                            .slice(0, 2)
-                            .join(":")
-                        : ""
-                    }
+                  <Controller
+                    name="completionTime"
+                    control={controlEditOrderDetail}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="Thời gian hoàn thành (HH:MM)"
+                        placeholder="Ví dụ: 14:30"
+                        InputLabelProps={{
+                          shrink: true,
+                        }}
+                        inputProps={{
+                          pattern: "[0-9]{2}:[0-9]{2}",
+                        }}
+                        error={!!errorsEditOrderDetail.completionTime}
+                        helperText={
+                          errorsEditOrderDetail.completionTime?.message ||
+                          "Nhập theo định dạng HH:MM (ví dụ: 14:30)"
+                        }
+                        margin="normal"
+                        disabled={editOrderDetailLoading}
+                        value={field.value || ""}
+                      />
+                    )}
                   />
                 </Grid>
 
