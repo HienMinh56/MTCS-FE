@@ -642,7 +642,7 @@ const IncidentDetailDialog = ({
               )
             }
           >
-            {paymentLoading ? "Đang xử lý..." : "Đã thanh toán"}
+            {paymentLoading ? "Đang xử lý..." : "Xác nhận thanh toán"}
           </Button>
         )}
 
@@ -1269,6 +1269,7 @@ const IncidentManagement = () => {
                         </TableSortLabel>
                       </TableCell>
                       <TableCell align="center">Trạng thái</TableCell>
+                      <TableCell align="center">Trạng thái thanh toán</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1323,6 +1324,25 @@ const IncidentManagement = () => {
                                   : incident.status === "Handling"
                                   ? "info"
                                   : "success"
+                              }
+                            />
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip                             
+                              size="small"
+                              label={
+                                incident.isPay === 0
+                                  ? "Chưa thanh toán"
+                                  : incident.isPay === 1
+                                  ? "Đã thanh toán"
+                                  : "Không có"
+                              }
+                              color={
+                                incident.isPay === 0
+                                  ? "warning"
+                                  : incident.isPay === 1
+                                  ? "success"
+                                  : "info"
                               }
                             />
                           </TableCell>
