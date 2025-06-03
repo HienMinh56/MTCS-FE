@@ -172,8 +172,9 @@ const DriverTimeTable: React.FC<DriverTimeTableProps> = ({
 
   const getTripsForDay = (driver: DriverTimeTableItem, date: Date) => {
     return driver.driverSchedule.filter((trip) => {
-      const deliveryDate = parseISO(trip.deliveryDate);
-      return isSameDay(deliveryDate, date);
+      if (!trip.startTime) return false;
+      const tripDate = parseISO(trip.startTime);
+      return isSameDay(tripDate, date);
     });
   };
 
@@ -383,41 +384,6 @@ const DriverTimeTable: React.FC<DriverTimeTableProps> = ({
                           <strong>Dự kiến hoàn thành:</strong>{" "}
                           {trip.estimatedCompletionTime}
                         </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ mb: 0.5 }}
-                        >
-                          <strong>Ngày giao hàng:</strong> {trip.deliveryDate}
-                        </Typography>
-                        {trip.startTime && (
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mb: 0.5 }}
-                          >
-                            <strong>Bắt đầu:</strong>{" "}
-                            {format(
-                              parseISO(trip.startTime),
-                              "HH:mm dd/MM/yyyy",
-                              { locale: vi }
-                            )}
-                          </Typography>
-                        )}
-                        {trip.endTime && (
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mb: 0.5 }}
-                          >
-                            <strong>Kết thúc:</strong>{" "}
-                            {format(
-                              parseISO(trip.endTime),
-                              "HH:mm dd/MM/yyyy",
-                              { locale: vi }
-                            )}
-                          </Typography>
-                        )}
                       </Box>
                     }
                   />
@@ -448,118 +414,397 @@ const DriverTimeTable: React.FC<DriverTimeTableProps> = ({
   }) => {
     const dayWorkingTime = getWorkingTimeForDay(driver, day);
     const dayTrips = getTripsForDay(driver, day);
-    const expectedProgress = Math.min(
-      (dayWorkingTime.expectedMinutes / 480) * 100,
-      100
-    ); // 8 hours = 480 minutes
-    const actualProgress = Math.min(
-      (dayWorkingTime.totalMinutes / 480) * 100,
-      100
-    );
+    const [isHovered, setIsHovered] = useState(false);
 
-    return (
-      <Card
-        className="driver-item"
-        onClick={() => {
-          setSelectedDriver(driver);
-          setDetailModalOpen(true);
-        }}
+    const tooltipContent = (
+      <Paper
+        elevation={8}
         sx={{
-          mb: 1.2,
-          cursor: "pointer",
-          borderRadius: 1,
-          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-          "&:hover": {
-            boxShadow: `0 4px 12px rgba(0,0,0,0.15)`,
-            transform: "translateY(-2px)",
-          },
+          p: 1.5,
+          maxWidth: 400,
+          backgroundColor: "rgba(255, 255, 255, 0.98)",
+          backdropFilter: "blur(10px)",
+          border: `1px solid ${theme.palette.divider}`,
         }}
       >
-        <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+          <PersonIcon
+            sx={{
+              mr: 1,
+              color: "primary.main",
+              fontSize: 18,
+            }}
+          />
+          <Typography variant="subtitle2" fontWeight="bold" color="primary">
+            Chi tiết lịch làm việc
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Typography variant="caption" fontWeight="bold">
+              Tài xế: {driver.driverName}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <AccessTimeIcon
+              sx={{ mr: 1, color: "warning.main", fontSize: 14 }}
+            />
+            <Typography variant="caption">
+              <strong>Dự kiến:</strong> {dayWorkingTime.expectedWorkingTime}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <AccessTimeIcon
+              sx={{ mr: 1, color: "primary.main", fontSize: 14 }}
+            />
+            <Typography variant="caption">
+              <strong>Thực tế:</strong> {dayWorkingTime.workingTime}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <LocalShippingIcon
+              sx={{ mr: 1, color: "info.main", fontSize: 14 }}
+            />
+            <Typography variant="caption">
+              <strong>Số chuyến:</strong> {dayTrips.length}
+            </Typography>
+          </Box>
+
+          {dayTrips.length > 0 && (
+            <Box
+              sx={{
+                mt: 0.5,
+                pt: 0.5,
+                borderTop: `1px solid ${theme.palette.divider}`,
+              }}
+            >
+              <Typography
+                variant="caption"
+                fontWeight="bold"
+                sx={{ mb: 0.5, display: "block" }}
+              >
+                Chi tiết chuyến hàng:
+              </Typography>
+              {dayTrips.map((trip, index) => (
+                <Box
+                  key={trip.tripId}
+                  sx={{
+                    mb: 1,
+                    p: 1,
+                    borderRadius: 1,
+                    backgroundColor: `${getStatusColor(trip.status)}10`,
+                    border: `1px solid ${getStatusColor(trip.status)}30`,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 0.5,
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      fontWeight="bold"
+                      color="primary.main"
+                    >
+                      {trip.tripId}
+                    </Typography>
+                    <Chip
+                      label={getStatusText(trip.status)}
+                      size="small"
+                      sx={{
+                        fontSize: "0.55rem",
+                        height: 14,
+                        backgroundColor: getStatusColor(trip.status),
+                        color: "white",
+                        fontWeight: "bold",
+                      }}
+                    />
+                  </Box>
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mb: 0.2 }}
+                  >
+                    <strong>Tracking:</strong> {trip.orderDetailId}
+                  </Typography>
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mb: 0.2 }}
+                  >
+                    <strong>Đầu kéo:</strong> {trip.tractorPlate}
+                  </Typography>
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mb: 0.2 }}
+                  >
+                    <strong>Rơ moóc:</strong> {trip.trailerPlate}
+                  </Typography>
+
+                  {trip.startTime && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mb: 0.2 }}
+                    >
+                      <strong>Bắt đầu:</strong>{" "}
+                      {format(parseISO(trip.startTime), "HH:mm dd/MM", {
+                        locale: vi,
+                      })}
+                    </Typography>
+                  )}
+
+                  {trip.endTime && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mb: 0.2 }}
+                    >
+                      <strong>Kết thúc:</strong>{" "}
+                      {format(parseISO(trip.endTime), "HH:mm dd/MM", {
+                        locale: vi,
+                      })}
+                    </Typography>
+                  )}
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block" }}
+                  >
+                    <strong>Dự kiến hoàn thành:</strong>{" "}
+                    {trip.estimatedCompletionTime}
+                  </Typography>
+                </Box>
+              ))}
+
+              {dayTrips.length > 2 && (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontStyle: "italic" }}
+                >
+                  Click vào tài xế để xem tất cả {dayTrips.length} chuyến...
+                </Typography>
+              )}
+            </Box>
+          )}
+
           <Box
             sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 0.8,
+              mt: 0.5,
+              pt: 0.5,
+              borderTop: `1px solid ${theme.palette.divider}`,
             }}
           >
             <Typography
-              variant="subtitle2"
+              variant="caption"
               fontWeight="bold"
-              sx={{
-                color: "primary.main",
-                fontSize: "0.8rem",
-                lineHeight: 1.2,
-              }}
+              sx={{ mb: 0.3, display: "block" }}
             >
-              {driver.driverName}
+              Tuần này:
             </Typography>
             <Typography
               variant="caption"
               color="text.secondary"
-              sx={{ fontSize: "0.7rem" }}
+              sx={{ display: "block", mb: 0.2 }}
             >
-              {dayTrips.length} chuyến
+              <strong>Tổng chuyến:</strong> {driver.totalCount}
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mb: 0.2 }}
+            >
+              <strong>Hoàn thành:</strong> {driver.completedCount}
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mb: 0.2 }}
+            >
+              <strong>Thời gian tuần:</strong> {driver.weeklyWorkingTime}
             </Typography>
           </Box>
+        </Box>
+      </Paper>
+    );
 
-          {/* Expected Working Time */}
-          <Box sx={{ mb: 0.8 }}>
+    return (
+      <Tooltip
+        title={tooltipContent}
+        placement="right"
+        arrow
+        enterDelay={200}
+        leaveDelay={100}
+        TransitionComponent={Fade}
+        TransitionProps={{ timeout: 300 }}
+      >
+        <Card
+          className="driver-item"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          sx={{
+            mb: 1.2,
+            borderLeft: `3px solid ${theme.palette.primary.main}`,
+            borderRadius: 1,
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            position: "relative",
+            overflow: "visible",
+            "&:hover": {
+              boxShadow: `0 4px 12px rgba(0,0,0,0.15)`,
+              borderLeftWidth: "4px",
+              "& .driver-status-indicator": {
+                transform: "scale(1.1)",
+              },
+              "& .driver-content": {
+                backgroundColor: "rgba(0,0,0,0.02)",
+              },
+            },
+            "&:before": {
+              content: '""',
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: `linear-gradient(45deg, ${theme.palette.primary.main}10, transparent)`,
+              opacity: isHovered ? 1 : 0,
+              transition: "opacity 0.3s ease",
+              borderRadius: "inherit",
+              zIndex: 0,
+            },
+          }}
+        >
+          <CardContent
+            className="driver-content"
+            sx={{
+              p: 1.5,
+              "&:last-child": { pb: 1.5 },
+              position: "relative",
+              zIndex: 1,
+              transition: "background-color 0.3s ease",
+            }}
+          >
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "flex-end",
+                justifyContent: "space-between",
                 alignItems: "center",
-                mb: 0.3,
+                mb: 0.8,
               }}
-            ></Box>
-          </Box>
+            >
+              <Typography
+                variant="subtitle2"
+                fontWeight="bold"
+                sx={{
+                  color: "primary.main",
+                  fontSize: "0.8rem",
+                  lineHeight: 1.2,
+                }}
+              >
+                {driver.driverName}
+              </Typography>
 
-          {/* Actual Working Time */}
-          <Box sx={{ mb: 1 }}>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "flex-end",
-                alignItems: "center",
-                mb: 0.3,
-              }}
-            ></Box>
-          </Box>
-
-          {dayTrips.length > 0 && (
-            <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-              {dayTrips.slice(0, 3).map((trip) => (
-                <Chip
-                  key={trip.tripId}
-                  label={trip.tripId}
-                  size="small"
+              <Box
+                className="driver-status-indicator"
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontSize: "0.7rem" }}
+                >
+                  {dayTrips.length} chuyến
+                </Typography>
+                <Box
                   sx={{
-                    fontSize: "0.6rem",
-                    height: 16,
-                    backgroundColor: getStatusColor(trip.status) + "20",
-                    color: getStatusColor(trip.status),
-                    border: `1px solid ${getStatusColor(trip.status)}40`,
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor:
+                      dayTrips.length > 0
+                        ? theme.palette.success.main
+                        : theme.palette.grey[400],
+                    transition: "transform 0.3s ease",
+                    boxShadow: `0 0 0 2px ${
+                      dayTrips.length > 0
+                        ? theme.palette.success.main
+                        : theme.palette.grey[400]
+                    }20`,
                   }}
                 />
-              ))}
-              {dayTrips.length > 3 && (
-                <Chip
-                  label={`+${dayTrips.length - 3}`}
-                  size="small"
-                  sx={{
-                    fontSize: "0.6rem",
-                    height: 16,
-                    backgroundColor: theme.palette.grey[200],
-                    color: theme.palette.text.secondary,
-                  }}
-                />
-              )}
+              </Box>
             </Box>
-          )}
-        </CardContent>
-      </Card>
+
+            {(dayWorkingTime.expectedWorkingTime !== "00:00" ||
+              dayWorkingTime.workingTime !== "00:00") && (
+              <Box sx={{ mb: 1 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{
+                    display: "block",
+                    fontSize: "0.65rem",
+                    opacity: 0.8,
+                    fontWeight: "medium",
+                    mb: 0.3,
+                  }}
+                >
+                  Dự kiến: {dayWorkingTime.expectedWorkingTime} | Thực tế:{" "}
+                  {dayWorkingTime.workingTime}
+                </Typography>
+              </Box>
+            )}
+
+            {dayTrips.length > 0 && (
+              <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                {dayTrips.slice(0, 3).map((trip) => (
+                  <Chip
+                    key={trip.tripId}
+                    label={trip.tripId}
+                    size="small"
+                    sx={{
+                      fontSize: "0.6rem",
+                      height: 16,
+                      backgroundColor: getStatusColor(trip.status) + "20",
+                      color: getStatusColor(trip.status),
+                      border: `1px solid ${getStatusColor(trip.status)}40`,
+                    }}
+                  />
+                ))}
+                {dayTrips.length > 3 && (
+                  <Chip
+                    label={`+${dayTrips.length - 3}`}
+                    size="small"
+                    sx={{
+                      fontSize: "0.6rem",
+                      height: 16,
+                      backgroundColor: theme.palette.grey[200],
+                      color: theme.palette.text.secondary,
+                    }}
+                  />
+                )}
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      </Tooltip>
     );
   };
 
@@ -859,15 +1104,11 @@ const DriverTimeTable: React.FC<DriverTimeTableProps> = ({
                         driverIndex % 2 === 0
                           ? "rgba(0, 0, 0, 0.02)"
                           : "transparent",
-                      cursor: "pointer",
+                      // Remove cursor:pointer and onClick for modal
+                      transition: "background-color 0.2s ease",
                       "&:hover": {
                         backgroundColor: "rgba(25, 118, 210, 0.05)",
                       },
-                      transition: "background-color 0.2s ease",
-                    }}
-                    onClick={() => {
-                      setSelectedDriver(driver);
-                      setDetailModalOpen(true);
                     }}
                   >
                     <Grid container spacing={2} alignItems="center">
@@ -1057,7 +1298,7 @@ const DriverTimeTable: React.FC<DriverTimeTableProps> = ({
                                                 dayWorkingTime.expectedMinutes
                                                   ? theme.palette.success.main
                                                   : dayWorkingTime.totalMinutes >=
-                                                    dayWorkingTime.expectedMinutes *
+                                                    dayWorkingTime.expectedWeeklyMinutes *
                                                       0.5
                                                   ? theme.palette.warning.main
                                                   : theme.palette.error.main,
