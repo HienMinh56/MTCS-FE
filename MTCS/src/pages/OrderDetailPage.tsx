@@ -2343,7 +2343,7 @@ const OrderDetailPage: React.FC = () => {
                     Số lượng đơn
                   </Typography>
                   <Typography variant="body1" gutterBottom>
-                    {orderDetails.quanlity || "Số lượng đơn"}
+                    {orderDetails.quantity || "Số lượng đơn"}
                   </Typography>
                 </Grid>
               </Grid>

@@ -1066,7 +1066,7 @@ const OrderManagement: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell align="center">
-                        {order.quanlity}
+                        {order.quantity}
                       </TableCell>
                       <TableCell align="center">
                         {new Intl.NumberFormat("vi-VN").format(order.totalAmount ? order.totalAmount : "N/A")}
