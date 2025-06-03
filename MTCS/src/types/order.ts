@@ -59,7 +59,7 @@ export interface Order {
   status: OrderStatus;
   deliveryType: DeliveryType;
   totalAmount: number;
-  quanlity: number;
+  quantity: number;
   isPay: IsPay | null; // Add this field
 }
 
