@@ -31,3 +31,20 @@ export const formatDate = (date: Date | null | undefined): string => {
     return "";
   }
 };
+
+export const formatDateString = (
+  date: Date | string | null | undefined
+): string => {
+  if (!date) return "";
+  try {
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    return new Intl.DateTimeFormat("vi-VN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(dateObj);
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "";
+  }
+};

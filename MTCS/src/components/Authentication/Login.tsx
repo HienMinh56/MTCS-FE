@@ -91,7 +91,7 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLoginSuccess }) => {
             onLoginSuccess();
           } else {
             if (roleFromToken === "Staff") {
-              navigate("/staff-menu/orders");
+              navigate("/staff-menu/time-table");
             } else {
               navigate(0);
             }

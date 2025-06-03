@@ -126,3 +126,50 @@ export const getDriverStatusColor = (
       return "default";
   }
 };
+
+export interface DriverTripSchedule {
+  tripId: string;
+  trackingCode: string;
+  orderDetailId: string;
+  tractorId: string;
+  tractorPlate: string;
+  trailerId: string;
+  trailerPlate: string;
+  startTime: string | null;
+  endTime: string | null;
+  status: string;
+  estimatedCompletionTime: string;
+}
+
+export interface DailyWorkingTime {
+  date: string;
+  workingTime: string;
+  totalMinutes: number;
+  expectedWorkingTime: string;
+  expectedMinutes: number;
+}
+
+export interface DriverTimeTableItem {
+  driverId: string;
+  driverName: string;
+  driverSchedule: DriverTripSchedule[];
+  totalCount: number;
+  completedCount: number;
+  deliveringCount: number;
+  delayingCount: number;
+  canceledCount: number;
+  notStartedCount: number;
+  weeklyWorkingTime: string;
+  totalWeeklyMinutes: number;
+  expectedWeeklyWorkingTime: string;
+  expectedWeeklyMinutes: number;
+  dailyWorkingTimes: DailyWorkingTime[];
+}
+
+export interface DriverTimeTableResponse {
+  success: boolean;
+  data: DriverTimeTableItem[];
+  message: string;
+  messageVN: string | null;
+  errors: any | null;
+}

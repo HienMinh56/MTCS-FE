@@ -40,12 +40,15 @@ import Tractors from "./Tractors";
 import Trailers from "./Trailers";
 import Customers from "../components/Customers";
 import TripTable from "../components/Trip/TripTable";
-import TimeTable from "../components/Trip/TimeTable";
+import TimeTableContainer from "../components/Trip/TimeTableContainer";
 import DeliveryStatusPage from "./DeliveryStatusPage";
+import ExpenseReportsPage from "./ExpenseReportsPage";
+import ExpenseReportDetailsPage from "./ExpenseReportDetailsPage";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import LogoutButton from "../components/Authentication/Logout";
 import NotificationComponent from "../components/Notification";
 import logo1 from "../assets/logo1.png";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 
 const drawerWidth = 240;
 const drawerCollapsedWidth = 70;
@@ -147,12 +150,18 @@ const StaffMenu: React.FC = () => {
       icon: <DirectionsCarFilledIcon />,
       selected: activeTab === "trailers",
     },
+    {
+      id: "expense-reports",
+      text: "Báo cáo chi phí",
+      icon: <AccountBalanceWalletIcon />,
+      selected: activeTab === "expense-reports",
+    },
   ];
 
   const renderActiveComponent = () => {
     switch (activeTab) {
       case "time-table":
-        return <TimeTable />;
+        return <TimeTableContainer />;
       case "orders":
         return <OrderManagement />;
       case "trips":
@@ -167,10 +176,12 @@ const StaffMenu: React.FC = () => {
         return <Tractors />;
       case "trailers":
         return <Trailers />;
+      case "expense-reports":
+        return <ExpenseReportsPage />;
       case "delivery-status":
         return <DeliveryStatusPage />;
       default:
-        return <TimeTable />;
+        return <TimeTableContainer />;
     }
   };
 
@@ -527,6 +538,7 @@ const StaffMenu: React.FC = () => {
           }),
         }}
       >
+        {" "}
         <Routes>
           <Route path="/orders" element={<OrderManagement />} />
           <Route path="/trips" element={<TripTable />} />
@@ -534,11 +546,16 @@ const StaffMenu: React.FC = () => {
           <Route path="/customers" element={<Customers />} />
           <Route path="/drivers" element={<Drivers />} />
           <Route path="/tractors" element={<Tractors />} />
-          <Route path="/tractors/:tractorId" element={<Tractors />} />
+          <Route path="/tractors/:tractorId" element={<Tractors />} />{" "}
           <Route path="/trailers" element={<Trailers />} />
           <Route path="/trailers/:trailerId" element={<Trailers />} />
+          <Route path="/expense-reports" element={<ExpenseReportsPage />} />
+          <Route
+            path="/expense-reports/:reportId"
+            element={<ExpenseReportDetailsPage />}
+          />
           <Route path="/delivery-status" element={<DeliveryStatusPage />} />
-          <Route path="/time-table" element={<TimeTable />} />
+          <Route path="/time-table" element={<TimeTableContainer />} />
         </Routes>
       </Box>
     </Box>

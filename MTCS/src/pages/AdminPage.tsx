@@ -39,6 +39,7 @@ import {
   ExpandLess,
   ExpandMore,
   Inventory as InventoryIcon,
+  Receipt as ReceiptIcon,
 } from "@mui/icons-material";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
@@ -68,6 +69,7 @@ import OrderTable from "../components/Order/OrderTable";
 import Trailers from "./Trailers";
 import StraightenIcon from "@mui/icons-material/Straighten";
 import DeliveryStatusPage from "./DeliveryStatusPage";
+import ExpenseTypeManagement from "../components/ExpenseTypeManagement";
 
 const AdminFinanceDashboard: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -124,7 +126,6 @@ const AdminFinanceDashboard: React.FC = () => {
   const handleSideTabChange = (tab: string) => {
     navigate(`/admin/${tab}`);
   };
-
   const mainSidebarItems = [
     {
       id: "finance",
@@ -146,6 +147,13 @@ const AdminFinanceDashboard: React.FC = () => {
       icon: <PriceChangeOutlined />,
       selected: activeSideTab === "pricing",
       path: "/admin/pricing",
+    },
+    {
+      id: "expense-types",
+      text: "Quản Lý Loại Phí",
+      icon: <ReceiptIcon />,
+      selected: activeSideTab === "expense-types",
+      path: "/admin/expense-types",
     },
     {
       id: "delivery-status",
@@ -406,7 +414,8 @@ const AdminFinanceDashboard: React.FC = () => {
               }),
             }}
           />
-          {drawerOpen && (            <Typography
+          {drawerOpen && (
+            <Typography
               variant="subtitle1"
               sx={{
                 fontWeight: 500,
@@ -722,6 +731,7 @@ const AdminFinanceDashboard: React.FC = () => {
               maxWidth: "100%",
             }}
           >
+            {" "}
             <Routes>
               <Route path="/finance" element={<FinanceDashboard />} />
               <Route path="/customers" element={<Customers />} />
@@ -730,6 +740,10 @@ const AdminFinanceDashboard: React.FC = () => {
               <Route path="/tractors" element={<Tractors />} />
               <Route path="/trailers" element={<Trailers />} />
               <Route path="/pricing" element={<PriceTableComponent />} />
+              <Route
+                path="/expense-types"
+                element={<ExpenseTypeManagement />}
+              />
               <Route path="/system-config" element={<SystemConfiguration />} />
               <Route
                 path="/user-management"

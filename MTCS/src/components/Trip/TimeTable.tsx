@@ -13,7 +13,6 @@ import {
   CardContent,
   Chip,
   Fade,
-  Zoom,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -63,7 +62,11 @@ const statusColors = {
   not_started: "#9e9e9e",
 };
 
-const TimeTable: React.FC = () => {
+interface TimeTableProps {
+  renderToggle?: () => React.ReactElement;
+}
+
+const TimeTable: React.FC<TimeTableProps> = ({ renderToggle }) => {
   const theme = useTheme();
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [trips, setTrips] = useState<TripTimeTableItem[]>([]);
@@ -696,320 +699,279 @@ const TimeTable: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 2, height: "100%", overflow: "auto" }}>
-      <Paper
-        elevation={3}
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Header */}
+      <Box
         sx={{
-          p: 2,
-          borderRadius: 2,
-          background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-          height: "100%",
-          overflow: "hidden",
           display: "flex",
-          flexDirection: "column",
-          position: "relative",
-          "&:before": {
-            content: '""',
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background:
-              "linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)",
-            zIndex: 0,
-          },
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 2,
+          pb: 1,
+          borderBottom: `2px solid ${theme.palette.primary.main}20`,
         }}
       >
+        <Typography
+          variant="h5"
+          fontWeight="bold"
+          sx={{
+            background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            backgroundClip: "text",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          Lịch Trình Giao Hàng
+        </Typography>
+
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <Paper
+            elevation={2}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 2,
+              backgroundColor: "rgba(255,255,255,0.9)",
+            }}
+          >
+            <IconButton
+              onClick={handlePreviousWeek}
+              size="small"
+              sx={{
+                mr: 0.5,
+                "&:hover": {
+                  backgroundColor: theme.palette.primary.main + "20",
+                  transform: "scale(1.05)",
+                },
+                transition: "all 0.2s ease",
+              }}
+            >
+              <NavigateBeforeIcon fontSize="small" />
+            </IconButton>
+
+            <Typography
+              variant="caption"
+              fontWeight="medium"
+              sx={{ mx: 1, minWidth: "120px", textAlign: "center" }}
+            >
+              {weekRange}
+            </Typography>
+
+            <IconButton
+              onClick={handleNextWeek}
+              size="small"
+              sx={{
+                ml: 0.5,
+                "&:hover": {
+                  backgroundColor: theme.palette.primary.main + "20",
+                  transform: "scale(1.05)",
+                },
+                transition: "all 0.2s ease",
+              }}
+            >
+              <NavigateNextIcon fontSize="small" />
+            </IconButton>
+          </Paper>
+
+          <Tooltip title="Về hôm nay" arrow>
+            <IconButton
+              onClick={handleToday}
+              size="small"
+              sx={{
+                backgroundColor: "rgba(255,255,255,0.9)",
+                "&:hover": {
+                  backgroundColor: theme.palette.warning.main + "20",
+                  transform: "scale(1.05)",
+                },
+                transition: "all 0.2s ease",
+              }}
+            >
+              <TodayIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Làm mới dữ liệu" arrow>
+            <IconButton
+              onClick={handleRefresh}
+              size="small"
+              disabled={loading}
+              sx={{
+                backgroundColor: "rgba(255,255,255,0.9)",
+                "&:hover": {
+                  backgroundColor: theme.palette.success.main + "20",
+                  transform: "rotate(180deg)",
+                },
+                transition: "all 0.3s ease",
+              }}
+            >
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
+
+      {/* Weekly Stats Card */}
+      <WeeklyStatsCard />
+
+      {/* Toggle Button */}
+      {renderToggle && renderToggle()}
+
+      {/* Content */}
+      {loading ? (
         <Box
           sx={{
-            position: "relative",
-            zIndex: 1,
-            height: "100%",
             display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            flex: 1,
             flexDirection: "column",
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2,
-              pb: 1,
-              borderBottom: `2px solid ${theme.palette.primary.main}20`,
-              position: "relative",
-            }}
-          >
-            <Box>
-              <Typography
-                variant="h5"
-                fontWeight="bold"
-                sx={{
-                  background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                  backgroundClip: "text",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  mb: 0.2,
-                }}
-              >
-                Lịch Trình Giao Hàng
-              </Typography>
-            </Box>
+          <CircularProgress size={40} thickness={4} />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+            Đang tải dữ liệu...
+          </Typography>
+        </Box>
+      ) : error ? (
+        <Alert
+          severity="error"
+          sx={{
+            mb: 1,
+            borderRadius: 1,
+          }}
+        >
+          {error}
+        </Alert>
+      ) : (
+        <Box sx={{ flex: 1, overflow: "auto" }} ref={tripsRef}>
+          <Grid container spacing={1.8}>
+            {weekDays.map((day, index) => {
+              const dayTrips = getTripsForDay(day);
+              const isToday = isSameDay(day, new Date());
 
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              <Paper
-                elevation={2}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  px: 1.5,
-                  py: 0.5,
-                  borderRadius: 2,
-                  backgroundColor: "rgba(255,255,255,0.9)",
-                }}
-              >
-                <IconButton
-                  onClick={handlePreviousWeek}
-                  size="small"
-                  sx={{
-                    mr: 0.5,
-                    "&:hover": {
-                      backgroundColor: theme.palette.primary.main + "20",
-                      transform: "scale(1.05)",
-                    },
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <NavigateBeforeIcon fontSize="small" />
-                </IconButton>
+              return (
+                <Grid item xs={12} sm={6} md={4} lg={12 / 7} key={index}>
+                  <Paper
+                    elevation={isToday ? 6 : 1}
+                    sx={{
+                      p: 1.8,
+                      height: "100%",
+                      borderRadius: 2,
+                      backgroundColor: isToday
+                        ? "rgba(25, 118, 210, 0.05)"
+                        : "rgba(255, 255, 255, 0.9)",
+                      border: isToday
+                        ? `2px solid ${theme.palette.primary.main}`
+                        : "1px solid transparent",
+                      transition: "all 0.3s ease",
+                      position: "relative",
+                      overflow: "visible", // Changed from "hidden" to "visible"
+                      "&:hover": {
+                        boxShadow: "0 6px 20px rgba(0,0,0,0.1)",
+                      },
+                      "&:before": isToday
+                        ? {
+                            content: '""',
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: 3,
+                            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                            zIndex: 1,
+                          }
+                        : {},
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight="bold"
+                      sx={{
+                        mb: 1.2,
+                        textAlign: "center",
+                        color: isToday
+                          ? theme.palette.primary.main
+                          : "text.primary",
+                        borderBottom: `1px solid ${
+                          isToday
+                            ? theme.palette.primary.main
+                            : theme.palette.divider
+                        }`,
+                        pb: 0.6,
+                        position: "relative",
+                        fontSize: "0.85rem",
+                        "&:after": isToday
+                          ? {
+                              content: '"●"',
+                              position: "absolute",
+                              right: 0,
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              color: theme.palette.primary.main,
+                              animation: "blink 1.5s infinite",
+                              "@keyframes blink": {
+                                "0%, 100%": { opacity: 1 },
+                                "50%": { opacity: 0.3 },
+                              },
+                            }
+                          : {},
+                      }}
+                    >
+                      {formatDayLabel(day)}
+                    </Typography>
 
-                <Typography
-                  variant="caption"
-                  fontWeight="medium"
-                  sx={{ mx: 1, minWidth: "120px", textAlign: "center" }}
-                >
-                  {weekRange}
-                </Typography>
-
-                <IconButton
-                  onClick={handleNextWeek}
-                  size="small"
-                  sx={{
-                    ml: 0.5,
-                    "&:hover": {
-                      backgroundColor: theme.palette.primary.main + "20",
-                      transform: "scale(1.05)",
-                    },
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <NavigateNextIcon fontSize="small" />
-                </IconButton>
-              </Paper>
-
-              <Tooltip title="Về hôm nay" arrow>
-                <IconButton
-                  onClick={handleToday}
-                  size="small"
-                  sx={{
-                    backgroundColor: "rgba(255,255,255,0.9)",
-                    "&:hover": {
-                      backgroundColor: theme.palette.warning.main + "20",
-                      transform: "scale(1.05)",
-                    },
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <TodayIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-
-              <Tooltip title="Làm mới dữ liệu" arrow>
-                <IconButton
-                  onClick={handleRefresh}
-                  size="small"
-                  disabled={loading}
-                  sx={{
-                    backgroundColor: "rgba(255,255,255,0.9)",
-                    "&:hover": {
-                      backgroundColor: theme.palette.success.main + "20",
-                      transform: "rotate(180deg)",
-                    },
-                    transition: "all 0.3s ease",
-                  }}
-                >
-                  <RefreshIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
-
-          {/* Weekly Stats Card */}
-          <WeeklyStatsCard />
-
-          {loading ? (
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                flex: 1,
-                flexDirection: "column",
-              }}
-            >
-              <CircularProgress size={40} thickness={4} />
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ mt: 1 }}
-              >
-                Đang tải dữ liệu...
-              </Typography>
-            </Box>
-          ) : error ? (
-            <Alert
-              severity="error"
-              sx={{
-                mb: 1,
-                borderRadius: 1,
-                "& .MuiAlert-icon": {
-                  fontSize: "1.2rem",
-                },
-              }}
-            >
-              {error}
-            </Alert>
-          ) : (
-            <Box sx={{ flex: 1 }} ref={tripsRef}>
-              <Grid container spacing={1.8}>
-                {weekDays.map((day, index) => {
-                  const dayTrips = getTripsForDay(day);
-                  const isToday = isSameDay(day, new Date());
-
-                  return (
-                    <Grid item xs={12} sm={6} md={4} lg={12 / 7} key={index}>
-                      <Paper
-                        elevation={isToday ? 6 : 1}
+                    {dayTrips.length === 0 ? (
+                      <Box
                         sx={{
-                          p: 1.8,
-                          height: "100%",
-                          borderRadius: 2,
-                          backgroundColor: isToday
-                            ? "rgba(25, 118, 210, 0.05)"
-                            : "rgba(255, 255, 255, 0.9)",
-                          border: isToday
-                            ? `2px solid ${theme.palette.primary.main}`
-                            : "1px solid transparent",
-                          transition: "all 0.3s ease",
-                          position: "relative",
-                          overflow: "visible", // Changed from "hidden" to "visible"
-                          "&:hover": {
-                            boxShadow: "0 6px 20px rgba(0,0,0,0.1)",
-                          },
-                          "&:before": isToday
-                            ? {
-                                content: '""',
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                height: 3,
-                                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                                zIndex: 1,
-                              }
-                            : {},
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          height: 100, // Reduced height for empty state
+                          flexDirection: "column",
+                          color: "text.secondary",
+                          opacity: 0.6,
                         }}
                       >
+                        <LocalShippingIcon
+                          sx={{ fontSize: 28, mb: 0.8, opacity: 0.3 }}
+                        />
+                        <Typography variant="body2" textAlign="center">
+                          Chưa có chuyến
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Box>
                         <Typography
-                          variant="subtitle1"
-                          fontWeight="bold"
+                          variant="caption"
+                          color="primary"
                           sx={{
-                            mb: 1.2,
+                            mb: 0.8,
+                            display: "block",
+                            fontWeight: "medium",
+                            backgroundColor: "rgba(25, 118, 210, 0.1)",
+                            px: 0.7,
+                            py: 0.3,
+                            borderRadius: 0.5,
                             textAlign: "center",
-                            color: isToday
-                              ? theme.palette.primary.main
-                              : "text.primary",
-                            borderBottom: `1px solid ${
-                              isToday
-                                ? theme.palette.primary.main
-                                : theme.palette.divider
-                            }`,
-                            pb: 0.6,
-                            position: "relative",
-                            fontSize: "0.85rem",
-                            "&:after": isToday
-                              ? {
-                                  content: '"●"',
-                                  position: "absolute",
-                                  right: 0,
-                                  top: "50%",
-                                  transform: "translateY(-50%)",
-                                  color: theme.palette.primary.main,
-                                  animation: "blink 1.5s infinite",
-                                  "@keyframes blink": {
-                                    "0%, 100%": { opacity: 1 },
-                                    "50%": { opacity: 0.3 },
-                                  },
-                                }
-                              : {},
+                            fontSize: "0.7rem",
                           }}
                         >
-                          {formatDayLabel(day)}
+                          {dayTrips.length} chuyến hàng
                         </Typography>
-
-                        {dayTrips.length === 0 ? (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              justifyContent: "center",
-                              alignItems: "center",
-                              height: 100, // Reduced height for empty state
-                              flexDirection: "column",
-                              color: "text.secondary",
-                              opacity: 0.6,
-                            }}
-                          >
-                            <LocalShippingIcon
-                              sx={{ fontSize: 28, mb: 0.8, opacity: 0.3 }}
-                            />
-                            <Typography variant="body2" textAlign="center">
-                              Chưa có chuyến
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <Box>
-                            <Typography
-                              variant="caption"
-                              color="primary"
-                              sx={{
-                                mb: 0.8,
-                                display: "block",
-                                fontWeight: "medium",
-                                backgroundColor: "rgba(25, 118, 210, 0.1)",
-                                px: 0.7,
-                                py: 0.3,
-                                borderRadius: 0.5,
-                                textAlign: "center",
-                                fontSize: "0.7rem",
-                              }}
-                            >
-                              {dayTrips.length} chuyến hàng
-                            </Typography>
-                            {dayTrips.map((trip) => (
-                              <TripCard key={trip.tripId} trip={trip} />
-                            ))}
-                          </Box>
-                        )}
-                      </Paper>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </Box>
-          )}
+                        {dayTrips.map((trip) => (
+                          <TripCard key={trip.tripId} trip={trip} />
+                        ))}
+                      </Box>
+                    )}
+                  </Paper>
+                </Grid>
+              );
+            })}
+          </Grid>
         </Box>
-      </Paper>
+      )}
 
       {/* Not Started Trips Modal */}
       <NotStartedTripsModal />

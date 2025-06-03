@@ -4,6 +4,7 @@ import {
   DriverListParams,
   PaginatedData,
   DriverStatus,
+  DriverTimeTableItem,
   DriverUseHistoryResponse,
   DriverUseHistoryPagedData,
 } from "../types/driver";
@@ -298,6 +299,31 @@ export const getDriverUsageHistory = async (
       `Failed to fetch driver usage history for ${driverId}:`,
       error
     );
+    throw error;
+  }
+};
+
+export const getDriverTimeTable = async (
+  startOfWeek: Date,
+  endOfWeek: Date
+): Promise<ApiResponse<DriverTimeTableItem[]>> => {
+  try {
+    const formatDateForAPI = (date: Date) => {
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const day = date.getDate().toString().padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const url = `/api/Driver/time-table?startOfWeek=${formatDateForAPI(
+      startOfWeek
+    )}&endOfWeek=${formatDateForAPI(endOfWeek)}`;
+    const response = await axiosInstance.get<
+      ApiResponse<DriverTimeTableItem[]>
+    >(url);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch driver time table:", error);
     throw error;
   }
 };
