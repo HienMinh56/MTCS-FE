@@ -2465,6 +2465,17 @@ const OrderDetailPage: React.FC = () => {
 
                         <AccordionDetails>
                           <Grid container spacing={2}>
+                            <Grid item xs={12} sm={12}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                              >
+                                Mã đơn
+                              </Typography>
+                              <Typography variant="body1" gutterBottom>
+                                {detail.orderDetailId}
+                              </Typography>
+                            </Grid>
                             <Grid item xs={12} sm={6}>
                               <Typography
                                 variant="subtitle2"
