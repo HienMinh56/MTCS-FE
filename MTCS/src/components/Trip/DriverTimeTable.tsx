@@ -172,9 +172,9 @@ const DriverTimeTable: React.FC<DriverTimeTableProps> = ({
 
   const getTripsForDay = (driver: DriverTimeTableItem, date: Date) => {
     return driver.driverSchedule.filter((trip) => {
-      if (!trip.startTime) return false;
-      const tripDate = parseISO(trip.startTime);
-      return isSameDay(tripDate, date);
+      // Use deliveryDate instead of startTime to filter trips
+      const deliveryDate = parseISO(trip.deliveryDate);
+      return isSameDay(deliveryDate, date);
     });
   };
 
@@ -964,6 +964,7 @@ const DriverTimeTable: React.FC<DriverTimeTableProps> = ({
                 const driversForDay = drivers.filter(
                   (driver) =>
                     getWorkingTimeForDay(driver, day).totalMinutes > 0 ||
+                    getWorkingTimeForDay(driver, day).expectedMinutes > 0 ||
                     getTripsForDay(driver, day).length > 0
                 );
 
