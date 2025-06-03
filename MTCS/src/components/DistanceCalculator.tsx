@@ -159,7 +159,6 @@ const DistanceCalculator: React.FC = () => {
       setOriginCoordinatesSetByGeocoding(false);
     }
   };
-
   const handleCalculate = async () => {
     try {
       setError("");
@@ -171,27 +170,42 @@ const DistanceCalculator: React.FC = () => {
       if (!returnLat || !returnLng)
         throw new Error("Cần có điểm trả cont hợp lệ");
 
-      const origins: Coordinates = {
+      // Check if origin and destination are the same
+      const originCoords = {
         lat: parseFloat(originLat),
         lng: parseFloat(originLng),
       };
-
-      // leg 1: origin -> delivery
-      const deliveryCoord = {
-        lat: parseFloat(destLat),
-        lng: parseFloat(destLng),
+      const destCoords = { lat: parseFloat(destLat), lng: parseFloat(destLng) };
+      const returnCoords = {
+        lat: parseFloat(returnLat),
+        lng: parseFloat(returnLng),
       };
+
+      // Compare coordinates with a small tolerance (about 100 meters)
+      const tolerance = 0.001;
+
+      if (
+        Math.abs(originCoords.lat - destCoords.lat) < tolerance &&
+        Math.abs(originCoords.lng - destCoords.lng) < tolerance
+      ) {
+        throw new Error("Điểm xuất phát và điểm đến không thể giống nhau");
+      }
+
+      if (
+        Math.abs(destCoords.lat - returnCoords.lat) < tolerance &&
+        Math.abs(destCoords.lng - returnCoords.lng) < tolerance
+      ) {
+        throw new Error("Điểm đến và điểm trả cont không thể giống nhau");
+      }
+      const origins: Coordinates = originCoords; // leg 1: origin -> delivery
+      const deliveryCoord = destCoords;
       const r1 = await calculateDistance({
         origins,
         destinations: [deliveryCoord],
         vehicle: DEFAULT_VEHICLE_TYPE,
       });
-      setResults(r1);
-      // leg 2: delivery -> return
-      const returnCoord = {
-        lat: parseFloat(returnLat),
-        lng: parseFloat(returnLng),
-      };
+      setResults(r1); // leg 2: delivery -> return
+      const returnCoord = returnCoords;
       const r2 = await calculateDistance({
         origins: deliveryCoord,
         destinations: [returnCoord],
