@@ -90,6 +90,30 @@ export const getTrip = async (trackingCode: string) => {
   }
 };
 
+export const getTripWithOrderDetail = async (orderDetailId: string) => {
+  try {
+    const response = await axiosInstance.get<trip[] | trip>(
+      `/api/trips?orderId=${orderDetailId}`
+    );
+
+    // Check if response has a data property that's an array (typical API wrapper format)
+    if (response.data && (response.data as any).data) {
+      return (response.data as any).data; // Return the whole array
+    }
+
+    // If the response is already an array, return it directly
+    if (response.data && Array.isArray(response.data)) {
+      return response.data; // Return the whole array
+    }
+
+    // If it's a single trip, wrap it in an array for consistent handling
+    return [response.data];
+  } catch (error) {
+    console.error("Error fetching trip:", error);
+    throw error;
+  }
+}
+
 export const getTripDetail = async (tripId: string) => {
   try {
     const response = await axiosInstance.get<trip>(
