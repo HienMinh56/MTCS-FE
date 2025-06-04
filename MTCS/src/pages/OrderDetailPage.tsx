@@ -312,9 +312,47 @@ const OrderDetailPage: React.FC = () => {
         return totalMinutes >= 15; // Minimum 15 minutes
       }, "Thời gian hoàn thành tối thiểu là 00:15"),
     distance: zod.number().min(0, "Khoảng cách không được âm"),
-    pickUpDate: zod.date(),
-    deliveryDate: zod.date(),
-  });
+    pickUpDate: zod
+  .date({
+    required_error: "Ngày lấy cont không được để trống",
+    invalid_type_error: "Vui lòng chọn một ngày hợp lệ cho ngày lấy cont",
+  })
+  .refine((date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset thời gian về 00:00:00
+    return date >= today;
+  }, {
+    message: "Ngày lấy cont phải là ngày hiện tại hoặc trong tương lai",
+  })
+  .refine((date) => date.getFullYear() <= 2025, {
+    message: "Năm lấy cont không được vượt quá 2025",
+  }),
+
+deliveryDate: zod
+  .date({
+    required_error: "Ngày trả cont không được để trống",
+    invalid_type_error: "Vui lòng chọn một ngày hợp lệ cho ngày trả cont",
+  })
+  .refine((date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset thời gian về 00:00:00
+    return date >= today;
+  }, {
+    message: "Ngày trả cont phải là ngày hiện tại hoặc trong tương lai",
+  })
+  .refine((date) => date.getFullYear() <= 2025, {
+    message: "Năm trả cont không được vượt quá 2025",
+  }),
+  })
+  .refine(
+    (data) => {
+      return data.pickUpDate <= data.deliveryDate;
+    },
+    {
+      message: "Ngày lấy cont phải cùng hoặc trước ngày trả cont",
+      path: ["pickUpDate"],
+    }
+  );
 
   // Add the type definition
   type CreateOrderDetailFormValues = zod.infer<typeof createOrderDetailSchema>;
@@ -368,7 +406,7 @@ const OrderDetailPage: React.FC = () => {
         containerType: data.containerType,
         containerSize: data.containerSize,
         weight: data.weight,
-        temperature: data.temperature || 0,
+        temperature: data.temperature || null,
         pickUpLocation: data.pickUpLocation,
         deliveryLocation: data.deliveryLocation,
         conReturnLocation: data.conReturnLocation,
@@ -601,9 +639,47 @@ const OrderDetailPage: React.FC = () => {
         return totalMinutes >= 15; // Minimum 15 minutes
       }, "Thời gian hoàn thành tối thiểu là 00:15"),
     distance: zod.number().min(0, "Khoảng cách không được âm"),
-    pickUpDate: zod.date(),
-    deliveryDate: zod.date(),
-  });
+    pickUpDate: zod
+  .date({
+    required_error: "Ngày lấy cont không được để trống",
+    invalid_type_error: "Vui lòng chọn một ngày hợp lệ cho ngày lấy cont",
+  })
+  .refine((date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset thời gian về 00:00:00
+    return date >= today;
+  }, {
+    message: "Ngày lấy cont phải là ngày hiện tại hoặc trong tương lai",
+  })
+  .refine((date) => date.getFullYear() <= 2025, {
+    message: "Năm lấy cont không được vượt quá 2025",
+  }),
+
+deliveryDate: zod
+  .date({
+    required_error: "Ngày trả cont không được để trống",
+    invalid_type_error: "Vui lòng chọn một ngày hợp lệ cho ngày trả cont",
+  })
+  .refine((date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset thời gian về 00:00:00
+    return date >= today;
+  }, {
+    message: "Ngày trả cont phải là ngày hiện tại hoặc trong tương lai",
+  })
+  .refine((date) => date.getFullYear() <= 2025, {
+    message: "Năm trả cont không được vượt quá 2025",
+  }),
+  })
+  .refine(
+    (data) => {
+      return data.pickUpDate <= data.deliveryDate;
+    },
+    {
+      message: "Ngày lấy cont phải cùng hoặc trước ngày trả cont",
+      path: ["pickUpDate"],
+    }
+  );
 
   type EditOrderDetailFormValues = zod.infer<typeof editOrderDetailSchema>;
 
