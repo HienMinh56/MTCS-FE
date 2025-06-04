@@ -385,76 +385,81 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
         completedOrders: item.completedOrders,
         averageRevenuePerOrder: item.averageRevenuePerOrder,
         totalExpenses: item.totalExpenses,
-        // Use actual paid/unpaid expense data from the main data object for current period
-        // or calculate from periodic data breakdown if available
+        // Calculate paid expenses from expenseBreakdown for periodic data
         paidExpenses: (() => {
-          // For current period, use the main data object
-          if (item.periodLabel === data.periodicData?.[0]?.periodLabel) {
-            return data.paidExpenses || 0;
-          }
-          // For other periods, calculate from breakdown if available
           if (
-            item.paidExpenseBreakdown &&
-            Object.keys(item.paidExpenseBreakdown).length > 0
+            item.expenseBreakdown &&
+            Object.keys(item.expenseBreakdown).length > 0
           ) {
-            return Object.values(item.paidExpenseBreakdown).reduce(
-              (sum, amount) => sum + amount,
-              0
-            );
+            // For periodic data, we need to calculate based on the ratio of paid vs total revenue
+            // or use a more sophisticated approach if we have specific paid/unpaid breakdowns
+            const totalExpenseAmount = Object.values(
+              item.expenseBreakdown
+            ).reduce((sum, amount) => sum + amount, 0);
+
+            // If we have specific paid/unpaid breakdowns in the main data for current period
+            if (item.periodLabel === data.periodicData?.[0]?.periodLabel) {
+              return data.paidExpenses || 0;
+            }
+
+            // For historical periods, estimate based on revenue ratio
+            if (item.totalRevenue > 0) {
+              const paidRatio = item.paidRevenue / item.totalRevenue;
+              return Math.round(totalExpenseAmount * paidRatio);
+            }
+
+            return totalExpenseAmount; // If no unpaid revenue, assume all paid
           }
           return 0;
         })(),
         unpaidExpenses: (() => {
-          // For current period, use the main data object
-          if (item.periodLabel === data.periodicData?.[0]?.periodLabel) {
-            return data.unpaidExpenses || 0;
-          }
-          // For other periods, calculate from breakdown if available
           if (
-            item.unpaidExpenseBreakdown &&
-            Object.keys(item.unpaidExpenseBreakdown).length > 0
+            item.expenseBreakdown &&
+            Object.keys(item.expenseBreakdown).length > 0
           ) {
-            return Object.values(item.unpaidExpenseBreakdown).reduce(
-              (sum, amount) => sum + amount,
-              0
-            );
+            const totalExpenseAmount = Object.values(
+              item.expenseBreakdown
+            ).reduce((sum, amount) => sum + amount, 0);
+
+            // For current period, use main data
+            if (item.periodLabel === data.periodicData?.[0]?.periodLabel) {
+              return data.unpaidExpenses || 0;
+            }
+
+            // For historical periods, estimate based on revenue ratio
+            if (item.totalRevenue > 0) {
+              const unpaidRatio = item.unpaidRevenue / item.totalRevenue;
+              return Math.round(totalExpenseAmount * unpaidRatio);
+            }
+
+            return 0; // If no unpaid revenue, assume no unpaid expenses
           }
           return 0;
         })(),
         totalIncidentCosts: item.totalIncidentCosts,
-        // Use actual paid/unpaid incident cost data
+        // Calculate paid/unpaid incident costs similarly
         paidIncidentCosts: (() => {
-          // For current period, use the main data object
           if (item.periodLabel === data.periodicData?.[0]?.periodLabel) {
             return data.paidIncidentCosts || 0;
           }
-          // For other periods, calculate from breakdown if available
-          if (
-            item.paidIncidentCostBreakdown &&
-            Object.keys(item.paidIncidentCostBreakdown).length > 0
-          ) {
-            return Object.values(item.paidIncidentCostBreakdown).reduce(
-              (sum, amount) => sum + amount,
-              0
-            );
+
+          if (item.totalIncidentCosts > 0 && item.totalRevenue > 0) {
+            const paidRatio = item.paidRevenue / item.totalRevenue;
+            return Math.round(item.totalIncidentCosts * paidRatio);
           }
-          return 0;
+
+          return item.totalIncidentCosts || 0;
         })(),
         unpaidIncidentCosts: (() => {
-          // For current period, use the main data object
           if (item.periodLabel === data.periodicData?.[0]?.periodLabel) {
             return data.unpaidIncidentCosts || 0;
           }
-          // For other periods, calculate from breakdown if available
-          if (
-            item.unpaidIncidentCostBreakdown &&
-            Object.keys(item.unpaidIncidentCostBreakdown).length > 0
-          ) {
-            return Object.values(item.unpaidIncidentCostBreakdown).reduce(
-              (sum, amount) => sum + amount,
-              0
-            );
+
+          if (item.totalIncidentCosts > 0 && item.totalRevenue > 0) {
+            const unpaidRatio = item.unpaidRevenue / item.totalRevenue;
+            return Math.round(item.totalIncidentCosts * unpaidRatio);
           }
+
           return 0;
         })(),
         netRevenue: item.netRevenue,
@@ -484,16 +489,54 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
   };
 
   const renderExpenseBreakdownChart = () => {
+    // Prepare data for expense breakdown chart
+    const expenseChartData = shouldUsePeriodicData
+      ? data.periodicData.map((item) => {
+          const breakdown = item.expenseBreakdown || {};
+          return {
+            period: formatDateLabel(item),
+            periodFull: item.periodLabel,
+            totalExpenses: item.totalExpenses,
+            ...breakdown, // Spread the expense breakdown (e.g., "Phí đổ nhiên liệu", "Phí cầu đường", etc.)
+          };
+        })
+      : chartDataToUse.map((item) => ({
+          period: item.period || item.month,
+          periodFull: item.periodFull || item.month,
+          totalExpenses: item.totalExpenses,
+        }));
+
+    // Get all unique expense types from the data
+    const expenseTypes = shouldUsePeriodicData
+      ? [
+          ...new Set(
+            data.periodicData.flatMap((item) =>
+              Object.keys(item.expenseBreakdown || {})
+            )
+          ),
+        ]
+      : [];
+
+    // Color palette for different expense types
+    const expenseColors = [
+      theme.palette.primary.main,
+      theme.palette.secondary.main,
+      theme.palette.info.main,
+      theme.palette.success.main,
+      theme.palette.warning.main,
+      theme.palette.error.main,
+    ];
+
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={chartDataToUse}>
+        <ComposedChart data={expenseChartData}>
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
             stroke={alpha(theme.palette.divider, 0.7)}
           />
           <XAxis
-            dataKey={shouldUsePeriodicData ? "period" : "month"}
+            dataKey="period"
             tick={{
               fill: theme.palette.text.secondary,
               fontSize: 12,
@@ -516,10 +559,10 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
               name,
             ]}
             labelFormatter={(label) => {
-              const item = chartDataToUse.find(
-                (item) => item.period === label || item.month === label
+              const item = expenseChartData.find(
+                (item) => item.period === label
               );
-              return item && shouldUsePeriodicData ? item.periodFull : label;
+              return item?.periodFull || label;
             }}
           />
           <Legend
@@ -537,24 +580,22 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
               </Typography>
             )}
           />
-          <Bar
-            dataKey="paidExpenses"
-            name="Chi phí đã thanh toán"
-            fill={theme.palette.success.main}
-            barSize={
-              shouldUsePeriodicData && chartDataToUse.length > 12 ? 16 : 32
-            }
-            radius={[4, 4, 0, 0]}
-          />
-          <Bar
-            dataKey="unpaidExpenses"
-            name="Chi phí chưa thanh toán"
-            fill={theme.palette.warning.main}
-            barSize={
-              shouldUsePeriodicData && chartDataToUse.length > 12 ? 16 : 32
-            }
-            radius={[4, 4, 0, 0]}
-          />
+
+          {/* Render bars for each expense type */}
+          {expenseTypes.map((expenseType, index) => (
+            <Bar
+              key={expenseType}
+              dataKey={expenseType}
+              name={expenseType}
+              fill={expenseColors[index % expenseColors.length]}
+              barSize={
+                shouldUsePeriodicData && expenseChartData.length > 12 ? 12 : 24
+              }
+              radius={[2, 2, 0, 0]}
+            />
+          ))}
+
+          {/* Total expenses line */}
           <Line
             type="monotone"
             dataKey="totalExpenses"
@@ -562,12 +603,12 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
             stroke={theme.palette.error.main}
             strokeWidth={3}
             dot={{
-              r: shouldUsePeriodicData && chartDataToUse.length > 12 ? 3 : 6,
+              r: shouldUsePeriodicData && expenseChartData.length > 12 ? 3 : 6,
               strokeWidth: 2,
               fill: "#fff",
             }}
             activeDot={{
-              r: shouldUsePeriodicData && chartDataToUse.length > 12 ? 5 : 8,
+              r: shouldUsePeriodicData && expenseChartData.length > 12 ? 5 : 8,
             }}
           />
         </ComposedChart>
@@ -576,16 +617,54 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
   };
 
   const renderIncidentCostBreakdownChart = () => {
+    // Prepare data for incident cost breakdown chart
+    const incidentChartData = shouldUsePeriodicData
+      ? data.periodicData.map((item) => {
+          const breakdown = item.incidentCostBreakdown || {};
+          return {
+            period: formatDateLabel(item),
+            periodFull: item.periodLabel,
+            totalIncidentCosts: item.totalIncidentCosts,
+            ...breakdown, // Spread the incident cost breakdown (e.g., "1", "2", "3")
+          };
+        })
+      : chartDataToUse.map((item) => ({
+          period: item.period || item.month,
+          periodFull: item.periodFull || item.month,
+          totalIncidentCosts: item.totalIncidentCosts,
+        }));
+
+    // Get all unique incident types from the data
+    const incidentTypes = shouldUsePeriodicData
+      ? [
+          ...new Set(
+            data.periodicData.flatMap((item) =>
+              Object.keys(item.incidentCostBreakdown || {})
+            )
+          ),
+        ]
+      : [];
+
+    // Color palette for different incident types
+    const incidentColors = [
+      theme.palette.warning.main,
+      theme.palette.error.main,
+      theme.palette.info.main,
+      theme.palette.secondary.main,
+      theme.palette.primary.main,
+      theme.palette.success.main,
+    ];
+
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={chartDataToUse}>
+        <ComposedChart data={incidentChartData}>
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
             stroke={alpha(theme.palette.divider, 0.7)}
           />
           <XAxis
-            dataKey={shouldUsePeriodicData ? "period" : "month"}
+            dataKey="period"
             tick={{
               fill: theme.palette.text.secondary,
               fontSize: 12,
@@ -603,50 +682,57 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
             tickLine={false}
           />
           <RechartsTooltip
-            formatter={(value: number, name: string) => [
-              formatCurrency(value),
-              name,
-            ]}
+            formatter={(value: number, name: string) => {
+              // Format incident type names for tooltip
+              if (["1", "2", "3"].includes(name)) {
+                return [formatCurrency(value), getIncidentTypeLabel(name)];
+              }
+              return [formatCurrency(value), name];
+            }}
             labelFormatter={(label) => {
-              const item = chartDataToUse.find(
-                (item) => item.period === label || item.month === label
+              const item = incidentChartData.find(
+                (item) => item.period === label
               );
-              return item && shouldUsePeriodicData ? item.periodFull : label;
+              return item?.periodFull || label;
             }}
           />
           <Legend
             iconType="circle"
             iconSize={10}
-            formatter={(value) => (
-              <Typography
-                variant="caption"
-                sx={{
-                  color: theme.palette.text.primary,
-                  fontWeight: 500,
-                }}
-              >
-                {value}
-              </Typography>
-            )}
+            formatter={(value) => {
+              // Format incident type names for legend
+              const displayName = ["1", "2", "3"].includes(value)
+                ? getIncidentTypeLabel(value)
+                : value;
+              return (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: theme.palette.text.primary,
+                    fontWeight: 500,
+                  }}
+                >
+                  {displayName}
+                </Typography>
+              );
+            }}
           />
-          <Bar
-            dataKey="paidIncidentCosts"
-            name="Chi phí sự cố đã thanh toán"
-            fill={theme.palette.success.main}
-            barSize={
-              shouldUsePeriodicData && chartDataToUse.length > 12 ? 16 : 32
-            }
-            radius={[4, 4, 0, 0]}
-          />
-          <Bar
-            dataKey="unpaidIncidentCosts"
-            name="Chi phí sự cố chưa thanh toán"
-            fill={theme.palette.warning.main}
-            barSize={
-              shouldUsePeriodicData && chartDataToUse.length > 12 ? 16 : 32
-            }
-            radius={[4, 4, 0, 0]}
-          />
+
+          {/* Render bars for each incident type */}
+          {incidentTypes.map((incidentType, index) => (
+            <Bar
+              key={incidentType}
+              dataKey={incidentType}
+              name={incidentType}
+              fill={incidentColors[index % incidentColors.length]}
+              barSize={
+                shouldUsePeriodicData && incidentChartData.length > 12 ? 12 : 24
+              }
+              radius={[2, 2, 0, 0]}
+            />
+          ))}
+
+          {/* Total incident costs line */}
           <Line
             type="monotone"
             dataKey="totalIncidentCosts"
@@ -654,12 +740,12 @@ const AdminRevenueChart: React.FC<AdminRevenueChartProps> = ({
             stroke={theme.palette.error.main}
             strokeWidth={3}
             dot={{
-              r: shouldUsePeriodicData && chartDataToUse.length > 12 ? 3 : 6,
+              r: shouldUsePeriodicData && incidentChartData.length > 12 ? 3 : 6,
               strokeWidth: 2,
               fill: "#fff",
             }}
             activeDot={{
-              r: shouldUsePeriodicData && chartDataToUse.length > 12 ? 5 : 8,
+              r: shouldUsePeriodicData && incidentChartData.length > 12 ? 5 : 8,
             }}
           />
         </ComposedChart>

@@ -364,32 +364,6 @@ const AdminTripPerformanceChart: React.FC<AdminTripPerformanceChartProps> = ({
                 <Divider sx={{ my: 2 }} />
 
                 <Grid container spacing={3}>
-                  {/* Fuel efficiency */}
-                  <Grid item xs={6}>
-                    <Tooltip
-                      title="Chi phí nhiên liệu trung bình trên mỗi km"
-                      placement="top"
-                      arrow
-                    >
-                      <Box>
-                        <Stack
-                          direction="row"
-                          spacing={1}
-                          alignItems="center"
-                          sx={{ mb: 1 }}
-                        >
-                          <LocalGasStation color="warning" />
-                          <Typography variant="body2" fontWeight="medium">
-                            Chi phí nhiên liệu/km
-                          </Typography>
-                        </Stack>
-                        <Typography variant="h6" fontWeight="bold">
-                          {formatCurrency(data.fuelCostPerDistance)}
-                        </Typography>
-                      </Box>
-                    </Tooltip>
-                  </Grid>
-
                   {/* Average trip distance */}
                   <Grid item xs={6}>
                     <Tooltip

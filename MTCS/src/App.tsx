@@ -29,7 +29,7 @@ const HomeRoute = () => {
     if (user.role === "Admin") {
       return <Navigate to="/admin/finance" replace />;
     } else if (user.role === "Staff") {
-      return <Navigate to="/staff-menu/orders" replace />;
+      return <Navigate to="/staff-menu/time-table" replace />;
     }
   }
 
