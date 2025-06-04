@@ -85,6 +85,7 @@ import {
   getTrip,
   manualCreateTrip,
   autoScheduleTrip,
+  getTripWithOrderDetail,
 } from "../services/tripApi";
 import { trip } from "../types/trip";
 import { ContractFile } from "../types/contract";
@@ -1009,11 +1010,11 @@ deliveryDate: zod
     if (!trips) return groupedTrips;
 
     trips.forEach((trip) => {
-      const containerNumber = trip.containerNumber || "unknown";
-      if (!groupedTrips[containerNumber]) {
-        groupedTrips[containerNumber] = [];
+      const orderDetailId = trip.orderDetailId || "unknown";
+      if (!groupedTrips[orderDetailId]) {
+        groupedTrips[orderDetailId] = [];
       }
-      groupedTrips[containerNumber].push(trip);
+      groupedTrips[orderDetailId].push(trip);
     });
 
     return groupedTrips;
@@ -1652,13 +1653,15 @@ deliveryDate: zod
       const container = orderDetailList.find(
         (d) => d.orderDetailId === orderDetailId
       );
+      console.log("Day la orderdetailid", orderDetailList);
+
       if (!container) {
         throw new Error("Container không tồn tại");
       }
 
-      const trips = await getTrip(container.containerNumber);
+      const trips = await getTripWithOrderDetail(container.orderDetailId);
       console.log(
-        `Loaded trips for container ${container.containerNumber}:`,
+        `Loaded trips for container ${container.orderDetailId}:`,
         trips
       );
 
@@ -1690,13 +1693,14 @@ deliveryDate: zod
     );
     if (!detail) return false;
 
-    const containerNum = detail.containerNumber;
+    const orderDetail = detail.orderDetailId;
 
     // Kiểm tra trong dữ liệu trips của container cụ thể
     const containerSpecificTrips = containerTrips[orderDetailId] || [];
     const hasActiveInContainerTrips = containerSpecificTrips.some(
       (trip) =>
-        // trip.status !== "not_started" &&
+        trip.status !== "not_started" &&
+        trip.status !== "scheduled" &&
         trip.status !== "canceled" &&
         trip.status !== "completed"
     );
@@ -1705,8 +1709,9 @@ deliveryDate: zod
     const hasActiveInGlobalTrips = tripData
       ? tripData.some(
           (trip) =>
-            trip.containerNumber === containerNum &&
-            // trip.status !== "not_started" &&
+            trip.orderId === orderDetail &&
+            trip.status !== "not_started" &&
+            trip.status !== "scheduled" &&
             trip.status !== "canceled" &&
             trip.status !== "completed"
         )
@@ -2505,7 +2510,7 @@ deliveryDate: zod
                               {getContainerSizeName(detail.containerSize)})
                             </Typography>
 
-                            {hasActiveTrips(detail.orderDetailId) && (
+                            {detail.status === "Delivering" && (
                               <Chip
                                 size="small"
                                 label="Đang giao"
@@ -2514,7 +2519,7 @@ deliveryDate: zod
                               />
                             )}
 
-                            {hasCompletedTrips(detail.orderDetailId) && (
+                            {detail.status === "Completed" && (
                               <Chip
                                 size="small"
                                 label="Đã giao"
@@ -3988,9 +3993,9 @@ deliveryDate: zod
                     return (
                       <>
                         {Object.entries(groupedTrips).map(
-                          ([containerNumber, containerTrips], groupIndex) => (
+                          ([orderDetailId, containerTrips], groupIndex) => (
                             <Accordion
-                              key={`trip-group-${containerNumber}-${groupIndex}`}
+                              key={`trip-group-${orderDetailId}-${groupIndex}`}
                               defaultExpanded={groupIndex === 0}
                               sx={{
                                 mb: 2,
@@ -4009,7 +4014,7 @@ deliveryDate: zod
                                     variant="subtitle1"
                                     fontWeight="medium"
                                   >
-                                    Container {containerNumber}
+                                    Mã đơn {orderDetailId}
                                   </Typography>
 
                                   {/* Hiển thị trạng thái chuyến nếu có chuyến đi hoạt động */}

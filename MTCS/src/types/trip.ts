@@ -36,6 +36,7 @@ export interface incidentReports {
 export interface trip {
   tripId: string | null;
   orderId: string | null;
+  orderDetailId: string | null;
   containerNumber: string;
   driverId: string | null;
   tractorId: string | null;
