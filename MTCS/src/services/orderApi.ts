@@ -288,7 +288,7 @@ export const updateOrderDetail = async (orderData: {
   conReturnLocation: string;
   completionTime: string;
   distance: number;
-  pickUpdate: string;
+  pickUpDate: string;
   deliveryDate: string;
   description: string[] | null;
   notes: string[] | null;
@@ -311,7 +311,7 @@ export const updateOrderDetail = async (orderData: {
     formData.append("ConReturnLocation", orderData.conReturnLocation || "");
     formData.append("CompletionTime", orderData.completionTime || "");
     formData.append("Distance", orderData.distance.toString());
-    formData.append("PickUpDate", orderData.pickUpdate || "");
+    formData.append("PickUpDate", orderData.pickUpDate || "");
     formData.append("DeliveryDate", orderData.deliveryDate || "");
 
     // Only add description fields for new files
