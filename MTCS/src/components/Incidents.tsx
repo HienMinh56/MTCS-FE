@@ -280,7 +280,7 @@ const IncidentDetailDialog = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(
-                            `/staff-menu/orders/${incident.order.orderId}`
+                            `/staff-menu/orders/${incident.trip.orderId}`
                           );
                         }}
                       >
